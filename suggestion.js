@@ -7,7 +7,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 	function createRoutes() {
 		app.post("/vote", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
-				api.makeLocalAPICall("POST", "/api/vote", {suggestionID: req.body.suggestionID, userID: data.id, voteType: req.body.voteType}, function(err, data) {
+				api.makeLocalAPICall("POST", "/api/vote", {suggestionID: req.body.suggestionID, userID: data.id, dir: req.body.dir}, function(err, data) {
 					res.end();
 				});
 			}, function() {

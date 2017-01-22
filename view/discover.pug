@@ -2,7 +2,7 @@ include voteUI
 mixin suggestion(data)
   div.suggestion(sid=data.id)
     if user
-      +voteUI(data.upvotes, data.up)
+      +voteUI(data.upvotes, data.dir)
     a(href=data.href)
       span.title #{data.title}
     br

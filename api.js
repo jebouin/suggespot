@@ -33,7 +33,7 @@ module.exports = function(app, mysqlConnection) {
     var query;
     var params;
     if(userID) {
-      query = "SELECT suggestions.id AS id, title, descr, upvotes, author, up FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ?";
+      query = "SELECT suggestions.id AS id, title, descr, upvotes, author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ?";
       params = [userID];
     } else {
       query = "SELECT id, title, descr, upvotes, author FROM suggestions";
@@ -66,7 +66,7 @@ module.exports = function(app, mysqlConnection) {
         return;
       }
       var suggestionData = rows[0];
-      var query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY t";
+      var query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY t";
       mysqlConnection.query(query, [suggestionData.id], function(err, commentRows, fields) {
         if(err) throw err;
         res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), comments: commentRows});
@@ -86,14 +86,14 @@ module.exports = function(app, mysqlConnection) {
       res.end("No userID specified");
       return;
     }
-    if(!req.body.voteType) {
+    if(!req.body.dir) {
       res.status(400);
-      res.end("No voteType specified");
+      res.end("No dir specified");
       return;
     }
     var suggestionID = parseInt(req.body.suggestionID, 36);
     var userID = req.body.userID;
-    var voteType = req.body.voteType;
+    var dir = req.body.dir;
     checkUser(userID, res, function(ok, row) {
       if(!ok) {
         return;
@@ -107,11 +107,11 @@ module.exports = function(app, mysqlConnection) {
           return;
         }
         var suggestionTitle = rows[0].title;
-        if(voteType === "cancel") {
-          mysqlConnection.query('SELECT id, up FROM votes WHERE suggestion = ? AND user = ?', [suggestionID, userID], function(err, rows, fields) {
+        if(dir == 0) {
+          mysqlConnection.query('SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?', [suggestionID, userID], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length == 1) {
-              var wasUp = rows[0].up;
+              var wasUp = rows[0].dir === 1;
               mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
                 if(err) throw err;
                 mysqlConnection.query('UPDATE suggestions SET upvotes = upvotes + ? WHERE id = ?', [wasUp ? -1 : 1, suggestionID], function(err, rows, fields) {
@@ -122,11 +122,11 @@ module.exports = function(app, mysqlConnection) {
             }
           });
         } else {
-          var up = (voteType === "up" ? true : false);
-          mysqlConnection.query('SELECT id, up FROM votes WHERE suggestion = ? AND user = ?', [suggestionID, userID], function(err, rows, fields) {
+          var up = (dir == 1);
+          mysqlConnection.query('SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?', [suggestionID, userID], function(err, rows, fields) {
             if(err) throw err;
             function registerVote() {
-              mysqlConnection.query('INSERT INTO votes (up, user, suggestion) VALUES (?, ?, ?)', [up, userID, suggestionID], function(err, rows, fields) {
+              mysqlConnection.query('INSERT INTO votes (dir, user, suggestion) VALUES (?, ?, ?)', [dir, userID, suggestionID], function(err, rows, fields) {
                 if(err) throw err;
                 logs.log("user " + colors.bold(username) + " " + (up ? "upvoted" : "downvoted") + " an entry " + colors.bold(suggestionTitle));
               });
@@ -137,7 +137,7 @@ module.exports = function(app, mysqlConnection) {
                 registerVote();
               });
             } else {
-              var wasUp = rows[0].up;
+              var wasUp = rows[0].dir === 1;
               if(up != wasUp) {
                 mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
                   if(err) throw err;
