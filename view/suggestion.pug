@@ -1,0 +1,28 @@
+include voteUI
+mixin comment(c)
+  div.comment
+    +voteUI(20)
+    b #{c.author} at #{c.time}
+    | :&nbsp; #{c.content}
+
+doctype html
+html
+  include head
+  body
+    include header
+    h2 #{title}
+    p#descr #{descr}
+    h2 Comments
+    div#comments
+      if comments && comments.length
+        each c in comments
+          +comment(c)
+      else
+        p Be the first to comment!
+    form(action="/comment" method="POST")
+      input(type="hidden" name="suggestionID" value=sid)
+      textarea.big(name="content" placeholder="Comment this entry" required)
+      input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
+    script(src="/libs/jquery.js")
+    script(src="/view/scripts/suggestionScript.js")
+    script(src="/view/scripts/voteUI.js")

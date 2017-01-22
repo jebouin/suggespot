@@ -1,0 +1,8 @@
+mixin voteUI(upvotes, voted)
+  span.voteUI
+    button.upvote(class= voted === 1 ? "voted" : undefined) +
+    | &nbsp;(
+    span.upvoteCount #{upvotes}
+    | )&nbsp;
+    button.downvote(class= voted === 0 ? "voted" : undefined) -
+    | &nbsp;

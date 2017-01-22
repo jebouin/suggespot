@@ -1,0 +1,74 @@
+body {
+	margin: 0px;
+	padding: 0px;
+	font-family: sans-serif;
+}
+
+h1 {
+	font-size: 80px;
+	margin: 10px 0px 50px 0px;
+	text-align: center;
+}
+
+h2 {
+	text-indent: 100px;
+	font-size: 50px;
+}
+
+form {
+	display: inline;
+}
+
+input, button {
+	border-radius: 10px;
+	outline: none;
+	border: 2px solid grey;
+}
+
+button, input[type="button"], input[type="submit"] {
+	display: inline-block;
+	cursor: pointer;
+}
+
+.upvote.voted {
+	background-color: green;
+}
+
+.downvote.voted {
+	background-color: red;
+}
+
+.big {
+	font-size: 30px;
+}
+
+#contentLeft {
+	display: inline-block;
+	width: 40%;
+	margin: auto;
+	text-align: center;
+	vertical-align: middle;
+}
+
+#contentRight {
+	display: inline-block;
+	width: 40%;
+	margin: auto;
+	text-align: center;
+	vertical-align: middle;
+}
+
+#map {
+	height: 800px;
+	width: 100%;
+}
+
+.suggestion {
+	word-wrap: break-word;
+	border: 1px solid black;
+	margin: 10px 10px 10px 10px;
+}
+
+.suggestion .title {
+	font-size: 22px;
+}

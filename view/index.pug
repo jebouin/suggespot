@@ -1,0 +1,12 @@
+doctype html
+html
+  include head.pug
+  body
+    include header.pug
+    div#contentLeft
+      input.big(type="submit" value="Discover Anonymously" onclick="location.href='/discover'")
+    div#contentRight
+      form(name="login" action="/login" method="POST")
+        input.big(type="text" name="username" placeholder="Username" required)
+        br
+        input.big(type="submit" value="Log In")

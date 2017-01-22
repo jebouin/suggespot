@@ -1,0 +1,17 @@
+doctype html
+html
+  include head
+  body
+    include header
+    h2 Submit
+    div#submit
+      form(name="submit" action="/submit" method="POST")
+        input.big(type="text" name="title" placeholder="Title" required)
+        textarea.big(name="descr" placeholder="Describe your experience here" required)
+        input.big(type="hidden" name="lat" placeholder="Latitude")
+        input.big(type="hidden" name="lon" placeholder="Longitude")
+        div#map
+        input.big(type="submit" value="Submit")
+    script(src="/libs/jquery.js")
+    script(src="/view/scripts/pickLocation.js")
+    script(src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBeP2jWF6ypAr5e7WlgqGgEGibTX1Hb_No&callback=googleMapsLoaded")
