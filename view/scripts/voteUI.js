@@ -5,13 +5,13 @@ $(document).ready(function() {
       $(".upvoteCount", elm).text(parseInt($(".upvoteCount", elm).text()) + nv);
     }
     $("." + type + "vote", elm).click(function(event) {
-      var sid = $(this).parent().parent().attr("sid");
+      var tid = $(this).parent().attr("tid");
       if($(this).hasClass("voted")) {
-        $.post("/vote", {suggestionID: sid, dir: 0});
+        $.post("/vote", {thingID: tid, dir: 0});
         $(this).removeClass("voted");
         addVotes(-dir);
       } else {
-        $.post("/vote", {suggestionID: sid, dir: dir});
+        $.post("/vote", {thingID: tid, dir: dir});
         var optype = (type === "up" ? "down" : "up");
         $(this).addClass("voted");
         if($("." + optype + "vote", elm).hasClass("voted")) {

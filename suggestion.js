@@ -7,7 +7,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 	function createRoutes() {
 		app.post("/vote", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
-				api.makeLocalAPICall("POST", "/api/vote", {suggestionID: req.body.suggestionID, userID: data.id, dir: req.body.dir}, function(err, data) {
+				api.makeLocalAPICall("POST", "/api/vote", {thingID: req.body.thingID, userID: data.id, dir: req.body.dir}, function(err, data) {
 					res.end();
 				});
 			}, function() {
@@ -39,12 +39,19 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 		app.get(/\/s\//, function(req, res) {
 			var url = req.originalUrl;
 			var id = url.substr(url.search("/s/") + 3);
-			api.makeLocalAPICall("GET", "/api/suggestion/" + id, {}, function(err, suggestionData) {
-				if(err) {
-					res.redirect("/");
-					return;
-				}
-				res.end(view.getTemplate("suggestion")(suggestionData));
+			function apiCall(loginData) {
+				api.makeLocalAPICall("GET", "/api/suggestion/" + id, loginData ? loginData : {}, function(err, suggestionData) {
+					if(err) {
+						res.redirect("/");
+						return;
+					}
+					res.end(view.getTemplate("suggestion")(suggestionData));
+				});
+			}
+			auth.checkUserLoggedIn(req, res, function(data) {
+				apiCall(data);
+			}, function() {
+				apiCall();
 			});
 		});
 

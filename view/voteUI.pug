@@ -1,8 +1,8 @@
-mixin voteUI(upvotes, voted)
-  span.voteUI
-    button.upvote(class= voted === 1 ? "voted" : undefined) +
+mixin voteUI(tid, upvotes, dir)
+  span.voteUI(tid=tid)
+    button.upvote(class= dir === 1 ? "voted" : undefined) +
     | &nbsp;(
     span.upvoteCount #{upvotes}
     | )&nbsp;
-    button.downvote(class= voted === 0 ? "voted" : undefined) -
+    button.downvote(class= dir === -1 ? "voted" : undefined) -
     | &nbsp;

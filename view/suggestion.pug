@@ -1,7 +1,7 @@
 include voteUI
 mixin comment(c)
   div.comment
-    +voteUI(c.upvotes)
+    +voteUI("1_" + c.id, c.upvotes, c.dir)
     b #{c.author} at #{c.time}
     | :&nbsp; #{c.content}
 
