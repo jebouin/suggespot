@@ -60,7 +60,7 @@ module.exports = function(app, mysqlConnection) {
       return;
     }
     id = parseInt(id, 36);
-    mysqlConnection.query("SELECT id, title, descr FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
+    mysqlConnection.query("SELECT id, title, descr, upvotes FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
       if(err) throw err;
       if(rows.length != 1) {
         res.status(404);
@@ -68,21 +68,36 @@ module.exports = function(app, mysqlConnection) {
         return;
       }
       var suggestionData = rows[0];
-      var query, params;
-      if(userID) {
-        query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY t";
-        params = [suggestionData.id, userID];
-      } else {
-        query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ?";
-        params = [suggestionData.id];
-      }
-      mysqlConnection.query(query, params, function(err, commentRows, fields) {
-        if(err) throw err;
-        for(var i = 0; i < commentRows.length; i++) {
-          commentRows[i].id = commentRows[i].id.toString(36);
+      function sendComments(voteDir) {
+        var query, params;
+        if(userID) {
+          query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY t";
+          params = [suggestionData.id, userID];
+        } else {
+          query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ?";
+          params = [suggestionData.id];
         }
-        res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), comments: commentRows});
-      });
+        mysqlConnection.query(query, params, function(err, commentRows, fields) {
+          if(err) throw err;
+          for(var i = 0; i < commentRows.length; i++) {
+            commentRows[i].id = commentRows[i].id.toString(36);
+          }
+          res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), upvotes: suggestionData.upvotes, comments: commentRows, voteDir: voteDir});
+        });
+      }
+
+      if(userID) {
+        //get user's vote
+        mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ?", [id], function(err, voteRows, fields) {
+          if(voteRows.length != 1) {
+            sendComments();
+          } else {
+            sendComments(voteRows[0].dir);
+          }
+        })
+      } else {
+        sendComments();
+      }
     });
   });
 

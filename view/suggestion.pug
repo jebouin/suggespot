@@ -10,6 +10,7 @@ html
   include head
   body
     include header
+    +voteUI("0_" + sid, upvotes, voteDir)
     h2 #{title}
     p#descr #{descr}
     h2 Comments
