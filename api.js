@@ -8,7 +8,7 @@ const logs = require("./logs");
 
 module.exports = function(app, mysqlConnection) {
 
-  function checkUser(id, res, callback) {
+  function checkUserExists(id, res, callback) {
     mysqlConnection.query("SELECT name FROM users WHERE id = ?", [id], function(err, rows, fields) {
       if(err) throw err;
       if(rows.length != 1) {
@@ -121,7 +121,7 @@ module.exports = function(app, mysqlConnection) {
     var thing = utils.getThingFromID(req.body.thingID);
     var userID = req.body.userID;
     var dir = req.body.dir;
-    checkUser(userID, res, function(ok, row) {
+    checkUserExists(userID, res, function(ok, row) {
       if(!ok) {
         return;
       }
@@ -265,7 +265,7 @@ module.exports = function(app, mysqlConnection) {
       return;
     }
     var id = parseInt(req.body.suggestionID, 36);
-    checkUser(req.body.userID, res, function(ok, row) {
+    checkUserExists(req.body.userID, res, function(ok, row) {
       var username = row.name;
       mysqlConnection.query('SELECT id, title FROM suggestions WHERE id = ?', [id], function(err, rows, fields) {
         if(err) throw err;
@@ -302,7 +302,7 @@ module.exports = function(app, mysqlConnection) {
       res.end("No description specified");
       return;
     }
-    checkUser(userID, res, function(ok, row) {
+    checkUserExists(userID, res, function(ok, row) {
       var username = row.name;
       var title = req.body.title;
       var descr = req.body.descr;
