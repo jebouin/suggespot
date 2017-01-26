@@ -322,10 +322,14 @@ module.exports = function(app, mysqlConnection) {
   return {
     makeLocalAPICall: function(method, path, params, callback) {
       function reqCallback(err, res, body) {
-        if(err) {
-          if(callback) callback(err, null);
-        } else {
-          if(callback) callback(null, body);
+        if(callback) {
+          if(res.statusCode >= 400 && res.statusCode < 500) {
+            callback(res.statusCode.toString(), null);
+          } else if(err) {
+            callback(err, null);
+          } else {
+            callback(null, body);
+          }
         }
       }
       if(method == "GET") {
