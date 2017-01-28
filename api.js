@@ -277,8 +277,9 @@ module.exports = function(app, mysqlConnection) {
         var suggestionData = rows[0];
         mysqlConnection.query('INSERT INTO comments (author, content, suggestion) VALUES (?, ?, ?)', [req.body.userID, req.body.content, id], function(err, rows, fields) {
           if(err) throw err;
+          var cid = parseInt(rows.insertId);
           res.status(201);
-          res.end(); //add link to comment
+          res.end(cid.toString(36));
           logs.log("user " + colors.bold(username) + " commented on " + colors.bold(suggestionData.title));
         });
       });
@@ -326,9 +327,10 @@ module.exports = function(app, mysqlConnection) {
   		}
   		mysqlConnection.query(query, params, function(err, rows, fields) {
   			if(err) throw err;
+        var sid = parseInt(rows.insertId);
   			logs.log("user " + colors.bold(username) + " posted a new entry " + colors.bold(title));
   			res.status(201);
-        res.end(); //todo: send link to suggestion
+        res.end(sid.toString(36));
         return;
   		});
     });

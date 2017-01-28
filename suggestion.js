@@ -30,7 +30,29 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 					if(err) {
 						res.redirect("/");
 					} else {
-						res.redirect("/");
+						api.makeLocalAPICall("POST", "/api/vote", {thingID: "0_" + data, userID: params.userID, dir: 1}, function(err, data) {
+							if(err) {
+								res.redirect("/");
+							} else {
+								res.redirect("/s/" + sid);
+							}
+						});
+					}
+				});
+			});
+		});
+
+		app.post("/comment", function(req, res) {
+			auth.checkUserLoggedIn(req, res, function(data) {
+				var params = req.body;
+				params.userID = data.id;
+				api.makeLocalAPICall("POST", "/api/comment", params, function(err, data) {
+					if(err) {
+						res.redirect("/s/" + req.body.suggestionID);
+					} else {
+						api.makeLocalAPICall("POST", "/api/vote", {thingID: "1_" + data, userID: params.userID, dir: 1}, function(err, data) {
+							res.redirect("/s/" + req.body.suggestionID);
+						});
 					}
 				});
 			});
@@ -52,20 +74,6 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 				apiCall(data);
 			}, function() {
 				apiCall();
-			});
-		});
-
-		app.post("/comment", function(req, res) {
-			auth.checkUserLoggedIn(req, res, function(data) {
-				var params = req.body;
-				params.userID = data.id;
-				api.makeLocalAPICall("POST", "/api/comment", params, function(err, data) {
-					if(err) {
-						res.redirect("/s/" + req.body.suggestionID);
-					} else {
-						res.redirect("/s/" + req.body.suggestionID);
-					}
-				});
 			});
 		});
 	}
