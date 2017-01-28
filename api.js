@@ -34,10 +34,10 @@ module.exports = function(app, mysqlConnection) {
     var query;
     var params;
     if(userID) {
-      query = "SELECT suggestions.id AS id, title, descr, upvotes, author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ?";
+      query = "SELECT suggestions.id AS id, title, descr, upvotes, author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ORDER BY upvotes DESC";
       params = [userID];
     } else {
-      query = "SELECT id, title, descr, upvotes, author FROM suggestions";
+      query = "SELECT id, title, descr, upvotes, author FROM suggestions ORDER BY upvotes DESC";
       params = [];
     }
     mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -74,7 +74,7 @@ module.exports = function(app, mysqlConnection) {
           query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY t";
           params = [suggestionData.id, userID];
         } else {
-          query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ?";
+          query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY t";
           params = [suggestionData.id];
         }
         mysqlConnection.query(query, params, function(err, commentRows, fields) {

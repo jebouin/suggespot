@@ -22,7 +22,7 @@ function initMap() {
       lat : currentLocation ? currentLocation.lat : 0,
       lng : currentLocation ? currentLocation.lon : 0
     },
-    scrollwheel : true
+    scrollwheel : false
   });
   marker = new google.maps.Marker({
     position : {
