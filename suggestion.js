@@ -37,7 +37,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 								res.redirect("/s/" + data);
 							}
 						});
-					}sid
+					}
 				});
 			});
 		});
@@ -67,8 +67,10 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 						res.redirect("/");
 						return;
 					}
-					var data = loginData ? Object.assign(suggestionData, {user: loginData}) : suggestionData;
-					res.end(view.getTemplate("suggestion")(data));
+					if(loginData) {
+						suggestionData.user = loginData;
+					}
+					res.end(view.getTemplate("suggestion")(suggestionData));
 				});
 			}
 			auth.checkUserLoggedIn(req, res, function(data) {

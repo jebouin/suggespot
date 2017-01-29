@@ -108,7 +108,7 @@ module.exports = function(app, mysqlConnection) {
             }
 
             if(userID) {
-                mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ?", [id], function(err, voteRows, fields) {
+                mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ? AND user = ?", [id, userID], function(err, voteRows, fields) {
                     if(voteRows.length != 1) {
                         sendComments();
                     } else {
