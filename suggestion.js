@@ -34,10 +34,10 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 							if(err) {
 								res.redirect("/");
 							} else {
-								res.redirect("/s/" + sid);
+								res.redirect("/s/" + data);
 							}
 						});
-					}
+					}sid
 				});
 			});
 		});
