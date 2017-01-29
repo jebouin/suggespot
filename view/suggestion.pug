@@ -1,9 +1,12 @@
 include voteUI
+include commentUI
 mixin comment(c)
-  div.comment
+  div.comment(cid=c.id)
     +voteUI("1_" + c.id, c.upvotes, c.dir)
     b #{c.author} at #{c.time}
     | :&nbsp; #{c.content}
+    | &nbsp; 
+    a(href="javascript:void(0)" onclick="reply(event)") reply
 
 doctype html
 html
@@ -14,16 +17,17 @@ html
     h2 #{title}
     p#descr #{descr}
     h2 Comments
+    form(action="/comment" method="POST")
+      input(type="hidden" name="suggestionID" value=sid)
+      textarea.big(name="content" placeholder="Comment this entry" required)
+      input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
     div#comments
       if comments && comments.length
         each c in comments
           +comment(c)
       else
         p Be the first to comment!
-    form(action="/comment" method="POST")
-      input(type="hidden" name="suggestionID" value=sid)
-      textarea.big(name="content" placeholder="Comment this entry" required)
-      input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
+    +commentUI(sid)
     script(src="/libs/jquery.js")
     script(src="/view/scripts/suggestionScript.js")
     script(src="/view/scripts/voteUI.js")
