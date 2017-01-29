@@ -1,5 +1,5 @@
 config.json
-dump
+dump/dump.sh
 libs
 node_modules
 features.txt
