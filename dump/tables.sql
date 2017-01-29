@@ -30,7 +30,13 @@ CREATE TABLE `comments` (
   `timeCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `upvotes` int(11) NOT NULL DEFAULT '0',
   `parent` bigint(20) unsigned DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `author` (`author`),
+  KEY `suggestion` (`suggestion`),
+  KEY `parent` (`parent`),
+  CONSTRAINT `comments_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `comments` (`id`),
+  CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`),
+  CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -85,8 +91,14 @@ CREATE TABLE `votes` (
   `user` int(10) unsigned NOT NULL,
   `suggestion` int(10) unsigned DEFAULT NULL,
   `comment` bigint(20) unsigned DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=81 DEFAULT CHARSET=latin1;
+  PRIMARY KEY (`id`),
+  KEY `user` (`user`),
+  KEY `suggestion` (`suggestion`),
+  KEY `comment` (`comment`),
+  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`),
+  CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`),
+  CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -98,4 +110,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-01-29 10:32:33
+-- Dump completed on 2017-01-29 11:02:32
