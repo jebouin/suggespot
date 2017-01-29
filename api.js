@@ -74,7 +74,7 @@ module.exports = function(app, mysqlConnection) {
           query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY t";
           params = [suggestionData.id, userID];
         } else {
-          query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY t";
+          query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY t";
           params = [suggestionData.id];
         }
         mysqlConnection.query(query, params, function(err, commentRows, fields) {
