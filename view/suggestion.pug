@@ -1,12 +1,11 @@
 include voteUI
 include commentUI
 mixin comment(c)
-  div.comment(cid=c.id)
+  div.comment
     +voteUI("1_" + c.id, c.upvotes, c.dir)
     b #{c.author} at #{c.time}
     | :&nbsp; #{c.content}
     | &nbsp; 
-    a(href="javascript:void(0)" onclick="reply(event)") reply
 
 doctype html
 html
@@ -24,7 +23,12 @@ html
     div#comments
       if comments && comments.length
         each c in comments
-          +comment(c)
+          div.commentThread
+            +comment(c)
+            div.replies(cid=c.id)
+              each child in c.children
+                +comment(child)
+              a(href="javascript:void(0)" onclick="reply(event)") reply
       else
         p Be the first to comment!
     +commentUI(sid)

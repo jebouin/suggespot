@@ -72,3 +72,7 @@ button, input[type="button"], input[type="submit"] {
 .suggestion .title {
 	font-size: 22px;
 }
+
+.replies {
+	margin-left: 100px;
+}

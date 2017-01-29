@@ -71,18 +71,39 @@ module.exports = function(app, mysqlConnection) {
             function sendComments(voteDir) {
                 var query, params;
                 if(userID) {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY t";
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY parent";
                     params = [suggestionData.id, userID];
                 } else {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated AS t, users.name AS author, upvotes, comments.id AS id FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY t";
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes, comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY parent";
                     params = [suggestionData.id];
                 }
                 mysqlConnection.query(query, params, function(err, commentRows, fields) {
                     if(err) throw err;
                     for(var i = 0; i < commentRows.length; i++) {
                         commentRows[i].id = commentRows[i].id.toString(36);
+                        if(commentRows[i].parent) {
+                            commentRows[i].parent = commentRows[i].parent.toString(36);
+                        }
                     }
-                    res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), upvotes: suggestionData.upvotes, comments: commentRows, voteDir: voteDir});
+                    var comments = {};
+                    for(var i = 0; i < commentRows.length; i++) {
+                        commentRows[i].children = [];
+                        comments[commentRows[i].id] = commentRows[i];
+                        if(commentRows[i].parent) {
+                            //limit comment depth to 1
+                            if(comments[commentRows[i].parent].parent) {
+                                commentRows[i].parent = comments[commentRows[i].parent].parent;
+                            }
+                            comments[commentRows[i].parent].children.push(commentRows[i]);    
+                        }
+                    }
+                    var formattedComments = [];
+                    for(var prop in comments) {
+                        if(comments.hasOwnProperty(prop) && !comments[prop].parent) {
+                            formattedComments.push(comments[prop]);
+                        }
+                    }
+                    res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), upvotes: suggestionData.upvotes, comments: formattedComments, voteDir: voteDir});
                 });
             }
 
