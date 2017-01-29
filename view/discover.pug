@@ -1,8 +1,7 @@
 include voteUI
 mixin suggestion(data)
   div.suggestion
-    if user
-      +voteUI("0_" + data.id, data.upvotes, data.dir)
+    +voteUI("0_" + data.id, data.upvotes, data.dir, user)
     a(href=data.href)
       span.title #{data.title}
     br

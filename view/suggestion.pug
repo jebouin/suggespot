@@ -2,17 +2,17 @@ include voteUI
 include commentUI
 mixin comment(c)
   div.comment
-    +voteUI("1_" + c.id, c.upvotes, c.dir)
+    +voteUI("1_" + c.id, c.upvotes, c.dir, user)
     b #{c.author} at #{c.time}
     | :&nbsp; #{c.content}
-    | &nbsp; 
+    | &nbsp;
 
 doctype html
 html
   include head
   body
     include header
-    +voteUI("0_" + sid, upvotes, voteDir)
+    +voteUI("0_" + sid, upvotes, voteDir, user)
     h2 #{title}
     p#descr #{descr}
     h2 Comments
@@ -28,8 +28,9 @@ html
             div.replies(cid=c.id)
               each child in c.children
                 +comment(child)
-              a(href="javascript:void(0)" onclick="reply(event)") reply
-      else
+              if user
+                a(href="javascript:void(0)" onclick="reply(event)") reply
+      else if user
         p Be the first to comment!
     +commentUI(sid)
     script(src="/libs/jquery.js")

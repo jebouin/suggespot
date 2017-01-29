@@ -67,7 +67,8 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 						res.redirect("/");
 						return;
 					}
-					res.end(view.getTemplate("suggestion")(suggestionData));
+					var data = loginData ? Object.assign(suggestionData, {user: loginData}) : suggestionData;
+					res.end(view.getTemplate("suggestion")(data));
 				});
 			}
 			auth.checkUserLoggedIn(req, res, function(data) {
