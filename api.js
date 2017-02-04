@@ -33,11 +33,12 @@ module.exports = function(app, mysqlConnection) {
         var userID = req.query.user;
         var query;
         var params;
+        var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) AS conf";
         if(userID) {
-            query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ORDER BY score DESC";
+            query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ORDER BY conf DESC";
             params = [userID];
         } else {
-            query = "SELECT id, title, descr, upvotes - downvotes AS score, author FROM suggestions ORDER BY score DESC";
+            query = "SELECT id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author FROM suggestions ORDER BY conf DESC";
             params = [];
         }
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -70,40 +71,39 @@ module.exports = function(app, mysqlConnection) {
             var suggestionData = rows[0];
             function sendComments(voteDir) {
                 var query, params;
+                var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
+                var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
                 if(userID) {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY parent";
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? " + orderQuery;
                     params = [suggestionData.id, userID];
                 } else {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY parent";
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? " + orderQuery;
                     params = [suggestionData.id];
                 }
+                console.log(query);
                 mysqlConnection.query(query, params, function(err, commentRows, fields) {
                     if(err) throw err;
+                    var comments = {}, formattedComments = [];
                     for(var i = 0; i < commentRows.length; i++) {
-                        commentRows[i].id = commentRows[i].id.toString(36);
-                        if(commentRows[i].parent) {
-                            commentRows[i].parent = commentRows[i].parent.toString(36);
-                        }
-                    }
-                    var comments = {};
-                    for(var i = 0; i < commentRows.length; i++) {
-                        commentRows[i].children = [];
                         comments[commentRows[i].id] = commentRows[i];
+                    }
+                    for(var i = 0; i < commentRows.length; i++) {
+                        comments[commentRows[i].id].children = [];
                         if(commentRows[i].parent) {
-                            //limit comment depth to 1
                             if(comments[commentRows[i].parent].parent) {
                                 commentRows[i].parent = comments[commentRows[i].parent].parent;
                             }
-                            comments[commentRows[i].parent].children.push(commentRows[i]);    
+                            comments[commentRows[i].parent].children.push(commentRows[i]);
                         }
                     }
-                    var formattedComments = [];
-                    for(var prop in comments) {
-                        if(comments.hasOwnProperty(prop) && !comments[prop].parent) {
-                            comments[prop].children.sort(function(c1, c2) {
-                                return c1.timeCreated > c2.timeCreated;
-                            });
-                            formattedComments.push(comments[prop]);
+                    for(var i = 0; i < commentRows.length; i++) {
+                        if(!commentRows[i].parent) {
+                            var c = comments[commentRows[i].id];
+                            c.id = c.id.toString(36);
+                            for(var j = 0; j < c.children.length; j++) {
+                                c.children[j].id = c.children[j].id.toString(36);
+                            }
+                            formattedComments.push(c);
                         }
                     }
                     res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), score: suggestionData.score, comments: formattedComments, voteDir: voteDir});
