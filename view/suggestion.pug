@@ -2,7 +2,7 @@ include voteUI
 include commentUI
 mixin comment(c)
   div.comment
-    +voteUI("1_" + c.id, c.upvotes, c.dir, user)
+    +voteUI("1_" + c.id, c.score, c.dir, user)
     b #{c.author} at #{c.time}
     | :&nbsp; #{c.content}
     | &nbsp;
@@ -12,7 +12,7 @@ html
   include head
   body
     include header
-    +voteUI("0_" + sid, upvotes, voteDir, user)
+    +voteUI("0_" + sid, score, voteDir, user)
     h2 #{title}
     p#descr #{descr}
     h2 Comments

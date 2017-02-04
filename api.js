@@ -34,10 +34,10 @@ module.exports = function(app, mysqlConnection) {
         var query;
         var params;
         if(userID) {
-            query = "SELECT suggestions.id AS id, title, descr, upvotes, author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ORDER BY upvotes DESC";
+            query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ORDER BY score DESC";
             params = [userID];
         } else {
-            query = "SELECT id, title, descr, upvotes, author FROM suggestions ORDER BY upvotes DESC";
+            query = "SELECT id, title, descr, upvotes - downvotes AS score, author FROM suggestions ORDER BY score DESC";
             params = [];
         }
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -60,7 +60,7 @@ module.exports = function(app, mysqlConnection) {
             return;
         }
         id = parseInt(id, 36);
-        mysqlConnection.query("SELECT id, title, descr, upvotes FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
+        mysqlConnection.query("SELECT id, title, descr, upvotes - downvotes AS score FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
@@ -71,10 +71,10 @@ module.exports = function(app, mysqlConnection) {
             function sendComments(voteDir) {
                 var query, params;
                 if(userID) {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes, comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY parent";
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? ORDER BY parent";
                     params = [suggestionData.id, userID];
                 } else {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes, comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY parent";
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? ORDER BY parent";
                     params = [suggestionData.id];
                 }
                 mysqlConnection.query(query, params, function(err, commentRows, fields) {
@@ -100,10 +100,13 @@ module.exports = function(app, mysqlConnection) {
                     var formattedComments = [];
                     for(var prop in comments) {
                         if(comments.hasOwnProperty(prop) && !comments[prop].parent) {
+                            comments[prop].children.sort(function(c1, c2) {
+                                return c1.timeCreated > c2.timeCreated;
+                            });
                             formattedComments.push(comments[prop]);
                         }
                     }
-                    res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), upvotes: suggestionData.upvotes, comments: formattedComments, voteDir: voteDir});
+                    res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), score: suggestionData.score, comments: formattedComments, voteDir: voteDir});
                 });
             }
 
@@ -139,11 +142,12 @@ module.exports = function(app, mysqlConnection) {
         }
         var thing = utils.getThingFromID(req.body.thingID);
         var userID = req.body.userID;
-        var dir = req.body.dir;
         checkUserExists(userID, res, function(ok, row) {
             if(!ok) {
                 return;
             }
+            var dir = req.body.dir;
+            var dirField = utils.voteDirToField(dir);
             var username = row.name;
             if(thing.type === 0) {
                 mysqlConnection.query('SELECT title FROM suggestions WHERE id = ?', [thing.id], function(err, rows, fields) {
@@ -162,12 +166,13 @@ module.exports = function(app, mysqlConnection) {
                                 res.end("No vote to cancel");
                                 return;
                             } else {
-                                var wasUp = rows[0].dir === 1;
+                                var prevDir = rows[0].dir;
+                                var prevDirField = utils.voteDirToField(prevDir);
                                 mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
                                     if(err) throw err;
-                                    mysqlConnection.query('UPDATE suggestions SET upvotes = upvotes + ? WHERE id = ?', [wasUp ? -1 : 1, thing.id], function(err, rows, fields) {
+                                    mysqlConnection.query('UPDATE suggestions SET ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
                                         if(err) throw err;
-                                        logs.log("user " + colors.bold(username) + " canceled his " + (wasUp ? "up" : "down") + "vote on " + colors.bold(suggestionTitle));
+                                        logs.log("user " + colors.bold(username) + " canceled his " + (prevDir == 1 ? "up" : "down") + "vote on " + colors.bold(suggestionTitle));
                                     });
                                 });
                             }
@@ -183,16 +188,18 @@ module.exports = function(app, mysqlConnection) {
                                 });
                             }
                             if(rows.length == 0) {
-                                mysqlConnection.query('UPDATE suggestions SET upvotes = upvotes + ? WHERE id = ?', [up ? 1 : -1, thing.id], function(err, rows, fields) {
+                                mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
                                     if(err) throw err;
                                     registerVote();
                                 });
                             } else {
-                                var wasUp = rows[0].dir === 1;
+                                var prevDir = rows[0].dir;
+                                var prevDirField = utils.voteDirToField(prevDir);
+                                var wasUp = prevDir === 1;
                                 if(up != wasUp) {
                                     mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
                                         if(err) throw err;
-                                        mysqlConnection.query('UPDATE suggestions SET upvotes = upvotes + ? WHERE id = ?', [up ? 2 : -2, thing.id], function(err, rows, fields) {
+                                        mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
                                             if(err) throw err;
                                             registerVote();
                                         });
@@ -222,10 +229,11 @@ module.exports = function(app, mysqlConnection) {
                                 res.end("No vote to cancel");
                                 return;
                             } else {
-                                var wasUp = rows[0].dir === 1;
+                                var prevDir = rows[0].dir;
+                                var prevDirField = utils.voteDirToField(prevDir);
                                 mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
                                     if(err) throw err;
-                                    mysqlConnection.query('UPDATE comments SET upvotes = upvotes + ? WHERE id = ?', [wasUp ? -1 : 1, thing.id], function(err, rows, fields) {
+                                    mysqlConnection.query('UPDATE comments SET ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
                                         if(err) throw err;
                                     });
                                 });
@@ -241,16 +249,18 @@ module.exports = function(app, mysqlConnection) {
                                 });
                             }
                             if(rows.length == 0) {
-                                mysqlConnection.query('UPDATE comments SET upvotes = upvotes + ? WHERE id = ?', [up ? 1 : -1, thing.id], function(err, rows, fields) {
+                                mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
                                     if(err) throw err;
                                     registerVote();
                                 });
                             } else {
-                                var wasUp = rows[0].dir === 1;
+                                var prevDir = rows[0].dir;
+                                var prevDirField = utils.voteDirToField(prevDir);
+                                var wasUp = prevDir === 1;
                                 if(up != wasUp) {
                                     mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
                                         if(err) throw err;
-                                        mysqlConnection.query('UPDATE comments SET upvotes = upvotes + ? WHERE id = ?', [up ? 2 : -2, thing.id], function(err, rows, fields) {
+                                        mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
                                             if(err) throw err;
                                             registerVote();
                                         });

@@ -29,15 +29,16 @@ CREATE TABLE `comments` (
   `suggestion` int(10) unsigned NOT NULL,
   `timeCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `upvotes` int(11) NOT NULL DEFAULT '0',
+  `downvotes` int(11) NOT NULL DEFAULT '0',
   `parent` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `author` (`author`),
   KEY `suggestion` (`suggestion`),
   KEY `parent` (`parent`),
-  CONSTRAINT `comments_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `comments` (`id`),
   CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`),
-  CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`),
+  CONSTRAINT `comments_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `comments` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -54,12 +55,13 @@ CREATE TABLE `suggestions` (
   `lat` int(11) DEFAULT NULL,
   `lon` int(11) DEFAULT NULL,
   `upvotes` int(11) NOT NULL DEFAULT '0',
+  `downvotes` int(11) NOT NULL DEFAULT '0',
   `author` int(10) unsigned NOT NULL DEFAULT '1',
   `timeCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `author` (`author`),
   CONSTRAINT `suggestions_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -95,10 +97,10 @@ CREATE TABLE `votes` (
   KEY `user` (`user`),
   KEY `suggestion` (`suggestion`),
   KEY `comment` (`comment`),
-  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`),
   CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`),
-  CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=latin1;
+  CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`),
+  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -110,4 +112,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-01-29 17:38:11
+-- Dump completed on 2017-02-04 15:04:12

@@ -48,5 +48,13 @@ module.exports = {
 			throw "Thing type out of bounds";
 		}
 		return {type: thingType, id: thingID};
+	},
+	voteDirToField: function(dir) {
+		if(dir == -1) {
+			return "downvotes";
+		} else if(dir == 1) {
+			return "upvotes";
+		}
+		return "cancels";
 	}
 };
