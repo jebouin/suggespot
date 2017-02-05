@@ -8,20 +8,35 @@ module.exports = function(app, mysqlConnection, view) {
 	function createRoutes() {
 		app.post("/register", function(req, res) {
 			var username = req.body.username;
-			mysqlConnection.query('SELECT id FROM users WHERE name = ?', [username], function(err, rows, fields) {
-				if(rows.length) {
-					res.redirect("/discover");
-				} else {
-					mysqlConnection.query('INSERT INTO users (name) VALUES (?)', [username], function(err, rows, fields) {
-						if(err) throw err;
-						mysqlConnection.query('SELECT id FROM users WHERE name = ?', [username], function(err, rows, fields) {
-							if(err) throw err;
-							logs.log("new user " + colors.bold(username));
-							logUserIn(req, res, rows[0].id, username);
-						});
-					});
+			try {
+				if(username.length < 3 || username.length > 20) {
+					throw "username should be between 3 and 20 characters";
+				} else if(!username.match(/^[a-zA-Z0-9_]+$/)) {
+					throw "username contains invalid characters";
 				}
-			});
+				mysqlConnection.query('SELECT id FROM users WHERE name = ?', [username], function(err, rows, fields) {
+					if(err) throw err;
+					if(rows.length) {
+						throw "user exists";
+					} else {
+						mysqlConnection.query('INSERT INTO users (name) VALUES (?)', [username], function(err, rows, fields) {
+							if(err) throw err;
+							mysqlConnection.query('SELECT id FROM users WHERE name = ?', [username], function(err, rows, fields) {
+								if(err) throw err;
+								logs.log("new user " + colors.bold(username));
+								logUserIn(req, res, rows[0].id, username);
+							});
+						});
+					}
+				});
+			} catch(e) {
+				console.log(e);
+				res.redirect("/discover");
+			}
+		});
+
+		app.get("/register", function(req, res) {
+			res.redirect("/discover");
 		});
 
 		app.post("/login", function(req, res) {

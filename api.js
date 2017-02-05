@@ -80,7 +80,6 @@ module.exports = function(app, mysqlConnection) {
                     query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? " + orderQuery;
                     params = [suggestionData.id];
                 }
-                console.log(query);
                 mysqlConnection.query(query, params, function(err, commentRows, fields) {
                     if(err) throw err;
                     var comments = {}, formattedComments = [];
