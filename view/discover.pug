@@ -14,6 +14,8 @@ html
     include header
     if user
       h2 Logged as #{user.name}
+      button.big(onclick="location.href='/profile'") Profile
+      button.big(onclick="location.href='/preferences'") Preferences
       button.big(onclick="location.href='/submit'") Submit
       button.big(onclick="location.href='/logout'") Log Out
     if suggestions && suggestions.length

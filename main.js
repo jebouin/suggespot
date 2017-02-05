@@ -27,11 +27,15 @@ const view = require("./view")(app);
 const auth = require("./auth")(app, connection, view);
 const suggestion = require("./suggestion")(app, connection, auth, view, api);
 const discover = require("./discover")(app, connection, auth, view, api);
+const profile = require("./profile")(app, connection, auth, view, api);
+const preferences = require("./preferences")(app, connection, auth, view, api);
 
 connection.connect();
 auth.createRoutes();
 discover.createRoutes();
 suggestion.createRoutes();
+profile.createRoutes();
+preferences.createRoutes();
 
 app.use(function(req, res, next) {
 	for(var i = 0; i < global.config.allowedIPs.length; i++) {

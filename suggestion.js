@@ -83,5 +83,5 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 
 	return {
 		createRoutes: createRoutes
-	}
+	};
 };

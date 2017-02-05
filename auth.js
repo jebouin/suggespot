@@ -98,7 +98,11 @@ module.exports = function(app, mysqlConnection, view) {
 			if(noCallback) {
 				noCallback();
 			} else {
-				res.end(view.getTemplate("index")());
+				if(req.originalUrl != "/") {
+					res.redirect("/");
+				} else {
+					res.end(view.getTemplate("index")());
+				}
 			}
 		}
 	}
