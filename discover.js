@@ -10,6 +10,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 		}
 		if(loginData) {
 			params.user = loginData.id;
+			loginData.id = loginData.id.toString(36);
 		}
 		api.makeLocalAPICall("GET", "/api/suggestions", params, function(err, suggestionData) {
 			if(err) {

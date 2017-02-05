@@ -58,7 +58,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			});
 		});
 
-		app.get(/\/s\//, function(req, res) {
+		app.get(/^\/s\//, function(req, res) {
 			var url = req.originalUrl;
 			var id = url.substr(url.search("/s/") + 3);
 			function apiCall(loginData) {

@@ -3,7 +3,9 @@ include commentUI
 mixin comment(c)
   div.comment
     +voteUI("1_" + c.id, c.score, c.dir, user)
-    b #{c.author} at #{c.time}
+    b 
+      a(href="/p/"+c.authorId) #{c.author}
+      | &nbsp;at #{c.time}
     | :&nbsp; #{c.content}
     | &nbsp;
 

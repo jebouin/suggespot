@@ -51,7 +51,7 @@ module.exports = function(app, mysqlConnection) {
         });
     });
 
-    app.get(/\/api\/suggestion\//, function(req, res) {
+    app.get(/^\/api\/suggestion\//, function(req, res) {
         var url = urlut.parse(req.originalUrl).pathname;
         var userId = req.query.id;
         var id = url.substr(url.search("/suggestion/") + 12);
@@ -74,10 +74,10 @@ module.exports = function(app, mysqlConnection) {
                 var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
                 var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
                 if(userId) {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? " + orderQuery;
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? " + orderQuery;
                     params = [suggestionData.id, userId];
                 } else {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? " + orderQuery;
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? " + orderQuery;
                     params = [suggestionData.id];
                 }
                 mysqlConnection.query(query, params, function(err, commentRows, fields) {
@@ -99,6 +99,7 @@ module.exports = function(app, mysqlConnection) {
                         if(!commentRows[i].parent) {
                             var c = comments[commentRows[i].id];
                             c.id = c.id.toString(36);
+                            c.authorId = c.authorId.toString(36);
                             for(var j = 0; j < c.children.length; j++) {
                                 c.children[j].id = c.children[j].id.toString(36);
                             }
@@ -122,7 +123,7 @@ module.exports = function(app, mysqlConnection) {
             }
         });
     });
-
+    
     app.post("/api/vote", function(req, res) {
         if(!req.body.thingId) {
             res.status(400);
@@ -386,7 +387,27 @@ module.exports = function(app, mysqlConnection) {
                 return;
             });
         });
-    })
+    });
+
+    app.get(/^\/api\/profile\//, function(req, res) {
+        var url = urlut.parse(req.originalUrl).pathname;
+        var id = url.substr(url.search("/profile/") + 9);
+        if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
+            res.status(400);
+            res.end("Invalid profile url");
+            return;
+        }
+        id = parseInt(id, 36);
+        mysqlConnection.query("SELECT id, name FROM users WHERE id = ?", [id], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length != 1) {
+                res.status(404);
+                res.end("This user doesn't exist");
+                return;
+            }
+            res.json(rows[0]);
+        });
+    });
 
     return {
         makeLocalAPICall: function(method, path, params, callback) {
