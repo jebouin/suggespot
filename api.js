@@ -30,13 +30,13 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.get("/api/suggestions", function(req, res) {
-        var userID = req.query.user;
+        var userId = req.query.user;
         var query;
         var params;
         var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) AS conf";
-        if(userID) {
+        if(userId) {
             query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ORDER BY conf DESC";
-            params = [userID];
+            params = [userId];
         } else {
             query = "SELECT id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author FROM suggestions ORDER BY conf DESC";
             params = [];
@@ -53,7 +53,7 @@ module.exports = function(app, mysqlConnection) {
 
     app.get(/\/api\/suggestion\//, function(req, res) {
         var url = urlut.parse(req.originalUrl).pathname;
-        var userID = req.query.id;
+        var userId = req.query.id;
         var id = url.substr(url.search("/suggestion/") + 12);
         if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
             res.status(400);
@@ -73,9 +73,9 @@ module.exports = function(app, mysqlConnection) {
                 var query, params;
                 var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
                 var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
-                if(userID) {
+                if(userId) {
                     query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? " + orderQuery;
-                    params = [suggestionData.id, userID];
+                    params = [suggestionData.id, userId];
                 } else {
                     query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? " + orderQuery;
                     params = [suggestionData.id];
@@ -109,8 +109,8 @@ module.exports = function(app, mysqlConnection) {
                 });
             }
 
-            if(userID) {
-                mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ? AND user = ?", [id, userID], function(err, voteRows, fields) {
+            if(userId) {
+                mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ? AND user = ?", [id, userId], function(err, voteRows, fields) {
                     if(voteRows.length != 1) {
                         sendComments();
                     } else {
@@ -124,14 +124,14 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.post("/api/vote", function(req, res) {
-        if(!req.body.thingID) {
+        if(!req.body.thingId) {
             res.status(400);
             res.end("No thing specified");
             return;
         }
-        if(!req.body.userID) {
+        if(!req.body.userId) {
             res.status(400);
-            res.end("No userID specified");
+            res.end("No userId specified");
             return;
         }
         if(!req.body.dir) {
@@ -139,9 +139,9 @@ module.exports = function(app, mysqlConnection) {
             res.end("No dir specified");
             return;
         }
-        var thing = utils.getThingFromID(req.body.thingID);
-        var userID = req.body.userID;
-        checkUserExists(userID, res, function(ok, row) {
+        var thing = utils.getThingFromId(req.body.thingId);
+        var userId = req.body.userId;
+        checkUserExists(userId, res, function(ok, row) {
             if(!ok) {
                 return;
             }
@@ -158,7 +158,7 @@ module.exports = function(app, mysqlConnection) {
                     }
                     var suggestionTitle = rows[0].title;
                     if(dir == 0) {
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?', [thing.id, userID], function(err, rows, fields) {
+                        mysqlConnection.query('SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
                                 res.status(400);
@@ -178,10 +178,10 @@ module.exports = function(app, mysqlConnection) {
                         });
                     } else {
                         var up = (dir == 1);
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?', [thing.id, userID], function(err, rows, fields) {
+                        mysqlConnection.query('SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             function registerVote() {
-                                mysqlConnection.query('INSERT INTO votes (dir, user, suggestion) VALUES (?, ?, ?)', [dir, userID, thing.id], function(err, rows, fields) {
+                                mysqlConnection.query('INSERT INTO votes (dir, user, suggestion) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
                                     if(err) throw err;
                                     logs.log("user " + colors.bold(username) + " " + (up ? "upvoted" : "downvoted") + " an entry " + colors.bold(suggestionTitle));
                                 });
@@ -221,7 +221,7 @@ module.exports = function(app, mysqlConnection) {
                     }
                     var commentAuthor = rows[0].author;
                     if(dir == 0) {
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE comment = ? AND user = ?', [thing.id, userID], function(err, rows, fields) {
+                        mysqlConnection.query('SELECT id, dir FROM votes WHERE comment = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
                                 res.status(400);
@@ -240,10 +240,10 @@ module.exports = function(app, mysqlConnection) {
                         });
                     } else {
                         var up = (dir == 1);
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE comment = ? AND user = ?', [thing.id, userID], function(err, rows, fields) {
+                        mysqlConnection.query('SELECT id, dir FROM votes WHERE comment = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             function registerVote() {
-                                mysqlConnection.query('INSERT INTO votes (dir, user, comment) VALUES (?, ?, ?)', [dir, userID, thing.id], function(err, rows, fields) {
+                                mysqlConnection.query('INSERT INTO votes (dir, user, comment) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
                                     if(err) throw err;
                                 });
                             }
@@ -277,14 +277,14 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.post("/api/comment", function (req, res) {
-        if(!req.body.suggestionID) {
+        if(!req.body.suggestionId) {
             res.status(400);
             res.end("No suggestion specified");
             return;
         }
-        if(!req.body.userID) {
+        if(!req.body.userId) {
             res.status(400);
-            res.end("No userID specified");
+            res.end("No userId specified");
             return;
         }
         if(!req.body.content) {
@@ -292,8 +292,8 @@ module.exports = function(app, mysqlConnection) {
             res.end("No comment specified");
             return;
         }
-        var id = parseInt(req.body.suggestionID, 36);
-        checkUserExists(req.body.userID, res, function(ok, row) {
+        var id = parseInt(req.body.suggestionId, 36);
+        checkUserExists(req.body.userId, res, function(ok, row) {
             var username = row.name;
             mysqlConnection.query('SELECT id, title FROM suggestions WHERE id = ?', [id], function(err, rows, fields) {
                 if(err) throw err;
@@ -307,10 +307,10 @@ module.exports = function(app, mysqlConnection) {
                     var query, params;
                     if(parent) {
                         query = 'INSERT INTO comments (author, content, suggestion, parent) VALUES (?, ?, ?, ?)';
-                        params = [req.body.userID, req.body.content, id, parent];
+                        params = [req.body.userId, req.body.content, id, parent];
                     } else {
                         query = 'INSERT INTO comments (author, content, suggestion) VALUES (?, ?, ?)';
-                        params = [req.body.userID, req.body.content, id];
+                        params = [req.body.userId, req.body.content, id];
                     }
                     mysqlConnection.query(query, params, function(err, rows, fields) {
                         if(err) throw err;
@@ -339,10 +339,10 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.post("/api/submit", function(req, res) {
-        var userID = req.body.userID;
-        if(!req.body.userID) {
+        var userId = req.body.userId;
+        if(!req.body.userId) {
             res.status(400);
-            res.end("No userID specified");
+            res.end("No userId specified");
             return;
         }
         if(!req.body.title) {
@@ -355,7 +355,7 @@ module.exports = function(app, mysqlConnection) {
             res.end("No description specified");
             return;
         }
-        checkUserExists(userID, res, function(ok, row) {
+        checkUserExists(userId, res, function(ok, row) {
             var username = row.name;
             var title = req.body.title;
             var descr = req.body.descr;
@@ -372,10 +372,10 @@ module.exports = function(app, mysqlConnection) {
                 lat *= 10000000;
                 lon *= 10000000;
                 query = 'INSERT INTO suggestions (title, descr, lat, lon, author) VALUES (?, ?, ?, ?, ?)';
-                params = [title, descr, lat, lon, userID];
+                params = [title, descr, lat, lon, userId];
             } else {
                 query = 'INSERT INTO suggestions (title, descr, author) VALUES (?, ?, ?)';
-                params = [title, descr, userID];
+                params = [title, descr, userId];
             }
             mysqlConnection.query(query, params, function(err, rows, fields) {
                 if(err) throw err;

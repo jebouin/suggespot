@@ -7,11 +7,11 @@ $(document).ready(function() {
     $("." + type + "vote", elm).click(function(event) {
       var tid = $(this).parent().attr("tid");
       if($(this).hasClass("voted")) {
-        $.post("/vote", {thingID: tid, dir: 0});
+        $.post("/vote", {thingId: tid, dir: 0});
         $(this).removeClass("voted");
         addVotes(-dir);
       } else {
-        $.post("/vote", {thingID: tid, dir: dir});
+        $.post("/vote", {thingId: tid, dir: dir});
         var optype = (type === "up" ? "down" : "up");
         $(this).addClass("voted");
         if($("." + optype + "vote", elm).hasClass("voted")) {

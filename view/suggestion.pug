@@ -17,7 +17,7 @@ html
     p#descr #{descr}
     h2 Comments
     form(action="/comment" method="POST")
-      input(type="hidden" name="suggestionID" value=sid)
+      input(type="hidden" name="suggestionId" value=sid)
       textarea.big(name="content" placeholder="Comment this entry" required)
       input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
     div#comments

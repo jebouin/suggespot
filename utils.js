@@ -36,20 +36,20 @@ module.exports = {
 		}
 		return url;
 	},
-	getThingFromID: function(id) {
+	getThingFromId: function(id) {
 		id = id.toString();
 		var pos = id.indexOf("_");
 		if(pos < 1) {
 			throw "Invalid thing id";
 		}
 		var thingType = parseInt(id.substring(0, pos), 36);
-		var thingID = parseInt(id.substring(pos + 1), 36);
+		var thingId = parseInt(id.substring(pos + 1), 36);
 		//0 = suggestion
 		//1 = comment
 		if(thingType < 0 || thingType > 1) {
 			throw "Thing type out of bounds";
 		}
-		return {type: thingType, id: thingID};
+		return {type: thingType, id: thingId};
 	},
 	voteDirToField: function(dir) {
 		if(dir == -1) {

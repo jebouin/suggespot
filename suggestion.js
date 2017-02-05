@@ -7,7 +7,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 	function createRoutes() {
 		app.post("/vote", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
-				api.makeLocalAPICall("POST", "/api/vote", {thingID: req.body.thingID, userID: data.id, dir: req.body.dir}, function(err, data) {
+				api.makeLocalAPICall("POST", "/api/vote", {thingId: req.body.thingId, userId: data.id, dir: req.body.dir}, function(err, data) {
 					res.end();
 				});
 			}, function() {
@@ -25,12 +25,12 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 		app.post("/submit", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
 				var params = req.body;
-				params.userID = data.id;
+				params.userId = data.id;
 				api.makeLocalAPICall("POST", "/api/submit", params, function(err, data) {
 					if(err) {
 						res.redirect("/");
 					} else {
-						api.makeLocalAPICall("POST", "/api/vote", {thingID: "0_" + data, userID: params.userID, dir: 1}, function(err, data) {
+						api.makeLocalAPICall("POST", "/api/vote", {thingId: "0_" + data, userId: params.userId, dir: 1}, function(err, data) {
 							if(err) {
 								res.redirect("/");
 							} else {
@@ -45,13 +45,13 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 		app.post("/comment", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
 				var params = req.body;
-				params.userID = data.id;
+				params.userId = data.id;
 				api.makeLocalAPICall("POST", "/api/comment", params, function(err, data) {
 					if(err) {
-						res.redirect("/s/" + req.body.suggestionID);
+						res.redirect("/s/" + req.body.suggestionId);
 					} else {
-						api.makeLocalAPICall("POST", "/api/vote", {thingID: "1_" + data, userID: params.userID, dir: 1}, function(err, data) {
-							res.redirect("/s/" + req.body.suggestionID);
+						api.makeLocalAPICall("POST", "/api/vote", {thingId: "1_" + data, userId: params.userId, dir: 1}, function(err, data) {
+							res.redirect("/s/" + req.body.suggestionId);
 						});
 					}
 				});
