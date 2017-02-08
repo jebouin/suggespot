@@ -17,24 +17,27 @@ html
     +voteUI("0_" + sid, score, voteDir, user)
     h2 #{title}
     p#descr #{descr}
-    h2 Comments
-    form(action="/comment" method="POST")
-      input(type="hidden" name="suggestionId" value=sid)
-      textarea.big(name="content" placeholder="Comment this entry" required)
-      input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
-    div#comments
-      if comments && comments.length
-        each c in comments
-          div.commentThread
-            +comment(c)
-            div.replies(cid=c.id)
-              each child in c.children
-                +comment(child)
-              if user
-                a(href="javascript:void(0)" onclick="reply(event)") reply
-      else if user
-        p Be the first to comment!
-    +commentUI(sid)
+    if published
+      h2 Comments
+      form(action="/comment" method="POST")
+        input(type="hidden" name="suggestionId" value=sid)
+        textarea.big(name="content" placeholder="Comment this entry" required)
+        input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
+      div#comments
+        if comments && comments.length
+          each c in comments
+            div.commentThread
+              +comment(c)
+              div.replies(cid=c.id)
+                each child in c.children
+                  +comment(child)
+                if user
+                  a(href="javascript:void(0)" onclick="reply(event)") reply
+        else if user
+          p Be the first to comment!
+      +commentUI(sid)
+    else
+      button.big#publishButton Publish
     script(src="/libs/jquery.js")
     script(src="/view/scripts/suggestionScript.js")
     script(src="/view/scripts/voteUI.js")

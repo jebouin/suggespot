@@ -35,10 +35,10 @@ module.exports = function(app, mysqlConnection) {
         var params;
         var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) AS conf";
         if(userId) {
-            query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ORDER BY conf DESC";
+            query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? WHERE published = 1 ORDER BY conf DESC";
             params = [userId];
         } else {
-            query = "SELECT id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author FROM suggestions ORDER BY conf DESC";
+            query = "SELECT id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author FROM suggestions WHERE published = 1 ORDER BY conf DESC";
             params = [];
         }
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -61,7 +61,7 @@ module.exports = function(app, mysqlConnection) {
             return;
         }
         id = parseInt(id, 36);
-        mysqlConnection.query("SELECT id, title, descr, upvotes - downvotes AS score FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
+        mysqlConnection.query("SELECT id, title, descr, author, upvotes - downvotes AS score, published FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
@@ -69,6 +69,11 @@ module.exports = function(app, mysqlConnection) {
                 return;
             }
             var suggestionData = rows[0];
+            if(suggestionData.published == 0 && (!userId || userId != suggestionData.author)) {
+                res.status(401);
+                res.end("This suggestion is private and you are not the author");
+                return;
+            }
             function sendComments(voteDir) {
                 var query, params;
                 var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
@@ -106,7 +111,7 @@ module.exports = function(app, mysqlConnection) {
                             formattedComments.push(c);
                         }
                     }
-                    res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), score: suggestionData.score, comments: formattedComments, voteDir: voteDir});
+                    res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), score: suggestionData.score, comments: formattedComments, voteDir: voteDir, published: suggestionData.published});
                 });
             }
 
@@ -389,16 +394,64 @@ module.exports = function(app, mysqlConnection) {
         });
     });
 
-    app.get(/^\/api\/profile\//, function(req, res) {
-        var url = urlut.parse(req.originalUrl).pathname;
-        var id = url.substr(url.search("/profile/") + 9);
-        if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
+    app.post("/api/publish", function(req, res) {
+        if(!req.body.sid) {
             res.status(400);
-            res.end("Invalid profile url");
+            res.end("No suggestion specified");
             return;
         }
-        id = parseInt(id, 36);
-        mysqlConnection.query("SELECT id, name FROM users WHERE id = ?", [id], function(err, rows, fields) {
+        if(!req.body.userId) {
+            res.status(400);
+            res.end("No userId specified");
+            return;
+        }
+        var userId = parseInt(req.body.userId, 36);
+        if(userId == NaN) {
+            res.status(400);
+            res.end("Incorrect userId");
+            return;
+        }
+        var sid = parseInt(req.body.sid, 36);
+        if(sid == NaN) {
+            res.status(400);
+            res.end("Incorrect suggestion id");
+            return;
+        }
+        mysqlConnection.query("SELECT id, author FROM suggestions WHERE id = ?", [sid], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length != 1) {
+                res.status(404);
+                res.end("This suggestion doesn't exist");
+                return;
+            }
+            if(rows[0].author != userId) {
+                res.status(401);
+                res.end("This suggestion is private and you are not the author");
+                return;
+            }
+            mysqlConnection.query("UPDATE suggestions SET published = 1 WHERE id = ?", [sid], function(err, rows, fields) {
+                if(err) throw err;
+                //check rows?
+                res.status(200);
+                res.end();
+                return;
+            });
+        });
+    });
+
+    app.get("/api/profile", function(req, res) {
+        if(!req.query.userId) {
+            res.status(400);
+            res.end("No userId specified");
+            return;
+        }
+        var userId = parseInt(req.query.userId, 36);
+        if(userId == NaN) {
+            res.status(400);
+            res.end("Incorrect userId");
+            return;
+        }
+        mysqlConnection.query("SELECT id, name FROM users WHERE id = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);

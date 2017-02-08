@@ -1,8 +1,18 @@
+function getSid() {
+	return window.location.pathname.substr(3);
+}
+
 $(document).ready(function() {
 	$(document).keydown(function(e) {
-  	if(e.which === 13 && e.ctrlKey) {
+  		if(e.which === 13 && e.ctrlKey) {
     		$("input[type='submit'").click();
     	}
+	});
+	$("#publishButton").click(function(e) {
+		var sid = getSid();
+		$.post("/publish", {sid: sid}, function(data) {
+			window.location.reload(true);
+		});
 	});
 });
 

@@ -30,17 +30,33 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 					if(err) {
 						res.redirect("/");
 					} else {
+						var sid = data;
 						api.makeLocalAPICall("POST", "/api/vote", {thingId: "0_" + data, userId: params.userId, dir: 1}, function(err, data) {
 							if(err) {
 								res.redirect("/");
 							} else {
-								res.redirect("/s/" + data);
+								res.redirect("/s/" + sid);
 							}
 						});
 					}
 				});
 			});
 		});
+
+		app.post("/publish", function(req, res) {
+			var url = req.originalUrl;
+			var id = req.body.sid;
+			auth.checkUserLoggedIn(req, res, function(data) {
+				api.makeLocalAPICall("POST", "/api/publish", {userId: data.id, sid: id}, function(err, publishData) {
+					if(err) {
+						res.redirect("/");
+						return;
+					}
+					res.status(200);
+					res.end();
+				});
+			});
+		})
 
 		app.post("/comment", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {

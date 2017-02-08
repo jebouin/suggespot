@@ -19,7 +19,8 @@ html
       button.big(onclick="location.href='/preferences'") Preferences
       button.big(onclick="location.href='/logout'") Log Out
     if suggestions && suggestions.length
-      h2 Suggestions (#{suggestions.length})
+      if false
+        h2 Suggestions (#{suggestions.length})
       each s in suggestions
         +suggestion(s)
     else
