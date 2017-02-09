@@ -43,13 +43,27 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			});
 		});
 
+		app.post("/edit", function(req, res) {
+			auth.checkUserLoggedIn(req, res, function(data) {
+				api.makeLocalAPICall("POST", "/api/edit", {user: data, edit: req.body}, function(err, editData) {
+					if(err) {
+						res.status(500);
+						res.end();
+						return;
+					}
+					res.status(200);
+					res.end();
+				});
+			})
+		});
+
 		app.post("/publish", function(req, res) {
-			var url = req.originalUrl;
 			var id = req.body.sid;
 			auth.checkUserLoggedIn(req, res, function(data) {
 				api.makeLocalAPICall("POST", "/api/publish", {userId: data.id, sid: id}, function(err, publishData) {
-					if(err) {
-						res.redirect("/");
+					if(err) {	
+						res.status(500);
+						res.end();
 						return;
 					}
 					res.status(200);

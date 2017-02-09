@@ -61,7 +61,7 @@ module.exports = function(app, mysqlConnection) {
             return;
         }
         id = parseInt(id, 36);
-        mysqlConnection.query("SELECT id, title, descr, author, upvotes - downvotes AS score, published FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
+        mysqlConnection.query("SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, upvotes - downvotes AS score, published FROM suggestions INNER JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
@@ -70,7 +70,7 @@ module.exports = function(app, mysqlConnection) {
             }
             var suggestionData = rows[0];
             if(suggestionData.published == 0 && (!userId || userId != suggestionData.author)) {
-                res.status(401);
+                res.status(403);
                 res.end("This suggestion is private and you are not the author");
                 return;
             }
@@ -111,7 +111,15 @@ module.exports = function(app, mysqlConnection) {
                             formattedComments.push(c);
                         }
                     }
-                    res.json({title: suggestionData.title, descr: suggestionData.descr, sid: suggestionData.id.toString(36), score: suggestionData.score, comments: formattedComments, voteDir: voteDir, published: suggestionData.published});
+                    res.json({title: suggestionData.title, 
+                              descr: suggestionData.descr, 
+                              author: suggestionData.author, 
+                              authorName: suggestionData.authorName,
+                              sid: suggestionData.id.toString(36), 
+                              score: suggestionData.score, 
+                              comments: formattedComments, 
+                              voteDir: voteDir, 
+                              published: suggestionData.published});
                 });
             }
 
@@ -394,6 +402,50 @@ module.exports = function(app, mysqlConnection) {
         });
     });
 
+    app.post("/api/edit", function(req, res) {
+        if(!req.body.user || !req.body.edit) {
+            res.status(400);
+            res.end("The body object should have user and edit properties");
+            return;
+        }
+        var user = req.body.user;
+        user.id = parseInt(user.id, 36);
+        var edit = req.body.edit;
+        if(!edit.thingId) {
+            res.status(400);
+            res.end("No thingId specified");
+            return;
+        }
+        var thing = utils.getThingFromId(edit.thingId);
+        if(thing.type == 0) {
+            mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
+                if(err) throw err;
+                if(rows.length != 1) {
+                    res.status(404);
+                    res.end("This suggestion doesn't exist");
+                    return;
+                }
+                var suggestion = rows[0];
+                if(suggestion.author != user.id) {
+                    res.status(402);
+                    res.end("This suggestion is not yours");
+                    return;
+                }
+                function onEditFinished() {
+                    logs.log("user " + colors.bold(user.name) + " edited their suggestion " + colors.bold(suggestion.title));
+                }
+                //if descr...
+                mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
+                    if(err) throw err;
+                    onEditFinished();
+                    res.status(200);
+                    res.end();
+                    return;
+                });
+            });
+        }
+    });
+
     app.post("/api/publish", function(req, res) {
         if(!req.body.sid) {
             res.status(400);
@@ -425,7 +477,7 @@ module.exports = function(app, mysqlConnection) {
                 return;
             }
             if(rows[0].author != userId) {
-                res.status(401);
+                res.status(403);
                 res.end("This suggestion is private and you are not the author");
                 return;
             }

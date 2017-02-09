@@ -14,6 +14,29 @@ $(document).ready(function() {
 			window.location.reload(true);
 		});
 	});
+
+	$(document).on("click", ".editLink", function(e) {
+		var target = $(e.target);
+		target.text("Save");
+		target.attr("class", "saveLink");
+		var editUI = $("#editUI");
+		var descr = $("p#descr");
+		editUI.css("display", "block");
+		descr.css("display", "none");
+		$("textarea", editUI).text(descr.text());
+		editUI.insertAfter(descr);
+	});
+	$(document).on("click", ".saveLink", function(e) {
+		var target = $(e.target);
+		target.text("Edit");
+		target.attr("class", "editLink");
+		var editUI = $("#editUI");
+		var descr = $("textarea", editUI).val();
+		$.post("/edit", {thingId: "0_" + getSid(), descr: descr}, function(data) {
+			editUI.css("display", "none");
+			$("p#descr").text(descr).css("display", "block");
+		});
+	});
 });
 
 function reply(event) {
