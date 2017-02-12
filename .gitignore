@@ -5,3 +5,4 @@ node_modules
 features.txt
 logs
 todo.txt
+uploads/*

@@ -1,19 +1,31 @@
 //todo: add database error
 //todo: generalize errors
 
+const logs = require("./logs");
 const http = require("http");
 const rq = require("request");
 const urlut = require("url");
-const logs = require("./logs");
+const multer = require("multer");
 
-module.exports = function(app, mysqlConnection) {
+var upload = multer({
+    dest: __dirname + "/uploads"
+});
+
+module.exports = function(app, mysqlConnection, auth) {
+
+    function checkParam(params, toCheck) {
+        if(!params[toCheck]) {
+            throw "parameter " + toCheck + " is missing";
+        }
+        return params[toCheck];
+    }
 
     function checkUserExists(id, res, callback) {
         mysqlConnection.query("SELECT name FROM users WHERE id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
-                res.end("This user doesn't exist");
+                res.end("this user doesn't exist");
                 return;
             }
             callback(true, rows[0]);
@@ -30,7 +42,7 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.get("/api/suggestions", function(req, res) {
-        var userId = req.query.user;
+        var userId = req.query.userId;
         var query;
         var params;
         var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) AS conf";
@@ -57,7 +69,7 @@ module.exports = function(app, mysqlConnection) {
         var id = url.substr(url.search("/suggestion/") + 12);
         if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
             res.status(400);
-            res.end("Invalid suggestion url");
+            res.end("invalid suggestion url");
             return;
         }
         id = parseInt(id, 36);
@@ -65,13 +77,13 @@ module.exports = function(app, mysqlConnection) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
-                res.end("This suggestion doesn't exist");
+                res.end("this suggestion doesn't exist");
                 return;
             }
             var suggestionData = rows[0];
             if(suggestionData.published == 0 && (!userId || userId != suggestionData.author)) {
                 res.status(403);
-                res.end("This suggestion is private and you are not the author");
+                res.end("this suggestion is private and you are not the author");
                 return;
             }
             function sendComments(voteDir) {
@@ -138,28 +150,20 @@ module.exports = function(app, mysqlConnection) {
     });
     
     app.post("/api/vote", function(req, res) {
-        if(!req.body.thingId) {
+        try {
+            var thingId = checkParam(req.body, "thingId");
+            var userId = checkParam(req.body, "userId");
+            var dir = checkParam(req.body, "dir");
+            var thing = utils.getThingFromId(req.body.thingId);
+        } catch(e) {
             res.status(400);
-            res.end("No thing specified");
+            res.end(e)
             return;
         }
-        if(!req.body.userId) {
-            res.status(400);
-            res.end("No userId specified");
-            return;
-        }
-        if(!req.body.dir) {
-            res.status(400);
-            res.end("No dir specified");
-            return;
-        }
-        var thing = utils.getThingFromId(req.body.thingId);
-        var userId = req.body.userId;
         checkUserExists(userId, res, function(ok, row) {
             if(!ok) {
                 return;
             }
-            var dir = req.body.dir;
             var dirField = utils.voteDirToField(dir);
             var username = row.name;
             if(thing.type === 0) {
@@ -167,7 +171,7 @@ module.exports = function(app, mysqlConnection) {
                     if(err) throw err;
                     if(rows.length != 1) {
                         res.status(404);
-                        res.end("This suggestion doesn't exist");
+                        res.end("this suggestion doesn't exist");
                         return;
                     }
                     var suggestionTitle = rows[0].title;
@@ -176,7 +180,7 @@ module.exports = function(app, mysqlConnection) {
                             if(err) throw err;
                             if(rows.length != 1) {
                                 res.status(400);
-                                res.end("No vote to cancel");
+                                res.end("no vote to cancel");
                                 return;
                             } else {
                                 var prevDir = rows[0].dir;
@@ -230,7 +234,7 @@ module.exports = function(app, mysqlConnection) {
                     if(err) throw err;
                     if(rows.length != 1) {
                         res.status(404);
-                        res.end("This comment doesn't exist");
+                        res.end("this comment doesn't exist");
                         return;
                     }
                     var commentAuthor = rows[0].author;
@@ -239,7 +243,7 @@ module.exports = function(app, mysqlConnection) {
                             if(err) throw err;
                             if(rows.length != 1) {
                                 res.status(400);
-                                res.end("No vote to cancel");
+                                res.end("no vote to cancel");
                                 return;
                             } else {
                                 var prevDir = rows[0].dir;
@@ -291,29 +295,23 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.post("/api/comment", function (req, res) {
-        if(!req.body.suggestionId) {
+        try {
+            var suggestionId = checkParam(req.body, "suggestionId");
+            var userId = checkParam(req.body, "userId");
+            var content = checkParam(req.body, "content");
+        } catch(e) {
             res.status(400);
-            res.end("No suggestion specified");
+            res.end(e);
             return;
         }
-        if(!req.body.userId) {
-            res.status(400);
-            res.end("No userId specified");
-            return;
-        }
-        if(!req.body.content) {
-            res.status(400);
-            res.end("No comment specified");
-            return;
-        }
-        var id = parseInt(req.body.suggestionId, 36);
-        checkUserExists(req.body.userId, res, function(ok, row) {
+        var id = parseInt(suggestionId, 36);
+        checkUserExists(userId, res, function(ok, row) {
             var username = row.name;
             mysqlConnection.query('SELECT id, title FROM suggestions WHERE id = ?', [id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
                     res.status(404);
-                    res.end("This suggestion doesn't exist");
+                    res.end("this suggestion doesn't exist");
                     return;
                 }
                 var suggestionData = rows[0];
@@ -321,10 +319,10 @@ module.exports = function(app, mysqlConnection) {
                     var query, params;
                     if(parent) {
                         query = 'INSERT INTO comments (author, content, suggestion, parent) VALUES (?, ?, ?, ?)';
-                        params = [req.body.userId, req.body.content, id, parent];
+                        params = [userId, content, id, parent];
                     } else {
                         query = 'INSERT INTO comments (author, content, suggestion) VALUES (?, ?, ?)';
-                        params = [req.body.userId, req.body.content, id];
+                        params = [userId, content, id];
                     }
                     mysqlConnection.query(query, params, function(err, rows, fields) {
                         if(err) throw err;
@@ -340,7 +338,7 @@ module.exports = function(app, mysqlConnection) {
                         if(err) throw err;
                         if(rows.length != 1) {
                             res.status(404);
-                            res.end("This parent comment doesn't exist");
+                            res.end("this parent comment doesn't exist");
                             return;
                         }
                         sendComment(parent);
@@ -353,26 +351,17 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.post("/api/submit", function(req, res) {
-        var userId = req.body.userId;
-        if(!req.body.userId) {
+        try {
+            var userId = checkParam(req.body, "userId");
+            var title = checkParam(req.body, "title");
+            var descr = checkParam(req.body, "descr");
+        } catch(e) {
             res.status(400);
-            res.end("No userId specified");
-            return;
-        }
-        if(!req.body.title) {
-            res.status(400);
-            res.end("No title specified");
-            return;
-        }
-        if(!req.body.descr) {
-            res.status(400);
-            res.end("No description specified");
+            res.end(e);
             return;
         }
         checkUserExists(userId, res, function(ok, row) {
             var username = row.name;
-            var title = req.body.title;
-            var descr = req.body.descr;
             var lat = req.body.lat;
             var lon = req.body.lon;
             function removeSpecialChars(str) {
@@ -403,32 +392,29 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.post("/api/edit", function(req, res) {
-        if(!req.body.user || !req.body.edit) {
+        try {
+            var user = checkParam(req.body.user, "user");
+            var edit = checkParam(req.body.user, "edit");
+            var thingId = checkParam(req.body.thingId, "thingId");
+            var thing = utils.getThingFromId(edit.thingId);
+        } catch(e) {
             res.status(400);
-            res.end("The body object should have user and edit properties");
+            res.end(e);
             return;
         }
-        var user = req.body.user;
         user.id = parseInt(user.id, 36);
-        var edit = req.body.edit;
-        if(!edit.thingId) {
-            res.status(400);
-            res.end("No thingId specified");
-            return;
-        }
-        var thing = utils.getThingFromId(edit.thingId);
         if(thing.type == 0) {
             mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
                     res.status(404);
-                    res.end("This suggestion doesn't exist");
+                    res.end("this suggestion doesn't exist");
                     return;
                 }
                 var suggestion = rows[0];
                 if(suggestion.author != user.id) {
                     res.status(402);
-                    res.end("This suggestion is not yours");
+                    res.end("this suggestion is not yours");
                     return;
                 }
                 function onEditFinished() {
@@ -446,42 +432,72 @@ module.exports = function(app, mysqlConnection) {
         }
     });
 
+    app.post("/api/upload", upload.single("photo"), function(req, res) {
+        function upload(req, res) {
+            try {
+                var userId = checkParam(req.body, "userId");
+                var thingId = checkParam(req.body, "thingId");
+                var thing = utils.getThingFromId(thingId);
+                if(thing.type == 1) {
+                    throw "you can't upload a photo for a comment";
+                }
+            } catch(e) {
+                res.status(400);
+                res.end(e);
+                return;
+            }
+            mysqlConnection.query("SELECT id FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
+                if(err) throw err;
+                if(rows.length != 1) {
+                    res.status(404);
+                    res.end("this suggestion doesn't exist");
+                    return;
+                }
+                var newPath = "/uploads/" + thing.id + utils.fileExtension(req.file.originalname);
+                fs.rename(req.file.path, __dirname + newPath);
+                res.status(200);
+                res.end(newPath);
+                return;
+            });
+        }
+
+        auth.checkUserLoggedIn(req, res, function(data) {
+            req.body.userId = data.id;
+            upload(req, res);
+        }, function() {
+            res.status(400);
+            res.end("authentification error");
+            return;
+        });
+    });
+
     app.post("/api/publish", function(req, res) {
-        if(!req.body.sid) {
+        try {
+            var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            if(suggestionId == NaN) {
+                throw "incorrect suggestionId";
+            } else if(userId == NaN) {
+                throw "incorrect userId";
+            }
+        } catch(e) {
             res.status(400);
-            res.end("No suggestion specified");
+            res.end(e);
             return;
         }
-        if(!req.body.userId) {
-            res.status(400);
-            res.end("No userId specified");
-            return;
-        }
-        var userId = parseInt(req.body.userId, 36);
-        if(userId == NaN) {
-            res.status(400);
-            res.end("Incorrect userId");
-            return;
-        }
-        var sid = parseInt(req.body.sid, 36);
-        if(sid == NaN) {
-            res.status(400);
-            res.end("Incorrect suggestion id");
-            return;
-        }
-        mysqlConnection.query("SELECT id, author FROM suggestions WHERE id = ?", [sid], function(err, rows, fields) {
+        mysqlConnection.query("SELECT id, author FROM suggestions WHERE id = ?", [suggestionId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
-                res.end("This suggestion doesn't exist");
+                res.end("this suggestion doesn't exist");
                 return;
             }
             if(rows[0].author != userId) {
                 res.status(403);
-                res.end("This suggestion is private and you are not the author");
+                res.end("this suggestion is private and you are not the author");
                 return;
             }
-            mysqlConnection.query("UPDATE suggestions SET published = 1 WHERE id = ?", [sid], function(err, rows, fields) {
+            mysqlConnection.query("UPDATE suggestions SET published = 1 WHERE id = ?", [suggestionId], function(err, rows, fields) {
                 if(err) throw err;
                 //check rows?
                 res.status(200);
@@ -492,22 +508,21 @@ module.exports = function(app, mysqlConnection) {
     });
 
     app.get("/api/profile", function(req, res) {
-        if(!req.query.userId) {
+        try {
+            var userId = parseInt(checkParam(req.query, "userId"), 36);
+            if(userId == NaN) {
+                throw "incorrect userId";
+            }
+        } catch(e) {
             res.status(400);
-            res.end("No userId specified");
-            return;
-        }
-        var userId = parseInt(req.query.userId, 36);
-        if(userId == NaN) {
-            res.status(400);
-            res.end("Incorrect userId");
+            res.end(e);
             return;
         }
         mysqlConnection.query("SELECT id, name FROM users WHERE id = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
-                res.end("This user doesn't exist");
+                res.end("this user doesn't exist");
                 return;
             }
             res.json(rows[0]);

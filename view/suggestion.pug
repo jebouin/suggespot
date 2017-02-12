@@ -1,6 +1,7 @@
 include voteUI
 include commentUI
 include editUI
+include uploadUI
 
 mixin comment(c)
   div.comment
@@ -23,8 +24,13 @@ html
       p 
         | By&nbsp;
         a(href="/p/"+author) #{authorName}
+        | &nbsp;
         if user.id == author
+          +editUI()
+          +uploadUI()
           a.editLink(href="javascript:void(0)") Edit
+          | &nbsp;
+          a.uploadLink(href="javascript:void(0)") Upload Photo
     if published
       h2 Comments
       form(action="/comment" method="POST")
@@ -46,7 +52,6 @@ html
       +commentUI(sid)
     else
       button.big#publishButton Publish
-    +editUI("test")
     script(src="/libs/jquery.js")
     script(src="/view/scripts/suggestionScript.js")
     script(src="/view/scripts/voteUI.js")

@@ -9,7 +9,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			params.lon = req.body.lon;
 		}
 		if(loginData) {
-			params.user = loginData.id;
+			params.userId = loginData.id;
 			loginData.id = loginData.id.toString(36);
 		}
 		api.makeLocalAPICall("GET", "/api/suggestions", params, function(err, suggestionData) {

@@ -37,6 +37,57 @@ $(document).ready(function() {
 			$("p#descr").text(descr).css("display", "block");
 		});
 	});
+
+	$(document).on("click", ".uploadLink", function(e) {
+		var target = $(e.target);
+		target.text("Cancel upload");
+		target.attr("class", "cancelUploadLink");
+		var uploadUI = $(".uploadUI");
+		uploadUI.css("display", "block");
+	});
+	$(document).on("click", ".cancelUploadLink", function(e) {
+		var target = $(e.target);
+		target.text("Upload photo");
+		target.attr("class", "uploadLink");
+		var uploadUI = $(".uploadUI");
+		uploadUI.css("display", "none");
+	});
+
+	$(".uploadUI > :button").on("click", function(e) {
+		var files = $(".uploadUI > :file")[0].files;
+		var formData = new FormData();
+		formData.append("photo", files[0]);
+		formData.append("thingId", "0_" + getSid());
+		$.ajax({
+			url: "/upload",
+        	type: "POST",
+        	data: formData,
+        	cache: false,
+        	contentType: false,
+        	processData: false,
+        	xhr: function() {
+	            var xhr = $.ajaxSettings.xhr();
+	            if (xhr.upload) {
+	                xhr.upload.addEventListener('progress', function(e) {
+	                    if (e.lengthComputable) {
+	                        /*$('progress').attr({
+	                            value: e.loaded,
+	                            max: e.total,
+	                        });*/
+	                        console.log(e.loaded, e.total);
+	                    }
+	                }, false);
+	            }
+	            return xhr;
+	        },
+	        error: function(xhr, err) {},
+	        success: function(data) {
+	        	$(".cancelUploadLink").text("Upload photo");
+	        	$(".uploadUI").css("display", "none");
+	        	$("<img src='" + data + "'>").appendTo("#suggestionBody");
+	        }
+	    });
+	});
 });
 
 function reply(event) {

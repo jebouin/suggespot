@@ -26,7 +26,7 @@ module.exports = {
 		return new Date(Date.now() + 2592000000);
 	},
 	sendFile: function(res, url) {
-		res.sendFile(url, {root: global.rootDir});
+		res.sendFile(url, {root: __dirname});
 	},
 	getUrlWithParameters: function(url, params) {
 		var f = true;
@@ -40,16 +40,19 @@ module.exports = {
 		id = id.toString();
 		var pos = id.indexOf("_");
 		if(pos < 1) {
-			throw "Invalid thing id";
+			throw "invalid thing id";
 		}
 		var thingType = parseInt(id.substring(0, pos), 36);
 		var thingId = parseInt(id.substring(pos + 1), 36);
 		//0 = suggestion
 		//1 = comment
 		if(thingType < 0 || thingType > 1) {
-			throw "Thing type out of bounds";
+			throw "thing type out of bounds";
 		}
 		return {type: thingType, id: thingId};
+	},
+	fileExtension: function(fileName) {
+		return "." + fileName.split('.').pop();
 	},
 	voteDirToField: function(dir) {
 		if(dir == -1) {

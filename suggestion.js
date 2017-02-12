@@ -57,11 +57,15 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			})
 		});
 
+		app.post("/upload", function(req, res) {
+			res.redirect(307, "/api/upload");
+		});
+
 		app.post("/publish", function(req, res) {
 			var id = req.body.sid;
 			auth.checkUserLoggedIn(req, res, function(data) {
-				api.makeLocalAPICall("POST", "/api/publish", {userId: data.id, sid: id}, function(err, publishData) {
-					if(err) {	
+				api.makeLocalAPICall("POST", "/api/publish", {userId: data.id, suggestionId: id}, function(err, publishData) {
+					if(err) {
 						res.status(500);
 						res.end();
 						return;

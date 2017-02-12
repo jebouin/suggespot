@@ -2,7 +2,6 @@ const logs = require("./logs");
 logs.log("starting server...");
 const fs = require("fs");
 global.config = JSON.parse(fs.readFileSync("config.json"));
-global.rootDir = global.config.rootDir;
 const express = require("express");
 const app = express();
 const mysql = require("mysql");
@@ -17,14 +16,15 @@ var connection = mysql.createConnection({
 	charset : "utf8mb4"
 });
 
+app.use(express.static(global.config.uploadDir));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
 const utils = require("./utils");
-const api = require("./api")(app, connection);
 const view = require("./view")(app);
 const auth = require("./auth")(app, connection, view);
+const api = require("./api")(app, connection, auth);
 const suggestion = require("./suggestion")(app, connection, auth, view, api);
 const discover = require("./discover")(app, connection, auth, view, api);
 const profile = require("./profile")(app, connection, auth, view, api);
@@ -68,6 +68,15 @@ app.get("/libs/jquery.js", function(req, res) {
 });
 
 app.get("/view/scripts/*", function(req, res) {
+	try {
+		utils.sendFile(res, req.url);
+	} catch(e) {
+		res.status(404);
+		res.end();
+	}
+});
+
+app.get("/uploads/*", function(req, res) {
 	try {
 		utils.sendFile(res, req.url);
 	} catch(e) {
