@@ -29,7 +29,7 @@ html
         | By&nbsp;
         a(href="/p/"+author) #{authorName}
         | &nbsp;
-        if user.id == author
+        if user && user.id == author
           +editUI()
           +uploadUI()
           a.editLink(href="javascript:void(0)") Edit

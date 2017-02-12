@@ -99,7 +99,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.end("this suggestion is private and you are not the author");
                 return;
             }
-            function sendComments(voteDir, photos) {
+            function sendComments(photos, voteDir) {
                 var query, params;
                 var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
                 var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
@@ -158,7 +158,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         if(voteRows.length != 1) {
                             sendComments(photoRows);
                         } else {
-                            sendComments(voteRows[0].dir, photoRows);
+                            sendComments(photoRows, voteRows[0].dir);
                         }
                     })
                 } else {
