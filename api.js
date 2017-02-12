@@ -7,15 +7,28 @@ const rq = require("request");
 const urlut = require("url");
 const multer = require("multer");
 
-var upload = multer({
-    dest: __dirname + "/uploads"
+const imageMimeTypes = ["image/png", "image/bmp", "image/jpeg", "image/gif"];
+
+var storage = multer.diskStorage({
+    destination: function (req, file, callback) {
+        if(imageMimeTypes.indexOf(file.mimetype) < 0) {
+            callback(new Error("this file type is not allowed"), null);
+        } else {
+            callback(null, __dirname + "/uploads");
+        }
+    }
 });
+
+var uploadPhoto = multer({
+    storage: storage,
+    limits: { fileSize: 5 * (1 << 20)}
+}).single("photo");
 
 module.exports = function(app, mysqlConnection, auth) {
 
     function checkParam(params, toCheck) {
         if(!params[toCheck]) {
-            throw "parameter " + toCheck + " is missing";
+            throw new Error("parameter " + toCheck + " is missing");
         }
         return params[toCheck];
     }
@@ -157,7 +170,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var thing = utils.getThingFromId(req.body.thingId);
         } catch(e) {
             res.status(400);
-            res.end(e)
+            res.end(e.message)
             return;
         }
         checkUserExists(userId, res, function(ok, row) {
@@ -301,7 +314,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var content = checkParam(req.body, "content");
         } catch(e) {
             res.status(400);
-            res.end(e);
+            res.end(e.message);
             return;
         }
         var id = parseInt(suggestionId, 36);
@@ -357,7 +370,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var descr = checkParam(req.body, "descr");
         } catch(e) {
             res.status(400);
-            res.end(e);
+            res.end(e.message);
             return;
         }
         checkUserExists(userId, res, function(ok, row) {
@@ -393,13 +406,13 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/edit", function(req, res) {
         try {
-            var user = checkParam(req.body.user, "user");
-            var edit = checkParam(req.body.user, "edit");
-            var thingId = checkParam(req.body.thingId, "thingId");
+            var user = checkParam(req.body, "user");
+            var edit = checkParam(req.body, "edit");
+            var thingId = checkParam(req.body, "thingId");
             var thing = utils.getThingFromId(edit.thingId);
         } catch(e) {
             res.status(400);
-            res.end(e);
+            res.end(e.message);
             return;
         }
         user.id = parseInt(user.id, 36);
@@ -413,7 +426,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 }
                 var suggestion = rows[0];
                 if(suggestion.author != user.id) {
-                    res.status(402);
+                    res.status(401);
                     res.end("this suggestion is not yours");
                     return;
                 }
@@ -432,42 +445,56 @@ module.exports = function(app, mysqlConnection, auth) {
         }
     });
 
-    app.post("/api/upload", upload.single("photo"), function(req, res) {
-        function upload(req, res) {
-            try {
-                var userId = checkParam(req.body, "userId");
-                var thingId = checkParam(req.body, "thingId");
-                var thing = utils.getThingFromId(thingId);
-                if(thing.type == 1) {
-                    throw "you can't upload a photo for a comment";
-                }
-            } catch(e) {
-                res.status(400);
-                res.end(e);
-                return;
-            }
-            mysqlConnection.query("SELECT id FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
-                if(err) throw err;
-                if(rows.length != 1) {
-                    res.status(404);
-                    res.end("this suggestion doesn't exist");
+    app.post("/api/upload", function(req, res) {
+        uploadPhoto(req, res, function(err) {
+            auth.checkUserLoggedIn(req, res, function(data) {
+                req.body.userId = data.id;
+                try {
+                    var userId = checkParam(req.body, "userId");
+                    var thingId = checkParam(req.body, "thingId");
+                    var thing = utils.getThingFromId(thingId);
+                    if(thing.type == 1) {
+                        throw "you can't upload a photo for a comment";
+                    } 
+                } catch(e) {
+                    res.status(400);
+                    res.end(e.message);
                     return;
                 }
-                var newPath = "/uploads/" + thing.id + utils.fileExtension(req.file.originalname);
-                fs.rename(req.file.path, __dirname + newPath);
-                res.status(200);
-                res.end(newPath);
+                mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
+                    if(err) throw err;
+                    if(rows.length != 1) {
+                        res.status(404);
+                        res.end("this suggestion doesn't exist");
+                        return;
+                    }
+                    var suggestion = rows[0];
+                    if(suggestion.author != userId) {
+                        res.status(401);
+                        res.end("this suggestion is not yours");
+                        return;
+                    }
+                    mysqlConnection.query("SELECT COUNT(id) AS count FROM photos WHERE suggestion = ?", [thing.id], function(err, rows, fields) {
+                        if(err) throw err;
+                        var count = rows[0].count;
+                        var newPath = "/uploads/" + thing.id + "_" + count + utils.fileExtension(req.file.originalname);
+                        mysqlConnection.query("INSERT INTO photos (path, suggestion) VALUES (?, ?)", [newPath, thing.id], function(err, rows, fields) {
+                            if(err) {
+                                throw err;
+                                fs.unlinkSync(req.file.path);
+                            }
+                            fs.rename(req.file.path, __dirname + newPath);
+                            logs.log("new photo for suggestion " + colors.bold(suggestion.title));
+                            res.status(201);
+                            res.end(newPath);
+                        });
+                    });
+                });
+            }, function() {
+                res.status(401);
+                res.end("authentification error");
                 return;
             });
-        }
-
-        auth.checkUserLoggedIn(req, res, function(data) {
-            req.body.userId = data.id;
-            upload(req, res);
-        }, function() {
-            res.status(400);
-            res.end("authentification error");
-            return;
         });
     });
 
@@ -482,7 +509,7 @@ module.exports = function(app, mysqlConnection, auth) {
             }
         } catch(e) {
             res.status(400);
-            res.end(e);
+            res.end(e.message);
             return;
         }
         mysqlConnection.query("SELECT id, author FROM suggestions WHERE id = ?", [suggestionId], function(err, rows, fields) {
@@ -515,7 +542,7 @@ module.exports = function(app, mysqlConnection, auth) {
             }
         } catch(e) {
             res.status(400);
-            res.end(e);
+            res.end(e.message);
             return;
         }
         mysqlConnection.query("SELECT id, name FROM users WHERE id = ?", [userId], function(err, rows, fields) {
@@ -533,7 +560,7 @@ module.exports = function(app, mysqlConnection, auth) {
         makeLocalAPICall: function(method, path, params, callback) {
             function reqCallback(err, res, body) {
                 if(callback) {
-                    if(res.statusCode >= 400 && res.statusCode < 500) {
+                    if(err && res.statusCode >= 400 && res.statusCode < 500) {
                         callback(res.statusCode.toString(), null);
                     } else if(err) {
                         callback(err, null);
