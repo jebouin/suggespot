@@ -52,7 +52,7 @@ module.exports = {
 		return {type: thingType, id: thingId};
 	},
 	fileExtension: function(fileName) {
-		return "." + fileName.split('.').pop();
+		return ("." + fileName.split('.').pop()).toLowerCase();
 	},
 	voteDirToField: function(dir) {
 		if(dir == -1) {

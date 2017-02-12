@@ -99,7 +99,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.end("this suggestion is private and you are not the author");
                 return;
             }
-            function sendComments(voteDir) {
+            function sendComments(voteDir, photos) {
                 var query, params;
                 var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
                 var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
@@ -143,22 +143,28 @@ module.exports = function(app, mysqlConnection, auth) {
                               sid: suggestionData.id.toString(36), 
                               score: suggestionData.score, 
                               comments: formattedComments, 
+                              photos: photos,
                               voteDir: voteDir, 
                               published: suggestionData.published});
                 });
             }
 
-            if(userId) {
-                mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ? AND user = ?", [id, userId], function(err, voteRows, fields) {
-                    if(voteRows.length != 1) {
-                        sendComments();
-                    } else {
-                        sendComments(voteRows[0].dir);
-                    }
-                })
-            } else {
-                sendComments();
-            }
+            //get the photos
+            mysqlConnection.query("SELECT path FROM photos WHERE suggestion = ?", [suggestionData.id], function(err, photoRows, fields) {
+                if(err) throw err;
+                if(userId) {
+                    mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ? AND user = ?", [id, userId], function(err, voteRows, fields) {
+                        if(err) throw err;
+                        if(voteRows.length != 1) {
+                            sendComments(photoRows);
+                        } else {
+                            sendComments(voteRows[0].dir, photoRows);
+                        }
+                    })
+                } else {
+                    sendComments(photoRows);
+                }
+            });
         });
     });
     
@@ -408,8 +414,8 @@ module.exports = function(app, mysqlConnection, auth) {
         try {
             var user = checkParam(req.body, "user");
             var edit = checkParam(req.body, "edit");
-            var thingId = checkParam(req.body, "thingId");
-            var thing = utils.getThingFromId(edit.thingId);
+            var thingId = checkParam(edit, "thingId");
+            var thing = utils.getThingFromId(thingId);
         } catch(e) {
             res.status(400);
             res.end(e.message);

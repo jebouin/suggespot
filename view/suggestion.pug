@@ -21,6 +21,10 @@ html
     div#suggestionBody
       h2 #{title}
       p#descr #{descr}
+      div#photos
+        if photos && photos.length
+          each p in photos
+            img(src=p.path)
       p 
         | By&nbsp;
         a(href="/p/"+author) #{authorName}
