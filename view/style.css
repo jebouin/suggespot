@@ -4,6 +4,10 @@ body {
 	font-family: sans-serif;
 }
 
+a {
+	color: #1E441E;
+}
+
 h1 {
 	font-size: 80px;
 	margin: 10px 0px 50px 0px;
