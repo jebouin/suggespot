@@ -60,10 +60,10 @@ module.exports = function(app, mysqlConnection, auth) {
         var params;
         var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) AS conf";
         if(userId) {
-            query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author, dir FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id AS id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.id = suggestions.thumb WHERE published = 1 ORDER BY conf DESC";
             params = [userId];
         } else {
-            query = "SELECT id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author FROM suggestions WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT id, title, descr, upvotes - downvotes AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.id = suggestions.thumb WHERE published = 1 ORDER BY conf DESC";
             params = [];
         }
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -493,6 +493,12 @@ module.exports = function(app, mysqlConnection, auth) {
                             logs.log("new photo for suggestion " + colors.bold(suggestion.title));
                             res.status(201);
                             res.end(newPath);
+                            if(count == 0) {
+                                var photoId = rows.insertId;
+                                mysqlConnection.query("UPDATE suggestions SET thumb = ? WHERE id = ?", [photoId, thing.id], function(err, rows, fields) {
+                                    if(err) throw err;
+                                });
+                            }
                         });
                     });
                 });

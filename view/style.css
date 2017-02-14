@@ -77,6 +77,10 @@ button, input[type="button"], input[type="submit"] {
 	font-size: 22px;
 }
 
+.suggestion img {
+	width: 160px;
+}
+
 #photos img {
 	width: 320px;
 }
