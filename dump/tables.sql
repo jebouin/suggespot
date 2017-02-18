@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.53, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.54, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: suggespot
 -- ------------------------------------------------------
--- Server version	5.5.53-0ubuntu0.12.04.1
+-- Server version	5.5.54-0ubuntu0.12.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,6 +14,20 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `categories`
+--
+
+DROP TABLE IF EXISTS `categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `categories` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(256) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `comments`
@@ -80,9 +94,28 @@ CREATE TABLE `suggestions` (
   PRIMARY KEY (`id`),
   KEY `author` (`author`),
   KEY `thumb` (`thumb`),
-  CONSTRAINT `suggestions_ibfk_2` FOREIGN KEY (`thumb`) REFERENCES `photos` (`id`),
-  CONSTRAINT `suggestions_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`)
+  CONSTRAINT `suggestions_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`),
+  CONSTRAINT `suggestions_ibfk_2` FOREIGN KEY (`thumb`) REFERENCES `photos` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `tags`
+--
+
+DROP TABLE IF EXISTS `tags`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tags` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `category` int(10) unsigned NOT NULL,
+  `suggestion` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `category` (`category`),
+  KEY `suggestion` (`suggestion`),
+  CONSTRAINT `tags_ibfk_1` FOREIGN KEY (`category`) REFERENCES `categories` (`id`),
+  CONSTRAINT `tags_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -133,4 +166,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-02-14 22:22:19
+-- Dump completed on 2017-02-18 15:04:10
