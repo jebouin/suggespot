@@ -69,7 +69,7 @@ CREATE TABLE `photos` (
   PRIMARY KEY (`id`),
   KEY `suggestion` (`suggestion`),
   CONSTRAINT `photos_ibfk_1` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -90,7 +90,7 @@ CREATE TABLE `suggestions` (
   `author` int(10) unsigned NOT NULL DEFAULT '1',
   `timeCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `published` tinyint(1) NOT NULL DEFAULT '0',
-  `thumb` bigint(20) unsigned DEFAULT NULL,
+  `thumb` bigint(20) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `author` (`author`),
   KEY `thumb` (`thumb`),
@@ -154,7 +154,7 @@ CREATE TABLE `votes` (
   CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`),
   CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`),
   CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -166,4 +166,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-02-18 15:04:10
+-- Dump completed on 2017-02-18 15:50:04
