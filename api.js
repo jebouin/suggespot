@@ -63,7 +63,7 @@ module.exports = function(app, mysqlConnection, auth) {
             query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.id = suggestions.thumb WHERE published = 1 ORDER BY conf DESC";
             params = [userId];
         } else {
-            query = "SELECT id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.id = suggestions.thumb WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.id = suggestions.thumb WHERE published = 1 ORDER BY conf DESC";
             params = [];
         }
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -572,7 +572,7 @@ module.exports = function(app, mysqlConnection, auth) {
         makeLocalAPICall: function(method, path, params, callback) {
             function reqCallback(err, res, body) {
                 if(callback) {
-                    if(err && res.statusCode >= 400 && res.statusCode < 500) {
+                    if(res.statusCode >= 400 && res.statusCode < 500) {
                         callback(res.statusCode.toString(), null);
                     } else if(err) {
                         callback(err, null);

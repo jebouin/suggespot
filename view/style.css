@@ -78,16 +78,20 @@ button, input[type="button"], input[type="submit"] {
 }
 
 .suggestion img {
-	vertical-align: middle;
 	display: inline-block;
+	vertical-align: middle;
 	width: 120px;
 	height: 80px;
 }
 
 .voteUI {
-	vertical-align: middle;
 	display: inline-block;
+	vertical-align: middle;
 	text-align: center;
+}
+
+.suggestionBody {
+	display: inline-block;
 }
 
 #photos img {

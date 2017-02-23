@@ -85,6 +85,7 @@ $(document).ready(function() {
 	        	$(".cancelUploadLink").text("Upload photo");
 	        	$(".uploadUI").css("display", "none");
 	        	$("<img src='" + data + "'>").appendTo("#suggestionBody");
+	        	$(".cancelUploadLink").attr("class", "uploadLink");
 	        }
 	    });
 	});

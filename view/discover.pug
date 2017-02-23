@@ -4,10 +4,10 @@ mixin suggestion(data)
     +voteUI("0_" + data.id, data.score, data.dir, user)
     if data.thumb
       img(src=data.thumb)
-    a(href=data.href)
-      span.title #{data.title}
-    br
-    div.descr #{data.descr}
+    div.suggestionBody
+      a(href=data.href)
+        span.title #{data.title}
+      div.descr #{data.descr}
 
 doctype html
 html
