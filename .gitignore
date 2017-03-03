@@ -1,8 +1,12 @@
+.*
+!/.gitignore
 config.json
 dump/dump.sh
 libs
 node_modules
 features.txt
 logs
+tests
 todo.txt
 uploads/*
+view/style.css

@@ -16,6 +16,7 @@ html
     include header
     if user
       h2 Logged as #{user.name}
+      br
       button.big(onclick="location.href='/submit'") Submit
       button.big(onclick="location.href='/p/"+user.id+"'") Profile
       button.big(onclick="location.href='/preferences'") Preferences

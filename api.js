@@ -46,9 +46,10 @@ module.exports = function(app, mysqlConnection, auth) {
     };
 
     app.use("/api/*", function(req, res, next) {
-        if(req.ip === "::ffff:127.0.0.1" || req.ip === "127.0.0.1") {
+        if(req.ip === "::ffff:127.0.0.1" || req.ip === "127.0.0.1" || req.ip === "::1") {
             next();
         } else {
+            console.log(req.ip);
             res.status(401);
             res.end();
         }
@@ -136,15 +137,15 @@ module.exports = function(app, mysqlConnection, auth) {
                             formattedComments.push(c);
                         }
                     }
-                    res.json({title: suggestionData.title, 
-                              descr: suggestionData.descr, 
-                              author: suggestionData.author, 
+                    res.json({title: suggestionData.title,
+                              descr: suggestionData.descr,
+                              author: suggestionData.author,
                               authorName: suggestionData.authorName,
-                              sid: suggestionData.id.toString(36), 
-                              score: suggestionData.score, 
-                              comments: formattedComments, 
+                              sid: suggestionData.id.toString(36),
+                              score: suggestionData.score,
+                              comments: formattedComments,
                               photos: photos,
-                              voteDir: voteDir, 
+                              voteDir: voteDir,
                               published: suggestionData.published});
                 });
             }
@@ -167,7 +168,7 @@ module.exports = function(app, mysqlConnection, auth) {
             });
         });
     });
-    
+
     app.post("/api/vote", function(req, res) {
         try {
             var thingId = checkParam(req.body, "thingId");
@@ -461,7 +462,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     var thing = utils.getThingFromId(thingId);
                     if(thing.type == 1) {
                         throw "you can't upload a photo for a comment";
-                    } 
+                    }
                 } catch(e) {
                     res.status(400);
                     res.end(e.message);

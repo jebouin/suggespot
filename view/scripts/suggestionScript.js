@@ -1,21 +1,176 @@
+var editMode = false;
+var photosExpanded = false;
+var mh, txt;
+
 function getSid() {
 	return window.location.pathname.substr(3);
 }
 
-$(document).ready(function() {
-	$(document).keydown(function(e) {
-  		if(e.which === 13 && e.ctrlKey) {
-    		$("input[type='submit'").click();
-    	}
+function uploadPhoto() {
+	var files = $("#newPhoto :file")[0].files;
+	var formData = new FormData();
+	formData.append("photo", files[0]);
+	formData.append("thingId", "0_" + getSid());
+	$.ajax({
+		url: "/upload",
+			type: "POST",
+			data: formData,
+			cache: false,
+			contentType: false,
+			processData: false,
+			xhr: function() {
+					var xhr = $.ajaxSettings.xhr();
+					if (xhr.upload) {
+							xhr.upload.addEventListener('progress', function(e) {
+									if (e.lengthComputable) {
+											/*$('progress').attr({
+													value: e.loaded,
+													max: e.total,
+											});*/
+											console.log(e.loaded, e.total);
+									}
+							}, false);
+					}
+					return xhr;
+			},
+			error: function(xhr, err) {},
+			success: function(data) {
+				$("#newPhoto").before($("<img>").attr({"src": data, "draggable": "true"}));
+				updatePhotos();
+				//reset input value?
+			}
 	});
+}
+
+function updatePhotos() {
+	var b = $("button#morePhotos");
+	var e = $("#photosGrid")[0];
+	var overflows = (e.offsetHeight < e.scrollHeight);
+	if(!overflows) b.css("display", "none");
+	else b.css("display", "");
+}
+
+function expandPhotos() {
+	if(photosExpanded) return;
+	photosExpanded = true;
+	var b = $("button#morePhotos");
+	$("#photosGrid").css("max-height", "none");
+	b.text("Less");
+	b.attr("class", "on");
+}
+
+function collapsePhotos() {
+	if(!photosExpanded) return;
+	photosExpanded = false;
+	var b = $("button#morePhotos");
+	$("#photosGrid").css("max-height", mh);
+	b.text(txt);
+	b.attr("class", "off");
+}
+
+function setEditMode(e) {
+	var b = $(e.target);
+	if(editMode) disableEditMode(b);
+	else enableEditMode(b);
+}
+
+function enableEditMode(b) {
+	if(editMode) return;
+	editMode = true;
+	$("#author").css("visibility", "hidden");
+	$("button#morePhotos").css("display", "none");
+	$("#newPhoto").css("display", "");
+	$("#photosGrid img").attr("draggable", "true");
+	expandPhotos();
+	b.text("Done");
+}
+
+function disableEditMode(b) {
+	if(!editMode) return;
+	editMode = false;
+	$("#author").css("visibility", "visible");
+	updatePhotos();
+	$("#newPhoto").css("display", "none");
+	$("#photosGrid img").attr("draggable", "false");
+	collapsePhotos();
+	b.text("Edit");
+}
+
+function initDD() {
+	var draggedElement;
+	$(document).on({
+		dragstart: function(e) {
+			draggedElement = $(this);
+			setTimeout(function() {
+				draggedElement.css("transform", "translateX(-9000px)");
+			});
+		}, dragenter: function(e) {
+			e.preventDefault();
+			if(!draggedElement) return;
+			var $this = $(this);
+			if($this.is(":animated")) return;
+			var id = $this.index();
+			var draggedId = draggedElement.index();
+			if(draggedId > id) {
+				$this.remove().insertAfter(draggedElement);
+				draggedElement.remove().insertBefore($("#photosGrid img").eq(id));
+			} else if(draggedId < id) {
+				$this.remove().insertBefore(draggedElement);
+				draggedElement.remove().insertAfter($("#photosGrid img").eq(id - 1));
+			}
+			var off = $this.offset();
+			var doff = draggedElement.offset();
+			$this.css({"left": doff.left - off.left + 9000 + "px", "top": doff.top - off.top + "px"});
+			$this.animate({"top": "0px", "left": "0px"}, "fast");
+		}, dragleave: function() {
+
+		}, dragover: function(e) {
+			e.preventDefault();
+		}, drop: function(e) {
+			e.preventDefault();
+			draggedElement.css("transform", "");
+			draggedElement = null;
+		}, dragend: function() {
+			if(!draggedElement) return;
+			draggedElement.css("transform", "");
+			draggedElement = null;
+		}
+	}, "#photosGrid img");
+}
+
+$(document).ready(function() {
+	//photo grid
+	mh = $("#photosGrid").css("max-height");
+	txt = $("button#morePhotos").text();
+	$("button#morePhotos").on("click", function(e) {
+		var b = $(e.target);
+		if(b.hasClass("off")) expandPhotos();
+		else collapsePhotos();
+	});
+	$("#newPhoto > input").change(function() {
+		uploadPhoto();
+	});
+	initDD();
+	updatePhotos();
+
+	//edit
+	$("#info button").click(setEditMode);
+
+	//publish
 	$("#publishButton").click(function(e) {
 		var sid = getSid();
 		$.post("/publish", {sid: sid}, function(data) {
 			window.location.reload(true);
 		});
 	});
+	//comment
+	$(document).keydown(function(e) {
+  		if(e.which === 13 && e.ctrlKey) {
+    		$("input[type='submit'").click();
+    	}
+	});
 
-	$(document).on("click", ".editLink", function(e) {
+	/*$(document).on("click", ".editLink", function(e) {
 		var target = $(e.target);
 		target.text("Save");
 		target.attr("class", "saveLink");
@@ -51,44 +206,7 @@ $(document).ready(function() {
 		target.attr("class", "uploadLink");
 		var uploadUI = $(".uploadUI");
 		uploadUI.css("display", "none");
-	});
-
-	$(".uploadUI > :button").on("click", function(e) {
-		var files = $(".uploadUI > :file")[0].files;
-		var formData = new FormData();
-		formData.append("photo", files[0]);
-		formData.append("thingId", "0_" + getSid());
-		$.ajax({
-			url: "/upload",
-        	type: "POST",
-        	data: formData,
-        	cache: false,
-        	contentType: false,
-        	processData: false,
-        	xhr: function() {
-	            var xhr = $.ajaxSettings.xhr();
-	            if (xhr.upload) {
-	                xhr.upload.addEventListener('progress', function(e) {
-	                    if (e.lengthComputable) {
-	                        /*$('progress').attr({
-	                            value: e.loaded,
-	                            max: e.total,
-	                        });*/
-	                        console.log(e.loaded, e.total);
-	                    }
-	                }, false);
-	            }
-	            return xhr;
-	        },
-	        error: function(xhr, err) {},
-	        success: function(data) {
-	        	$(".cancelUploadLink").text("Upload photo");
-	        	$(".uploadUI").css("display", "none");
-	        	$("<img src='" + data + "'>").appendTo("#suggestionBody");
-	        	$(".cancelUploadLink").attr("class", "uploadLink");
-	        }
-	    });
-	});
+	});*/
 });
 
 function reply(event) {

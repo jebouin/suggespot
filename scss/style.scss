@@ -1,0 +1,207 @@
+$black: #000000;
+$blueCharcoal: #02111B;
+$logCabin: #1A1F16;
+$mallard: #1E441E;
+$laPalma: #119822;
+$yellowGreen: #C5D86D;
+$berylGreen: #E4E6C3;
+$white: #FFFFFF;
+
+@mixin prefix($declarations, $prefixes: ()) {
+	@each $prop, $val in $declarations {
+		@each $pre in $prefixes {
+			#{'-' + $pre + '-' + $prop}: $val;
+		}
+		#{$prop}: $val;
+	}
+}
+
+body {
+	background: $berylGreen;
+	margin: 0px;
+	padding: 0px;
+	font-family: sans-serif;
+}
+
+#body {
+	background: $white;
+	padding: 10px 20px 20px 20px;
+	margin: 0px 30px 20px 30px;
+	height: 100%;
+}
+
+a {
+	color: $logCabin;
+}
+
+h1 {
+	font-size: 80px;
+	margin: 0px 0px 50px 0px;
+	text-align: center;
+}
+
+img {
+	@include prefix((
+		user-select: none
+	), webkit moz ms);
+}
+
+.indented {
+	text-indent: 200px;
+}
+
+h2 {
+	display: inline-block;
+	font-size: 50px;
+	text-indent: 0;
+}
+
+form {
+	display: inline;
+}
+
+input, button {
+	border-radius: 10px;
+	outline: none;
+	border: 2px solid grey;
+}
+
+button, input[type="button"], input[type="submit"] {
+	display: inline-block;
+	cursor: pointer;
+}
+
+.upvote.voted {
+	background-color: green;
+}
+
+.downvote.voted {
+	background-color: red;
+}
+
+.big {
+	font-size: 30px;
+}
+
+#contentLeft {
+	display: inline-block;
+	width: 40%;
+	margin: auto;
+	text-align: center;
+	vertical-align: middle;
+}
+
+#contentRight {
+	display: inline-block;
+	width: 40%;
+	margin: auto;
+	text-align: center;
+	vertical-align: middle;
+}
+
+#map {
+	height: 800px;
+	width: 100%;
+}
+
+.suggestion {
+	word-wrap: break-word;
+	border: 1px solid $black;
+	margin: 10px 10px 10px 10px;
+}
+
+.suggestion .title {
+	font-size: 22px;
+}
+
+.suggestion img {
+	display: inline-block;
+	vertical-align: middle;
+	width: 120px;
+	height: 80px;
+}
+
+.voteUI {
+	display: inline-block;
+	text-align: center;
+	text-indent: 0;
+}
+
+#suggestionBody {
+	display: inline-block;
+}
+
+#photos {
+	background: $berylGreen;
+}
+
+#photosGrid {
+	display: flex;
+	max-height: 252px;
+	overflow: hidden;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	padding: 5px;
+}
+
+#photosGrid img {
+	position: relative;
+	border-radius: 16px;
+	border: 1px solid $black;
+	width: 320px;
+	height: 240px;
+	margin: 5px;
+}
+
+#photosGrid img[draggable="true"] {
+	cursor: pointer;
+}
+
+#newPhoto {
+	width: 320px;
+	height: 240px;
+	margin: 5px;
+	text-align: center;
+	position: relative;
+}
+
+#newPhoto input {
+	width: .1px;
+	height: .1px;
+	opacity: 0;
+	overflow: hidden;
+	position: absolute;
+	z-index: -1;
+}
+
+#newPhoto label {
+	display: inline-block;
+	position: relative;
+	top: 30%;
+	color: $white;
+	background: $mallard;
+	padding: 10px;
+	cursor: pointer;
+	border-radius: 2px;
+}
+
+#newPhoto label:hover {
+	background: $logCabin;
+}
+
+#suggestionBody #info {
+	text-align: right;
+	margin-right: 50px;
+}
+
+.comment {
+	margin-bottom: 3px;
+}
+
+.commentThread {
+	margin-bottom: 15px;
+}
+
+.replies {
+	margin-left: 100px;
+}
