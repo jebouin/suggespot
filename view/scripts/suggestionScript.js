@@ -8,6 +8,7 @@ function getSid() {
 
 function uploadPhoto() {
 	var files = $("#newPhoto :file")[0].files;
+	if(!files || files.length == 0) return;
 	var formData = new FormData();
 	formData.append("photo", files[0]);
 	formData.append("thingId", "0_" + getSid());
@@ -19,19 +20,19 @@ function uploadPhoto() {
 			contentType: false,
 			processData: false,
 			xhr: function() {
-					var xhr = $.ajaxSettings.xhr();
-					if (xhr.upload) {
-							xhr.upload.addEventListener('progress', function(e) {
-									if (e.lengthComputable) {
-											/*$('progress').attr({
-													value: e.loaded,
-													max: e.total,
-											});*/
-											console.log(e.loaded, e.total);
-									}
-							}, false);
-					}
-					return xhr;
+				var xhr = $.ajaxSettings.xhr();
+				if (xhr.upload) {
+					xhr.upload.addEventListener('progress', function(e) {
+						if (e.lengthComputable) {
+							/*$('progress').attr({
+									value: e.loaded,
+									max: e.total,
+							});*/
+							console.log(e.loaded, e.total);
+						}
+					}, false);
+				}
+				return xhr;
 			},
 			error: function(xhr, err) {},
 			success: function(data) {

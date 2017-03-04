@@ -21,7 +21,10 @@ var storage = multer.diskStorage({
 
 var uploadPhoto = multer({
     storage: storage,
-    limits: { fileSize: 5 * (1 << 20)}
+    limits: { fileSize: 5 * (1 << 20)},
+    onError: function(err, next) {
+        next(err);
+    }
 }).single("photo");
 
 module.exports = function(app, mysqlConnection, auth) {
@@ -487,10 +490,11 @@ module.exports = function(app, mysqlConnection, auth) {
     });
 
     app.post("/api/upload", function(req, res) {
-        uploadPhoto(req, res, function(err) {
-            auth.checkUserLoggedIn(req, res, function(data) {
+        auth.checkUserLoggedIn(req, res, function(data) {
+            uploadPhoto(req, res, function(err) {
                 req.body.userId = data.id;
                 try {
+                    checkParam(req, "file");
                     var userId = checkParam(req.body, "userId");
                     var thingId = checkParam(req.body, "thingId");
                     var thing = utils.getThingFromId(thingId);
@@ -537,11 +541,11 @@ module.exports = function(app, mysqlConnection, auth) {
                         });
                     });
                 });
-            }, function() {
-                res.status(401);
-                res.end("authentification error");
-                return;
             });
+        }, function() {
+            res.status(401);
+            res.end("authentification error");
+            return;
         });
     });
 
