@@ -26,9 +26,12 @@ var uploadPhoto = multer({
 
 module.exports = function(app, mysqlConnection, auth) {
 
-    function testTransactionError(err) {
+    function testTransactionError(err, beforeCallback) {
         if(err) {
             mysqlConnection.rollback();
+            if(beforeCallback) {
+                beforeCallback();
+            }
             throw err;
         }
     }
@@ -521,21 +524,16 @@ module.exports = function(app, mysqlConnection, auth) {
                           return;
                         }
                         var newPath = "/uploads/" + thing.id + "_" + count + utils.fileExtension(req.file.originalname);
+                        if(err) throw err;
                         mysqlConnection.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
                             if(err) {
-                                throw err;
                                 fs.unlinkSync(req.file.path);
+                                throw err;
                             }
                             fs.rename(req.file.path, __dirname + newPath);
                             logs.log("new photo for suggestion " + colors.bold(suggestion.title));
                             res.status(201);
                             res.end(newPath);
-                            if(count == 0) {
-                                var photoId = rows.insertId;
-                                mysqlConnection.query("UPDATE suggestions SET thumb = ? WHERE id = ?", [photoId, thing.id], function(err, rows, fields) {
-                                    if(err) throw err;
-                                });
-                            }
                         });
                     });
                 });
