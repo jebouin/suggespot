@@ -26,6 +26,13 @@ var uploadPhoto = multer({
 
 module.exports = function(app, mysqlConnection, auth) {
 
+    function testTransactionError(err) {
+        if(err) {
+            mysqlConnection.rollback();
+            throw err;
+        }
+    }
+
     function checkParam(params, toCheck) {
         if(!params[toCheck]) {
             throw new Error("parameter " + toCheck + " is missing");
@@ -61,10 +68,10 @@ module.exports = function(app, mysqlConnection, auth) {
         var params;
         var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) AS conf";
         if(userId) {
-            query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.id = suggestions.thumb WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
             params = [userId];
         } else {
-            query = "SELECT suggestions.id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.id = suggestions.thumb WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
             params = [];
         }
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -187,7 +194,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var dirField = utils.voteDirToField(dir);
             var username = row.name;
             if(thing.type === 0) {
-                mysqlConnection.query('SELECT title FROM suggestions WHERE id = ?', [thing.id], function(err, rows, fields) {
+                mysqlConnection.query("SELECT title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length != 1) {
                         res.status(404);
@@ -196,7 +203,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     }
                     var suggestionTitle = rows[0].title;
                     if(dir == 0) {
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
+                        mysqlConnection.query("SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?", [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
                                 res.status(400);
@@ -205,11 +212,17 @@ module.exports = function(app, mysqlConnection, auth) {
                             } else {
                                 var prevDir = rows[0].dir;
                                 var prevDirField = utils.voteDirToField(prevDir);
-                                mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                mysqlConnection.beginTransaction(function(err) {
                                     if(err) throw err;
-                                    mysqlConnection.query('UPDATE suggestions SET ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
-                                        if(err) throw err;
-                                        logs.log("user " + colors.bold(username) + " canceled his " + (prevDir == 1 ? "up" : "down") + "vote on " + colors.bold(suggestionTitle));
+                                    mysqlConnection.query("DELETE FROM votes WHERE id = ?", [rows[0].id], function(err, rows, fields) {
+                                        testTransactionError(err);
+                                        mysqlConnection.query("UPDATE suggestions SET " + prevDirField + " = " + prevDirField + " - 1 WHERE id = ?", [thing.id], function(err, rows, fields) {
+                                            testTransactionError(err);
+                                            mysqlConnection.commit(function(err) {
+                                                testTransactionError(err);
+                                                logs.log("user " + colors.bold(username) + " canceled his " + (prevDir == 1 ? "up" : "down") + "vote on " + colors.bold(suggestionTitle));
+                                            });
+                                        });
                                     });
                                 });
                             }
@@ -220,29 +233,35 @@ module.exports = function(app, mysqlConnection, auth) {
                             if(err) throw err;
                             function registerVote() {
                                 mysqlConnection.query('INSERT INTO votes (dir, user, suggestion) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
-                                    if(err) throw err;
-                                    logs.log("user " + colors.bold(username) + " " + (up ? "upvoted" : "downvoted") + " an entry " + colors.bold(suggestionTitle));
-                                });
-                            }
-                            if(rows.length == 0) {
-                                mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
-                                    if(err) throw err;
-                                    registerVote();
-                                });
-                            } else {
-                                var prevDir = rows[0].dir;
-                                var prevDirField = utils.voteDirToField(prevDir);
-                                var wasUp = prevDir === 1;
-                                if(up != wasUp) {
-                                    mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
-                                        if(err) throw err;
-                                        mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
-                                            if(err) throw err;
-                                            registerVote();
-                                        });
+                                    testTransactionError(err);
+                                    mysqlConnection.commit(function(err) {
+                                        testTransactionError(err);
+                                        logs.log("user " + colors.bold(username) + " " + (up ? "upvoted" : "downvoted") + " an entry " + colors.bold(suggestionTitle));
                                     });
-                                }
+                                });
                             }
+                            mysqlConnection.beginTransaction(function(err) {
+                                if(err) throw err;
+                                if(rows.length == 0) {
+                                    mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
+                                        testTransactionError(err);
+                                        registerVote();
+                                    });
+                                } else {
+                                    var prevDir = rows[0].dir;
+                                    var prevDirField = utils.voteDirToField(prevDir);
+                                    var wasUp = prevDir === 1;
+                                    if(up != wasUp) {
+                                        mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                            testTransactionError(err);
+                                            mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
+                                                testTransactionError(err);
+                                                registerVote();
+                                            });
+                                        });
+                                    }
+                                }
+                            });
                         });
                     }
                     res.status(200);
@@ -268,10 +287,16 @@ module.exports = function(app, mysqlConnection, auth) {
                             } else {
                                 var prevDir = rows[0].dir;
                                 var prevDirField = utils.voteDirToField(prevDir);
-                                mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                mysqlConnection.beginTransaction(function(err) {
                                     if(err) throw err;
-                                    mysqlConnection.query('UPDATE comments SET ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
-                                        if(err) throw err;
+                                    mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                        testTransactionError(err);
+                                        mysqlConnection.query('UPDATE comments SET ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
+                                            testTransactionError(err);
+                                            mysqlConnection.commit(function(err) {
+                                                testTransactionError(err);
+                                            })
+                                        });
                                     });
                                 });
                             }
@@ -282,28 +307,34 @@ module.exports = function(app, mysqlConnection, auth) {
                             if(err) throw err;
                             function registerVote() {
                                 mysqlConnection.query('INSERT INTO votes (dir, user, comment) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
-                                    if(err) throw err;
+                                    testTransactionError(err);
+                                    mysqlConnection.commit(function(err) {
+                                        testTransactionError(err);
+                                    })
                                 });
                             }
-                            if(rows.length == 0) {
-                                mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
-                                    if(err) throw err;
-                                    registerVote();
-                                });
-                            } else {
-                                var prevDir = rows[0].dir;
-                                var prevDirField = utils.voteDirToField(prevDir);
-                                var wasUp = prevDir === 1;
-                                if(up != wasUp) {
-                                    mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
-                                        if(err) throw err;
-                                        mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
-                                            if(err) throw err;
-                                            registerVote();
-                                        });
+                            mysqlConnection.beginTransaction(function(err) {
+                                if(err) throw err;
+                                if(rows.length == 0) {
+                                    mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
+                                        testTransactionError(err);
+                                        registerVote();
                                     });
+                                } else {
+                                    var prevDir = rows[0].dir;
+                                    var prevDirField = utils.voteDirToField(prevDir);
+                                    var wasUp = prevDir === 1;
+                                    if(up != wasUp) {
+                                        mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                            testTransactionError(err);
+                                            mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE id = ?', [thing.id], function(err, rows, fields) {
+                                                testTransactionError(err);
+                                                registerVote();
+                                            });
+                                        });
+                                    }
                                 }
-                            }
+                            })
                         });
                     }
                     res.status(200);
@@ -484,8 +515,13 @@ module.exports = function(app, mysqlConnection, auth) {
                     mysqlConnection.query("SELECT COUNT(id) AS count FROM photos WHERE suggestion = ?", [thing.id], function(err, rows, fields) {
                         if(err) throw err;
                         var count = rows[0].count;
+                        if(count >= global.config.maximumPhotos) {
+                          res.status(422);
+                          res.end("maximum number of photos reached");
+                          return;
+                        }
                         var newPath = "/uploads/" + thing.id + "_" + count + utils.fileExtension(req.file.originalname);
-                        mysqlConnection.query("INSERT INTO photos (path, suggestion) VALUES (?, ?)", [newPath, thing.id], function(err, rows, fields) {
+                        mysqlConnection.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
                             if(err) {
                                 throw err;
                                 fs.unlinkSync(req.file.path);

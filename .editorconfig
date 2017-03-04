@@ -1,0 +1,9 @@
+root = true
+
+[*.{js, json, sass, scss}]
+indent_style = space
+indent_size = 4
+
+[*.{pug}]
+indent_style = space
+indend_size = 2

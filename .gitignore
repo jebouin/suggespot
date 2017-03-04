@@ -1,5 +1,6 @@
 .*
-!/.gitignore
+!.gitignore
+!.editorconfig
 config.json
 dump/dump.sh
 libs
