@@ -3,6 +3,12 @@ var photosExpanded = false;
 var mh, txt;
 var changedPhotosOrder = false;
 
+window.onbeforeunload = function() {
+    if(changedPhotosOrder) {
+        return true;
+    }
+}
+
 function getSid() {
 	return window.location.pathname.substr(3);
 }
@@ -116,33 +122,34 @@ function disableEditMode(b) {
 
 function initDD() {
 	var draggedElement;
+    var n = $("#photosGrid img").length;
 	$(document).on({
 		dragstart: function(e) {
+            e.originalEvent.dataTransfer.effectAllowed = "move";
 			draggedElement = $(this);
 			setTimeout(function() {
 				draggedElement.css("transform", "translateX(-9000px)");
 			});
 		}, dragenter: function(e) {
-			if(!draggedElement) return;
-			var $this = $(this);
-			if($this.is(":animated")) return;
-			var id = $this.index();
-			var draggedId = draggedElement.index();
-			if(draggedId > id) {
-				$this.remove().insertAfter(draggedElement);
-				draggedElement.remove().insertBefore($("#photosGrid img").eq(id));
-			} else if(draggedId < id) {
-				$this.remove().insertBefore(draggedElement);
-				draggedElement.remove().insertAfter($("#photosGrid img").eq(id - 1));
-			}
-			var off = $this.offset();
+            if(!draggedElement) return;
+            var $this = $(this);
+            var after = e.clientX > $this.offset().left + $this.width() * .5;
+            if($this.is(":animated")) return;
+            var id = $this.index();
+            var draggedId = draggedElement.index();
+            if(draggedId > id) {
+                draggedElement.remove().insertBefore($("#photosGrid img").eq(id));
+            } else if(draggedId < id) {
+                draggedElement.remove().insertAfter($("#photosGrid img").eq(id - 1));
+            }
+			/*var off = $this.offset();
 			var doff = draggedElement.offset();
 			$this.css({"left": doff.left - off.left + 9000 + "px", "top": doff.top - off.top + "px"});
-			$this.animate({"top": "0px", "left": "0px"}, "fast");
+			$this.animate({"top": "0px", "left": "0px"}, "fast");*/
 		}, dragleave: function() {
 
 		}, dragover: function(e) {
-			e.preventDefault();
+
 		}, drop: function(e) {
 			e.preventDefault();
 			draggedElement.css("transform", "");
