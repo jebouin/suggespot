@@ -32,7 +32,7 @@ html
           div#photosGrid
             if photos && photos.length
               each p in photos
-                img(src=p.path draggable="false")
+                img(src=p.path draggable="false", pid=p.id)
             if isAuthor
               + newPhoto()
           button#morePhotos.off(style="display: none") More

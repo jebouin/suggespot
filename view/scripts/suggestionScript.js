@@ -1,6 +1,7 @@
 var editMode = false;
 var photosExpanded = false;
 var mh, txt;
+var changedPhotosOrder = false;
 
 function getSid() {
 	return window.location.pathname.substr(3);
@@ -36,7 +37,7 @@ function uploadPhoto() {
 			},
 			error: function(xhr, err) {},
 			success: function(data) {
-				$("#newPhoto").before($("<img>").attr({"src": data, "draggable": "true"}));
+				$("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
 				updatePhotos();
 				//reset input value?
 			}
@@ -83,7 +84,7 @@ function enableEditMode(b) {
 	$("#newPhoto").css("display", "");
 	$("#photosGrid img").attr("draggable", "true");
 	expandPhotos();
-	b.text("Done");
+	b.text("Save changes");
 }
 
 function disableEditMode(b) {
@@ -95,6 +96,22 @@ function disableEditMode(b) {
 	$("#photosGrid img").attr("draggable", "false");
 	collapsePhotos();
 	b.text("Edit");
+    var editObject = {};
+    if(changedPhotosOrder) {
+        changedPhotosOrder = false;
+        var order = [];
+        var photos = $("#photosGrid img");
+        for(var i = 0; i < photos.length; i++) {
+            order.push(photos[i].getAttribute("pid"));
+        }
+        editObject.photosOrder = order;
+    }
+    if(!jQuery.isEmptyObject(editObject)) {
+        editObject.thingId = "0_" + getSid();
+        $.post("/edit", editObject, function(data) {
+            //edit succesful
+        });
+    }
 }
 
 function initDD() {
@@ -106,7 +123,6 @@ function initDD() {
 				draggedElement.css("transform", "translateX(-9000px)");
 			});
 		}, dragenter: function(e) {
-			e.preventDefault();
 			if(!draggedElement) return;
 			var $this = $(this);
 			if($this.is(":animated")) return;
@@ -130,11 +146,15 @@ function initDD() {
 		}, drop: function(e) {
 			e.preventDefault();
 			draggedElement.css("transform", "");
-			draggedElement = null;
+            draggedElement = null;
+            changedPhotosOrder = true;
+            console.log("drop");
 		}, dragend: function() {
 			if(!draggedElement) return;
 			draggedElement.css("transform", "");
 			draggedElement = null;
+            changedPhotosOrder = true;
+            console.log("dragend");
 		}
 	}, "#photosGrid img");
 }

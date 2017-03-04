@@ -164,8 +164,11 @@ module.exports = function(app, mysqlConnection, auth) {
             }
 
             //get the photos
-            mysqlConnection.query("SELECT path FROM photos WHERE suggestion = ?", [suggestionData.id], function(err, photoRows, fields) {
+            mysqlConnection.query("SELECT id, path FROM photos WHERE suggestion = ? ORDER BY position", [suggestionData.id], function(err, photoRows, fields) {
                 if(err) throw err;
+                for(var i = 0; i < photoRows.length; i++) {
+                    photoRows[i].id = photoRows[i].id.toString(36);
+                }
                 if(userId) {
                     mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ? AND user = ?", [id, userId], function(err, voteRows, fields) {
                         if(err) throw err;
@@ -474,17 +477,48 @@ module.exports = function(app, mysqlConnection, auth) {
                     res.end("this suggestion is not yours");
                     return;
                 }
+                var edited = false;
                 function onEditFinished() {
-                    logs.log("user " + colors.bold(user.name) + " edited their suggestion " + colors.bold(suggestion.title));
-                }
-                //if descr...
-                mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
-                    if(err) throw err;
-                    onEditFinished();
                     res.status(200);
                     res.end();
-                    return;
-                });
+                    logs.log("user " + colors.bold(user.name) + " edited their suggestion " + colors.bold(suggestion.title));
+                }
+                function onInvalidEdit() {
+                    res.status(400);
+                    res.end("invalid edit reqest");
+                }
+                if(edit.descr) {
+                    edited = true;
+                    mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
+                        if(err) throw err;
+                        onEditFinished();
+                    });
+                }
+                if(edit.photosOrder) {
+                    edited = true;
+                    var order = edit.photosOrder;
+                    if(order.length == 0) {
+                        onInvalidEdit();
+                    } else {
+                        mysqlConnection.beginTransaction(function(err) {
+                            if(err) throw err;
+                            for(var i = 0; i < order.length; i++) {
+                                var photoId = parseInt(order[i], 36);
+                                mysqlConnection.query("UPDATE photos SET position = ? WHERE id = ?", [i, photoId], function(err, rows, fields) {
+                                    testTransactionError(err);
+                                });
+                            }
+                            mysqlConnection.commit(function(err) {
+                                testTransactionError(err);
+                                onEditFinished();
+                            });
+                        });
+                    }
+                }
+                if(!edited) {
+                    onInvalidEdit();
+                }
+                return;
             });
         }
     });
@@ -537,7 +571,7 @@ module.exports = function(app, mysqlConnection, auth) {
                             fs.rename(req.file.path, __dirname + newPath);
                             logs.log("new photo for suggestion " + colors.bold(suggestion.title));
                             res.status(201);
-                            res.end(newPath);
+                            res.json({path: newPath, pid: rows.insertId.toString(36)});
                         });
                     });
                 });
