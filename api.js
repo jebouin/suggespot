@@ -15,7 +15,7 @@ var storage = multer.diskStorage({
         if(global.config.photoMimeTypes.indexOf(file.mimetype) < 0) {
             callback(new Error("this file type is not allowed"), null);
         } else {
-            callback(null, __dirname + "/uploads");
+            callback(null, __dirname + global.config.uploadDir);
         }
     }
 });
@@ -635,7 +635,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                 res.json({path: newPath, pid: rows.insertId.toString(36)});
                             });
                         }
-                        var newPath = "/uploads/" + thing.id + "_" + count;
+                        var newPath = global.config.uploadDir + "/" + thing.id + "_" + count;
                         if(fromUrl == "true") getPhotoFromUrl(newPath, cb);
                         else getPhotoFromForm(newPath, cb);
                     });

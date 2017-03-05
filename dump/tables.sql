@@ -66,10 +66,11 @@ CREATE TABLE `photos` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `path` varchar(256) NOT NULL,
   `suggestion` int(10) unsigned DEFAULT NULL,
+  `position` tinyint(3) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `suggestion` (`suggestion`),
   CONSTRAINT `photos_ibfk_1` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=143 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -90,13 +91,10 @@ CREATE TABLE `suggestions` (
   `author` int(10) unsigned NOT NULL DEFAULT '1',
   `timeCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `published` tinyint(1) NOT NULL DEFAULT '0',
-  `thumb` bigint(20) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `author` (`author`),
-  KEY `thumb` (`thumb`),
-  CONSTRAINT `suggestions_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`),
-  CONSTRAINT `suggestions_ibfk_2` FOREIGN KEY (`thumb`) REFERENCES `photos` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=57 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  CONSTRAINT `suggestions_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=58 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -154,7 +152,7 @@ CREATE TABLE `votes` (
   CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`),
   CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`),
   CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -166,4 +164,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-03 14:42:09
+-- Dump completed on 2017-03-05 11:30:32

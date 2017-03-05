@@ -29,65 +29,70 @@ const suggestion = require("./suggestion")(app, connection, auth, view, api);
 const discover = require("./discover")(app, connection, auth, view, api);
 const profile = require("./profile")(app, connection, auth, view, api);
 const preferences = require("./preferences")(app, connection, auth, view, api);
+const cleaner = require("./cleaner")(app, connection);
 
 connection.connect();
-auth.createRoutes();
-discover.createRoutes();
-suggestion.createRoutes();
-profile.createRoutes();
-preferences.createRoutes();
+cleaner.clean(createRoutes);
 
-app.use(function(req, res, next) {
-	for(var i = 0; i < global.config.allowedIPs.length; i++) {
-		if(req.ip === global.config.allowedIPs[i]) {
-			next();
-			return;
-		}
-	}
-	logs.log("Unauthorized ip " + req.ip);
-	res.status(401);
-	return res.send("Soon...");
-});
+function createRoutes() {
+    auth.createRoutes();
+    discover.createRoutes();
+    suggestion.createRoutes();
+    profile.createRoutes();
+    preferences.createRoutes();
 
-app.get("/", function(req, res) {
-	auth.checkUserLoggedIn(req, res, function(data) {
-		discover.discover(req, res, data);
-	});
-});
+    app.use(function(req, res, next) {
+    	for(var i = 0; i < global.config.allowedIPs.length; i++) {
+    		if(req.ip === global.config.allowedIPs[i]) {
+    			next();
+    			return;
+    		}
+    	}
+    	logs.log("Unauthorized ip " + req.ip);
+    	res.status(401);
+    	return res.send("Soon...");
+    });
 
-app.get("/indexDivs.html", function(req, res) {
-	utils.sendFile(res, "view/indexDivs.html");
-});
+    app.get("/", function(req, res) {
+    	auth.checkUserLoggedIn(req, res, function(data) {
+    		discover.discover(req, res, data);
+    	});
+    });
 
-app.get("/style.css", function(req, res) {
-	utils.sendFile(res, "view/style.css");
-});
+    app.get("/indexDivs.html", function(req, res) {
+    	utils.sendFile(res, "view/indexDivs.html");
+    });
 
-app.get("/libs/jquery.js", function(req, res) {
-	utils.sendFile(res, "libs/jquery.js");
-});
+    app.get("/style.css", function(req, res) {
+    	utils.sendFile(res, "view/style.css");
+    });
 
-app.get("/view/scripts/*", function(req, res) {
-	try {
-		utils.sendFile(res, req.url);
-	} catch(e) {
-		res.status(404);
-		res.end();
-	}
-});
+    app.get("/libs/jquery.js", function(req, res) {
+    	utils.sendFile(res, "libs/jquery.js");
+    });
 
-app.get("/uploads/*", function(req, res) {
-	try {
-		utils.sendFile(res, req.url);
-	} catch(e) {
-		res.status(404);
-		res.end();
-	}
-});
+    app.get("/view/scripts/*", function(req, res) {
+    	try {
+    		utils.sendFile(res, req.url);
+    	} catch(e) {
+    		res.status(404);
+    		res.end();
+    	}
+    });
 
-var server = app.listen(80, function() {
-	logs.log(colors.bold("server started"));
-});
+    app.get("/uploads/*", function(req, res) {
+    	try {
+    		utils.sendFile(res, req.url);
+    	} catch(e) {
+    		res.status(404);
+    		res.end();
+    	}
+    });
+
+    var server = app.listen(80, function() {
+    	logs.log(colors.bold("server started"));
+    });
+}
 
 process.on("SIGINT", function() {
 	logs.log("closing server...");
