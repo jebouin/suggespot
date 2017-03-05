@@ -38,7 +38,7 @@ DROP TABLE IF EXISTS `comments`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `comments` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `author` int(10) unsigned NOT NULL,
+  `author` int(10) unsigned DEFAULT NULL,
   `content` varchar(4096) COLLATE utf8mb4_unicode_ci NOT NULL,
   `suggestion` int(10) unsigned NOT NULL,
   `timeCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -49,10 +49,10 @@ CREATE TABLE `comments` (
   KEY `author` (`author`),
   KEY `suggestion` (`suggestion`),
   KEY `parent` (`parent`),
-  CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`),
   CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`),
-  CONSTRAINT `comments_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `comments` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  CONSTRAINT `comments_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `comments` (`id`),
+  CONSTRAINT `comments_ibfk_4` FOREIGN KEY (`author`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -127,6 +127,7 @@ CREATE TABLE `users` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(20) NOT NULL,
   `salt` char(32) DEFAULT NULL,
+  `timeRegistered` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;
@@ -142,17 +143,17 @@ DROP TABLE IF EXISTS `votes`;
 CREATE TABLE `votes` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `dir` tinyint(4) NOT NULL DEFAULT '1',
-  `user` int(10) unsigned NOT NULL,
+  `user` int(10) unsigned DEFAULT NULL,
   `suggestion` int(10) unsigned DEFAULT NULL,
   `comment` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `user` (`user`),
   KEY `suggestion` (`suggestion`),
   KEY `comment` (`comment`),
-  CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`),
   CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`),
-  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=latin1;
+  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`),
+  CONSTRAINT `votes_ibfk_4` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -164,4 +165,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-05 11:30:32
+-- Dump completed on 2017-03-05 15:41:01

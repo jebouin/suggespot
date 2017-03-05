@@ -119,10 +119,10 @@ module.exports = function(app, mysqlConnection, auth) {
                 var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
                 var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
                 if(userId) {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? " + orderQuery;
-                    params = [suggestionData.id, userId];
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? WHERE comments.suggestion = ? " + orderQuery;
+                    params = [userId, suggestionData.id];
                 } else {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments INNER JOIN users ON comments.author = users.id AND suggestion = ? " + orderQuery;
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments LEFT JOIN users ON comments.author = users.id WHERE suggestion = ? " + orderQuery;
                     params = [suggestionData.id];
                 }
                 mysqlConnection.query(query, params, function(err, commentRows, fields) {
@@ -144,7 +144,9 @@ module.exports = function(app, mysqlConnection, auth) {
                         if(!commentRows[i].parent) {
                             var c = comments[commentRows[i].id];
                             c.id = c.id.toString(36);
-                            c.authorId = c.authorId.toString(36);
+                            if(c.authorId != null) {
+                                c.authorId = c.authorId.toString(36);
+                            }
                             for(var j = 0; j < c.children.length; j++) {
                                 c.children[j].id = c.children[j].id.toString(36);
                             }
@@ -702,7 +704,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT id, name FROM users WHERE id = ?", [userId], function(err, rows, fields) {
+        mysqlConnection.query("SELECT id, name, CURRENT_TIMESTAMP - timeRegistered AS timeSinceRegistered FROM users WHERE id = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
