@@ -42,7 +42,8 @@ input, button {
 
 button, input[type="button"], input[type="submit"] {
   display: inline-block;
-  cursor: pointer; }
+  cursor: pointer;
+  font-size: 16px; }
 
 .upvote.voted {
   background-color: green; }
@@ -122,7 +123,7 @@ button, input[type="button"], input[type="submit"] {
   text-align: center;
   position: relative; }
 
-#newPhoto input {
+#newPhoto input[type="file"] {
   width: .1px;
   height: .1px;
   opacity: 0;
@@ -130,12 +131,28 @@ button, input[type="button"], input[type="submit"] {
   position: absolute;
   z-index: -1; }
 
+#newPhoto button {
+  display: inline-block;
+  color: #FFFFFF;
+  background: #1E441E;
+  margin-top: 30px;
+  padding: 10px;
+  border-radius: 2px;
+  border: none; }
+
+#newPhoto button:hover {
+  background: #1A1F16; }
+
+#newPhoto input {
+  margin-top: 30px; }
+
 #newPhoto label {
   display: inline-block;
   position: relative;
   top: 30%;
   color: #FFFFFF;
   background: #1E441E;
+  margin-top: 10px;
   padding: 10px;
   cursor: pointer;
   border-radius: 2px; }

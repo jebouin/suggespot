@@ -6,12 +6,13 @@ const http = require("http");
 const rq = require("request");
 const urlut = require("url");
 const multer = require("multer");
-
-const imageMimeTypes = ["image/png", "image/bmp", "image/jpeg", "image/gif"];
+const mime = require("mime-types");
+const mmmagic = require("mmmagic");
+const mmm = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
 
 var storage = multer.diskStorage({
     destination: function (req, file, callback) {
-        if(imageMimeTypes.indexOf(file.mimetype) < 0) {
+        if(global.config.photoMimeTypes.indexOf(file.mimetype) < 0) {
             callback(new Error("this file type is not allowed"), null);
         } else {
             callback(null, __dirname + "/uploads");
@@ -21,7 +22,7 @@ var storage = multer.diskStorage({
 
 var uploadPhoto = multer({
     storage: storage,
-    limits: { fileSize: 5 * (1 << 20)},
+    limits: { fileSize: global.config.photoSizeLimit},
     onError: function(err, next) {
         next(err);
     }
@@ -524,13 +525,13 @@ module.exports = function(app, mysqlConnection, auth) {
     });
 
     app.post("/api/upload", function(req, res) {
-        auth.checkUserLoggedIn(req, res, function(data) {
-            uploadPhoto(req, res, function(err) {
+        function onPhotoUpload() {
+            auth.checkUserLoggedIn(req, res, function(data) {
                 req.body.userId = data.id;
                 try {
-                    checkParam(req, "file");
                     var userId = checkParam(req.body, "userId");
                     var thingId = checkParam(req.body, "thingId");
+                    var fromUrl = checkParam(req.body, "fromUrl");
                     var thing = utils.getThingFromId(thingId);
                     if(thing.type == 1) {
                         throw "you can't upload a photo for a comment";
@@ -539,6 +540,60 @@ module.exports = function(app, mysqlConnection, auth) {
                     res.status(400);
                     res.end(e.message);
                     return;
+                }
+                function detectAndRename(originalPath, newPath, cb) {
+                    mmm.detectFile(originalPath, function(err, result) {
+                        var ext = utils.mimetypeExtension(result);
+                        if(!ext) {
+                            cb({message: "invalid file", code: 400}, null, originalPath);
+                            return;
+                        }
+                        var nnewPath = newPath + ext;
+                        fs.rename(originalPath, __dirname + nnewPath);
+                        cb(null, nnewPath);
+                    });
+                }
+                function getPhotoFromUrl(newPath, cb) {
+                    try {
+                        var url = checkParam(req.body, "url");
+                    } catch(e) {
+                        res.status(400);
+                        res.end(e.message);
+                        return;
+                    }
+                    var tempPath = __dirname + newPath + Math.random().toString(36).substring(10);
+                    var file = fs.createWriteStream(tempPath);
+                    file.on("open", function(fd) {
+                        var fileSize = 0;
+                        var req = rq.get(url);
+                        req.on("data", function(data) {
+                            fileSize += data.length;
+                            if(fileSize > global.config.photoSizeLimit) {
+                                req.abort();
+                                fs.unlink(tempPath);
+                                res.status(400);
+                                res.end("photo is too big");
+                                return;
+                            }
+                        }).on("end", function() {
+                            detectAndRename(tempPath, newPath, cb);
+                        }).on("close", function() {
+
+                        }).on("error", function(data) {
+                            fs.unlink(tempPath);
+                            cb({message: "can't download photo: " + data, code: 400});
+                        }).pipe(file);
+                    });
+                }
+                function getPhotoFromForm(newPath, cb) {
+                    try {
+                        checkParam(req, "file");
+                    } catch(e) {
+                        res.status(400);
+                        res.end(e.message);
+                        return;
+                    }
+                    detectAndRename(req.file.path, newPath, cb);
                 }
                 mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                     if(err) throw err;
@@ -561,26 +616,43 @@ module.exports = function(app, mysqlConnection, auth) {
                           res.end("maximum number of photos reached");
                           return;
                         }
-                        var newPath = "/uploads/" + thing.id + "_" + count + utils.fileExtension(req.file.originalname);
-                        if(err) throw err;
-                        mysqlConnection.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
+                        function cb(err, newPath, oldPath) {
                             if(err) {
-                                fs.unlinkSync(req.file.path);
-                                throw err;
+                                try {
+                                    fs.unlinkSync(oldPath);
+                                } catch(e) {};
+                                res.status(err.code);
+                                res.end(err.message);
+                                return;
                             }
-                            fs.rename(req.file.path, __dirname + newPath);
-                            logs.log("new photo for suggestion " + colors.bold(suggestion.title));
-                            res.status(201);
-                            res.json({path: newPath, pid: rows.insertId.toString(36)});
-                        });
+                            mysqlConnection.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
+                                if(err) {
+                                    fs.unlinkSync(newPath);
+                                    throw err;
+                                }
+                                logs.log("new photo for suggestion " + colors.bold(suggestion.title));
+                                res.status(201);
+                                res.json({path: newPath, pid: rows.insertId.toString(36)});
+                            });
+                        }
+                        var newPath = "/uploads/" + thing.id + "_" + count;
+                        if(fromUrl == "true") getPhotoFromUrl(newPath, cb);
+                        else getPhotoFromForm(newPath, cb);
                     });
                 });
+            }, function() {
+                res.status(401);
+                res.end("authentification error");
+                return;
             });
-        }, function() {
-            res.status(401);
-            res.end("authentification error");
-            return;
-        });
+        }
+        if(!Object.keys(req.body).length) {
+            uploadPhoto(req, res, function(err) {
+                onPhotoUpload();
+            });
+        } else {
+            onPhotoUpload();
+        }
     });
 
     app.post("/api/publish", function(req, res) {

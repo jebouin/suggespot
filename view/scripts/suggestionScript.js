@@ -14,12 +14,13 @@ function getSid() {
 }
 
 function uploadPhoto() {
-	var files = $("#newPhoto :file")[0].files;
+	var files = $("#newPhoto input[type='file']")[0].files;
 	if(!files || files.length == 0) return;
-	var formData = new FormData();
-	formData.append("photo", files[0]);
-	formData.append("thingId", "0_" + getSid());
-	$.ajax({
+    var formData = new FormData();
+    formData.append("photo", files[0]);
+    formData.append("thingId", "0_" + getSid());
+    formData.append("fromUrl", "false");
+    $.ajax({
 		url: "/upload",
 			type: "POST",
 			data: formData,
@@ -41,10 +42,13 @@ function uploadPhoto() {
 				}
 				return xhr;
 			},
-			error: function(xhr, err) {},
+			error: function(xhr, err) {
+
+            },
 			success: function(data) {
 				$("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
 				updatePhotos();
+                resetNewPhotoForm();
 				//reset input value?
 			}
 	});
@@ -118,6 +122,7 @@ function disableEditMode(b) {
             //edit succesful
         });
     }
+    resetNewPhotoForm();
 }
 
 function initDD() {
@@ -155,15 +160,47 @@ function initDD() {
 			draggedElement.css("transform", "");
             draggedElement = null;
             changedPhotosOrder = true;
-            console.log("drop");
 		}, dragend: function() {
 			if(!draggedElement) return;
 			draggedElement.css("transform", "");
 			draggedElement = null;
             changedPhotosOrder = true;
-            console.log("dragend");
 		}
 	}, "#photosGrid img");
+}
+
+function photoFromURL(e) {
+    e.preventDefault();
+    $("#newPhoto button").hide();
+    $("#newPhoto input").show().focus();
+}
+
+var lastChange = new Date().getTime();
+function onPhotoURLChange(e) {
+    var current = new Date().getTime();
+    var dt = current - lastChange;
+    if(dt < 600) {
+        setTimeout(function() {onPhotoURLChange(e);}, 800 - dt);
+        return;
+    }
+    lastChange = current;
+    var url = e.target.value;
+    var regex = /(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}[-a-zA-Z0-9@:%._\/+~#=]*/g;
+    var match = regex.exec(url);
+    if(match) {
+        if(!match[1]) {
+            url = "http://" + url;
+        }
+        $.post("/upload", {"fromUrl": true, "thingId": "0_" + getSid(), "url": url}, function(data) {
+            $("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
+            resetNewPhotoForm();
+        });
+    }
+}
+
+function resetNewPhotoForm() {
+    $("#newPhoto button").show();
+    $("#newPhoto input").hide().val("");
 }
 
 $(document).ready(function() {
@@ -175,9 +212,11 @@ $(document).ready(function() {
 		if(b.hasClass("off")) expandPhotos();
 		else collapsePhotos();
 	});
-	$("#newPhoto > input").change(function() {
+	$("#newPhoto > input[type='file']").on("change", function() {
 		uploadPhoto();
 	});
+    $("#newPhoto > button").on("click", photoFromURL);
+    $("#newPhoto > input[name='url']").on("input", onPhotoURLChange);
 	initDD();
 	updatePhotos();
 

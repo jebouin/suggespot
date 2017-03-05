@@ -54,6 +54,14 @@ module.exports = {
 	fileExtension: function(fileName) {
 		return ("." + fileName.split('.').pop()).toLowerCase();
 	},
+    mimetypeExtension: function(mime) {
+        return {"image/png": ".png",
+                "image/jpeg": ".jpg",
+                "image/pjpeg": ".jpeg",
+                "image/gif": ".gif",
+                "image/bmp": ".bmp",
+                "image/x-windows-bmp": ".bmp"}[mime];
+    },
 	voteDirToField: function(dir) {
 		if(dir == -1) {
 			return "downvotes";

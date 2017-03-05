@@ -4,8 +4,12 @@ include editUI
 
 mixin newPhoto()
   form#newPhoto(enctype="multipart/form-data" style="display: none")
-    input.big(type="file" name="photo" id="photo")
-    label(for="photo") Upload a photo
+    h3 New photo
+    input.big(type="file" name="photo" id="photo" accept=".png,.bmp,.jpeg,.jpg,.gif")
+    button From an URL
+    input.big(type="text" name="url" placeholder="Paste your URL" style="display: none")
+    br
+    label(for="photo") From your computer
 
 mixin comment(c)
   div.comment

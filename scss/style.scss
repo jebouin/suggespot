@@ -69,6 +69,7 @@ input, button {
 button, input[type="button"], input[type="submit"] {
 	display: inline-block;
 	cursor: pointer;
+	font-size: 16px;
 }
 
 .upvote.voted {
@@ -165,7 +166,7 @@ button, input[type="button"], input[type="submit"] {
 	position: relative;
 }
 
-#newPhoto input {
+#newPhoto input[type="file"] {
 	width: .1px;
 	height: .1px;
 	opacity: 0;
@@ -174,12 +175,31 @@ button, input[type="button"], input[type="submit"] {
 	z-index: -1;
 }
 
+#newPhoto button {
+	display: inline-block;
+	color: $white;
+	background: $mallard;
+	margin-top: 30px;
+	padding: 10px;
+	border-radius: 2px;
+	border: none;
+}
+
+#newPhoto button:hover {
+	background: $logCabin;
+}
+
+#newPhoto input {
+	margin-top: 30px;
+}
+
 #newPhoto label {
 	display: inline-block;
 	position: relative;
 	top: 30%;
 	color: $white;
 	background: $mallard;
+	margin-top: 10px;
 	padding: 10px;
 	cursor: pointer;
 	border-radius: 2px;
