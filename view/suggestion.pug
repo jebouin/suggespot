@@ -1,5 +1,4 @@
 include voteUI
-include commentUI
 include editUI
 
 mixin newPhoto()
@@ -24,6 +23,16 @@ mixin comment(c)
       | &nbsp;at #{c.time}
     | :&nbsp; #{c.content}
     | &nbsp;
+
+mixin commentUI(sid)
+  div.commentUI(style="display:none")
+    form(action="/comment" method="POST")
+      input(type="hidden" name="suggestionId" value=sid)
+      input(type="hidden" name="parent")
+      textarea.big(name="content" placeholder="Reply here" required)
+      br
+      input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
+      input.big(type="button" value="Cancel" onclick="cancelComment(event)")
 
 - var isAuthor = user && user.id == author
 
