@@ -75,10 +75,10 @@ module.exports = function(app, mysqlConnection, auth) {
         var params;
         var confQuery = "upvotes / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
         if(userId) {
-            query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
             params = [userId];
         } else {
-            query = "SELECT suggestions.id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
             params = [];
         }
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -101,7 +101,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         id = parseInt(id, 36);
-        mysqlConnection.query("SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, upvotes - downvotes AS score, published FROM suggestions LEFT JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?", [id], function(err, rows, fields) {
+        mysqlConnection.query("SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, published FROM suggestions LEFT JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
@@ -119,10 +119,10 @@ module.exports = function(app, mysqlConnection, auth) {
                 var confQuery = "upvotes / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
                 var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
                 if(userId) {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? WHERE comments.suggestion = ? " + orderQuery;
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? WHERE comments.suggestion = ? " + orderQuery;
                     params = [userId, suggestionData.id];
                 } else {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, parent FROM comments LEFT JOIN users ON comments.author = users.id WHERE suggestion = ? " + orderQuery;
+                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, parent FROM comments LEFT JOIN users ON comments.author = users.id WHERE suggestion = ? " + orderQuery;
                     params = [suggestionData.id];
                 }
                 mysqlConnection.query(query, params, function(err, commentRows, fields) {
