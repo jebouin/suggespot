@@ -48,7 +48,6 @@ function uploadPhoto() {
 			success: function(data) {
 				$("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
 				updatePhotos();
-                resetNewPhotoForm();
 				//reset input value?
 			}
 	});
@@ -176,11 +175,14 @@ function photoFromURL(e) {
 }
 
 var lastChange = new Date().getTime();
+var inputTimer;
 function onPhotoURLChange(e) {
+    $("#newPhoto .error").css("visibility", "hidden");
+    clearTimeout(inputTimer);
     var current = new Date().getTime();
     var dt = current - lastChange;
     if(dt < 600) {
-        setTimeout(function() {onPhotoURLChange(e);}, 800 - dt);
+        inputTimer = setTimeout(function() {onPhotoURLChange(e);}, 800 - dt);
         return;
     }
     lastChange = current;
@@ -191,9 +193,15 @@ function onPhotoURLChange(e) {
         if(!match[1]) {
             url = "http://" + url;
         }
-        $.post("/upload", {"fromUrl": true, "thingId": "0_" + getSid(), "url": url}, function(data) {
-            $("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
-            resetNewPhotoForm();
+        $.post("/upload", {"fromUrl": true, "thingId": "0_" + getSid(), "url": url}).done(function(data) {
+            if(data.code == 400) {
+                $("#newPhoto .error").css("visibility", "visible");
+            } else {
+                $("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
+                resetNewPhotoForm();
+            }
+        }).fail(function(xhr, status, error) {
+
         });
     }
 }

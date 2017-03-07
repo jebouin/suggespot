@@ -15,26 +15,27 @@ doctype html
 html
   include head
   body
-    include header
-    if user
-      h2 Logged as #{user.name}
-      br
-      button.big(onclick="location.href='/submit'") Submit
-      button.big(onclick="location.href='/p/"+user.id+"'") Profile
-      button.big(onclick="location.href='/preferences'") Preferences
-      button.big(onclick="location.href='/logout'") Log Out
-    if suggestions && suggestions.length
-      if false
-        h2 Suggestions (#{suggestions.length})
-      each s in suggestions
-        +suggestion(s)
-    else
-      h2 No suggestions for you right now...
-    if !user
-      h2 Do you want custom suggestions?
-      form(name="register" action="/register" method="POST")
-        input.big(type="text" name="username" placeholder="Username" required)
-        input.big(type="submit" value="Register")
-
+    #body
+      include header
+      if user
+        h2 Logged as #{user.name}
+        br
+        button.big(onclick="location.href='/submit'") Submit
+        button.big(onclick="location.href='/p/"+user.id+"'") Profile
+        button.big(onclick="location.href='/preferences'") Preferences
+        button.big(onclick="location.href='/logout'") Log Out
+      if suggestions && suggestions.length
+        if false
+          h2 Suggestions (#{suggestions.length})
+        each s in suggestions
+          +suggestion(s)
+      else
+        h2 No suggestions for you right now...
+      if !user
+        h2 Do you want custom suggestions?
+        br
+        form(name="register" action="/register" method="POST")
+          input.big(type="text" name="username" placeholder="Username" required)
+          input.big(type="submit" value="Register")
     script(src="/libs/jquery.js")
     script(src="/view/scripts/voteUI.js")

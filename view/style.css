@@ -18,6 +18,11 @@ h1 {
   margin: 0px 0px 50px 0px;
   text-align: center; }
 
+h2 {
+  display: inline-block;
+  font-size: 50px;
+  text-indent: 0; }
+
 img {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -26,11 +31,6 @@ img {
 
 .indented {
   text-indent: 200px; }
-
-h2 {
-  display: inline-block;
-  font-size: 50px;
-  text-indent: 0; }
 
 form {
   display: inline; }
@@ -44,6 +44,9 @@ button, input[type="button"], input[type="submit"] {
   display: inline-block;
   cursor: pointer;
   font-size: 16px; }
+
+.error {
+  color: #FF0000; }
 
 .upvote.voted {
   background-color: green; }
@@ -107,7 +110,7 @@ button, input[type="button"], input[type="submit"] {
 
 #photosGrid img {
   position: relative;
-  border-radius: 16px;
+  border-radius: 3px;
   border: 1px solid #000000;
   width: 320px;
   height: 240px;

@@ -32,7 +32,8 @@ const preferences = require("./preferences")(app, connection, auth, view, api);
 const cleaner = require("./cleaner")(app, connection);
 
 connection.connect();
-cleaner.clean(createRoutes);
+//cleaner.clean(createRoutes);
+createRoutes();
 
 function createRoutes() {
     auth.createRoutes();

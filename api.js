@@ -623,8 +623,8 @@ module.exports = function(app, mysqlConnection, auth) {
                                 try {
                                     fs.unlinkSync(oldPath);
                                 } catch(e) {};
-                                res.status(err.code);
-                                res.end(err.message);
+                                res.status(200);
+                                res.json(err);
                                 return;
                             }
                             mysqlConnection.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
@@ -660,7 +660,7 @@ module.exports = function(app, mysqlConnection, auth) {
     app.post("/api/publish", function(req, res) {
         try {
             var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            var userId = checkParam(req.body, "userId");
             if(suggestionId == NaN) {
                 throw "incorrect suggestionId";
             } else if(userId == NaN) {
@@ -720,7 +720,7 @@ module.exports = function(app, mysqlConnection, auth) {
             function reqCallback(err, res, body) {
                 if(callback) {
                     if(res.statusCode >= 400 && res.statusCode < 500) {
-                        callback(res.statusCode.toString(), null);
+                        callback({code: res.statusCode}, null);
                     } else if(err) {
                         callback(err, null);
                     } else {

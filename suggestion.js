@@ -66,7 +66,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			auth.checkUserLoggedIn(req, res, function(data) {
 				api.makeLocalAPICall("POST", "/api/publish", {userId: data.id, suggestionId: id}, function(err, publishData) {
 					if(err) {
-						res.status(500);
+						res.status(err.code ? err.code : 500);
 						res.end();
 						return;
 					}

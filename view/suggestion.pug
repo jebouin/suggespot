@@ -7,7 +7,9 @@ mixin newPhoto()
     h3 New photo
     input.big(type="file" name="photo" id="photo" accept=".png,.bmp,.jpeg,.jpg,.gif")
     button From an URL
-    input.big(type="text" name="url" placeholder="Paste your URL" style="display: none")
+    input.big(type="text" name="url" placeholder="Paste your URL" style="display: none" autocomplete="off")
+    br
+    span.error(style="visibility: hidden") Invalid file
     br
     label(for="photo") From your computer
 

@@ -6,6 +6,7 @@ $laPalma: #119822;
 $yellowGreen: #C5D86D;
 $berylGreen: #E4E6C3;
 $white: #FFFFFF;
+$error: #FF0000;
 
 @mixin prefix($declarations, $prefixes: ()) {
 	@each $prop, $val in $declarations {
@@ -40,6 +41,12 @@ h1 {
 	text-align: center;
 }
 
+h2 {
+	display: inline-block;
+	font-size: 50px;
+	text-indent: 0;
+}
+
 img {
 	@include prefix((
 		user-select: none
@@ -48,12 +55,6 @@ img {
 
 .indented {
 	text-indent: 200px;
-}
-
-h2 {
-	display: inline-block;
-	font-size: 50px;
-	text-indent: 0;
 }
 
 form {
@@ -70,6 +71,10 @@ button, input[type="button"], input[type="submit"] {
 	display: inline-block;
 	cursor: pointer;
 	font-size: 16px;
+}
+
+.error {
+	color: $error;
 }
 
 .upvote.voted {
@@ -147,7 +152,7 @@ button, input[type="button"], input[type="submit"] {
 
 #photosGrid img {
 	position: relative;
-	border-radius: 16px;
+	border-radius: 3px;
 	border: 1px solid $black;
 	width: 320px;
 	height: 240px;
