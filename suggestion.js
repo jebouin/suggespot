@@ -98,7 +98,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			function apiCall(loginData) {
 				api.makeLocalAPICall("GET", "/api/suggestion/" + id, loginData ? loginData : {}, function(err, suggestionData) {
 					if(err) {
-						res.redirect("/");
+                        res.redirect("/");
 						return;
 					}
 					if(loginData) {

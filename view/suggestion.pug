@@ -49,9 +49,12 @@ html
         div#info
           span#author
             | By&nbsp;
-            a(href="/p/"+author) #{authorName}
-            | &nbsp;
+            if author != null
+              a(href="/p/"+author) #{authorName}
+            else
+              | [deleted]
           if isAuthor
+            | &nbsp;
             button Edit
       br
       if published

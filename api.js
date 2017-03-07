@@ -101,7 +101,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         id = parseInt(id, 36);
-        mysqlConnection.query("SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, upvotes - downvotes AS score, published FROM suggestions INNER JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?", [id], function(err, rows, fields) {
+        mysqlConnection.query("SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, upvotes - downvotes AS score, published FROM suggestions LEFT JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
@@ -153,9 +153,13 @@ module.exports = function(app, mysqlConnection, auth) {
                             formattedComments.push(c);
                         }
                     }
+                    var author = suggestionData.author;
+                    if(author) {
+                        author = author.toString(36);
+                    }
                     res.json({title: suggestionData.title,
                               descr: suggestionData.descr,
-                              author: suggestionData.author.toString(36),
+                              author: author,
                               authorName: suggestionData.authorName,
                               sid: suggestionData.id.toString(36),
                               score: suggestionData.score,
