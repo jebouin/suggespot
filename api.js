@@ -73,7 +73,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var userId = req.query.userId;
         var query;
         var params;
-        var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) AS conf";
+        var confQuery = "upvotes / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
         if(userId) {
             query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, upvotes - downvotes AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
             params = [userId];
@@ -116,7 +116,7 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             function sendComments(photos, voteDir) {
                 var query, params;
-                var confQuery = "(upvotes - SQRT(upvotes + downvotes)) / (upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 604800 AS conf";
+                var confQuery = "upvotes / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
                 var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
                 if(userId) {
                     query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, upvotes - downvotes AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? WHERE comments.suggestion = ? " + orderQuery;
