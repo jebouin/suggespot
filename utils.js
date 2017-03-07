@@ -19,6 +19,22 @@ module.exports = {
 		var seconds = this.padString("" + date.getSeconds(), "0", 2);
 		return year + "/" + month + "/" + day + " " + hour + ":" + minutes + ":" + seconds;
 	},
+    formatProfileTime: function(seconds) {
+        var timesInSecond = [31556926, 2628288, 604800, 86400, 3600, 60, 1];
+        var timeStrings = ["year", "month", "week", "day", "hour", "minute", "second"];
+        var i = 0, a = 0, b = 0;
+        while(seconds > 0) {
+            var n = Math.floor(seconds / timesInSecond[i]);
+            seconds -= n * timesInSecond[i];
+            if(n > 0) {
+                var str = n.toString() + " " + timeStrings[i] + (n == 1 ? "" : "s");
+                if(a == 0) a = str;
+                else if(b == 0) b = str;
+            }
+            i++;
+        }
+        return (b == 0 ? a : a + " and " + b);
+    },
 	getSalt: function() {
 		return crypto.randomBytes(16).toString('base64');
 	},

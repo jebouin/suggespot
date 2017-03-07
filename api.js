@@ -708,14 +708,16 @@ module.exports = function(app, mysqlConnection, auth) {
             res.end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT id, name, CURRENT_TIMESTAMP - timeRegistered AS timeSinceRegistered FROM users WHERE id = ?", [userId], function(err, rows, fields) {
+        mysqlConnection.query("SELECT id, name, TIMESTAMPDIFF(SECOND, timeRegistered, CURRENT_TIMESTAMP) AS timeSinceRegistered FROM users WHERE id = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
                 res.end("this user doesn't exist");
                 return;
             }
-            res.json(rows[0]);
+            var profileData = rows[0];
+            profileData.timeSinceRegistered = utils.formatProfileTime(profileData.timeSinceRegistered);
+            res.json(profileData);
         });
     });
 
