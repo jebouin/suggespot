@@ -155,7 +155,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     }
                     res.json({title: suggestionData.title,
                               descr: suggestionData.descr,
-                              author: suggestionData.author,
+                              author: suggestionData.author.toString(36),
                               authorName: suggestionData.authorName,
                               sid: suggestionData.id.toString(36),
                               score: suggestionData.score,
