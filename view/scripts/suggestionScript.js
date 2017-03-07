@@ -89,6 +89,7 @@ function enableEditMode(b) {
 	if(editMode) return;
 	editMode = true;
 	$("#author").css("visibility", "hidden");
+    $("#publishButton").css("visibility", "hidden");
 	$("button#morePhotos").css("display", "none");
 	$("#newPhoto").css("display", "");
 	$("#photosGrid img").attr("draggable", "true");
@@ -100,6 +101,7 @@ function disableEditMode(b) {
 	if(!editMode) return;
 	editMode = false;
 	$("#author").css("visibility", "visible");
+    $("#publishButton").css("visibility", "visible");
 	updatePhotos();
 	$("#newPhoto").css("display", "none");
 	$("#photosGrid img").attr("draggable", "false");
