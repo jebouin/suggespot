@@ -166,6 +166,7 @@ module.exports = function(app, mysqlConnection, auth) {
                               comments: formattedComments,
                               photos: photos,
                               voteDir: voteDir,
+                              maximumPhotos: global.config.maximumPhotos,
                               published: suggestionData.published});
                 });
             }

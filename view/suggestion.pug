@@ -1,6 +1,11 @@
 include voteUI
 include editUI
 
+mixin photo(p, hidden)
+  div.photo(draggable="false" pid=p.id style=hidden?"display: none":"")
+    img(src=p.path draggable="false")
+    img.dragHandle(src="/view/svg/dragArrow.svg" draggable="false")
+
 mixin newPhoto()
   form#newPhoto(enctype="multipart/form-data" style="display: none")
     h3 New photo
@@ -48,12 +53,13 @@ html
       div#suggestionBody
         div#photos
           div#photosGrid
+            + photo({}, true)
             if photos && photos.length
               each p in photos
-                img(src=p.path draggable="false", pid=p.id)
+                + photo(p)
             if isAuthor
               + newPhoto()
-          button#morePhotos.off(style="display: none") More
+          button#morePhotos(style="display: none") More
         p#descr #{descr}
         div#info
           span#author
@@ -88,6 +94,8 @@ html
         +commentUI(sid)
       else
         button.big#publishButton Publish
+    script.
+      var maximumPhotos = "#{maximumPhotos}";
     script(src="/libs/jquery.js")
     script(src="/view/scripts/suggestionScript.js")
     script(src="/view/scripts/voteUI.js")

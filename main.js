@@ -72,7 +72,7 @@ function createRoutes() {
     	utils.sendFile(res, "libs/jquery.js");
     });
 
-    app.get("/view/scripts/*", function(req, res) {
+    app.get(["/view/scripts/*", "/view/svg/*"], function(req, res) {
     	try {
     		utils.sendFile(res, req.url);
     	} catch(e) {

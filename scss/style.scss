@@ -150,16 +150,35 @@ button, input[type="button"], input[type="submit"] {
 	padding: 5px;
 }
 
-#photosGrid img {
+#photosGrid .photo {
 	position: relative;
 	border-radius: 3px;
 	border: 1px solid $black;
-	width: 320px;
-	height: 240px;
 	margin: 5px;
 }
 
-#photosGrid img[draggable="true"] {
+.photo img:first-child {
+	display: block;
+	width: 320px;
+	height: 240px;
+}
+
+.photo .dragHandle {
+	position: absolute;
+	display: block;
+	visibility: hidden;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	margin: auto;
+}
+
+.photo:hover .dragHandle {
+	visibility: visible;
+}
+
+#photosGrid .photo[draggable="true"] .dragHandle {
 	cursor: pointer;
 }
 

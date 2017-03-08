@@ -46,8 +46,11 @@ function uploadPhoto() {
 
             },
 			success: function(data) {
-				$("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
+                //todo
+                addPhoto(data);
 				updatePhotos();
+                resetNewPhotoForm();
+                updateNewPhotoForm();
 				//reset input value?
 			}
 	});
@@ -64,19 +67,43 @@ function updatePhotos() {
 function expandPhotos() {
 	if(photosExpanded) return;
 	photosExpanded = true;
-	var b = $("button#morePhotos");
 	$("#photosGrid").css("max-height", "none");
-	b.text("Less");
-	b.attr("class", "on");
+	$("button#morePhotos").text("Less");
 }
 
 function collapsePhotos() {
 	if(!photosExpanded) return;
 	photosExpanded = false;
-	var b = $("button#morePhotos");
 	$("#photosGrid").css("max-height", mh);
-	b.text(txt);
-	b.attr("class", "off");
+	$("button#morePhotos").text(txt);
+}
+
+function addPhoto(data) {
+    var photo = $(".photo:eq(0)").clone().insertBefore($("#newPhoto"));
+    photo.attr("pid", data.pid);
+    $("img:eq(0)", photo).attr("src", data.path);
+    photo.show();
+
+    /*div.photo(draggable="false" pid=p.id)
+        img(src=p.path draggable="false")
+        img.dragHandle(src="/view/svg/dragArrow.svg" draggable="false")
+
+    $("<img>").attr({"src": data.path, draggable="false"}).wrap("<div class='photo'>").parent().attr({"draggable": "true", "pid": data.pid}).insertBefore("#newPhoto");
+    $("<img>").attr("src": )*/
+}
+
+function resetNewPhotoForm() {
+    $("#newPhoto button").show();
+    $("#newPhoto input").hide().val("");
+}
+
+function updateNewPhotoForm() {
+    var photoCount = $("#photosGrid .photo").length;
+    if(photoCount >= maximumPhotos) {
+        $("#newPhoto").hide();
+    } else {
+        $("#newPhoto").show();
+    }
 }
 
 function setEditMode(e) {
@@ -92,8 +119,10 @@ function enableEditMode(b) {
     $("#publishButton").css("visibility", "hidden");
 	$("button#morePhotos").css("display", "none");
 	$("#newPhoto").css("display", "");
-	$("#photosGrid img").attr("draggable", "true");
+    $(".dragHandle").css("display", "");
+	$("#photosGrid .photo").attr("draggable", "true");
 	expandPhotos();
+    updateNewPhotoForm();
 	b.text("Save changes");
 }
 
@@ -102,16 +131,17 @@ function disableEditMode(b) {
 	editMode = false;
 	$("#author").css("visibility", "visible");
     $("#publishButton").css("visibility", "visible");
-	updatePhotos();
 	$("#newPhoto").css("display", "none");
-	$("#photosGrid img").attr("draggable", "false");
+    $(".dragHandle").css("display", "none");
+	$("#photosGrid .photo").attr("draggable", "false");
 	collapsePhotos();
+    updatePhotos();
 	b.text("Edit");
     var editObject = {};
     if(changedPhotosOrder) {
         changedPhotosOrder = false;
         var order = [];
-        var photos = $("#photosGrid img");
+        var photos = $("#photosGrid .photo");
         for(var i = 0; i < photos.length; i++) {
             order.push(photos[i].getAttribute("pid"));
         }
@@ -127,12 +157,24 @@ function disableEditMode(b) {
 }
 
 function initDD() {
+    $(".dragHandle").css("display", "none");
 	var draggedElement;
-    var n = $("#photosGrid img").length;
+    var n = $("#photosGrid .photo").length;
+    var target = false;
 	$(document).on({
-		dragstart: function(e) {
+        mousedown: function(e) {
+            target = $(e.target);
+        }, dragstart: function(e) {
+            //console.log(target, );
+            if(!target.is($(".dragHandle", $(e.target)))) {
+                e.preventDefault();
+                return;
+            }
+            e.originalEvent.dataTransfer.setData("text/plain", "");
             e.originalEvent.dataTransfer.effectAllowed = "move";
 			draggedElement = $(this);
+            $(".dragHandle").css("display", "none");
+            $(".dragHandle", draggedElement).css("display", "");
 			setTimeout(function() {
 				draggedElement.css("transform", "translateX(-9000px)");
 			});
@@ -144,9 +186,9 @@ function initDD() {
             var id = $this.index();
             var draggedId = draggedElement.index();
             if(draggedId > id) {
-                draggedElement.remove().insertBefore($("#photosGrid img").eq(id));
+                draggedElement.remove().insertBefore($("#photosGrid .photo").eq(id));
             } else if(draggedId < id) {
-                draggedElement.remove().insertAfter($("#photosGrid img").eq(id - 1));
+                draggedElement.remove().insertAfter($("#photosGrid .photo").eq(id - 1));
             }
 			/*var off = $this.offset();
 			var doff = draggedElement.offset();
@@ -158,22 +200,25 @@ function initDD() {
 
 		}, drop: function(e) {
 			e.preventDefault();
+            $(".dragHandle").css("display", "");
 			draggedElement.css("transform", "");
             draggedElement = null;
             changedPhotosOrder = true;
 		}, dragend: function() {
 			if(!draggedElement) return;
+            $(".dragHandle").css("display", "");
 			draggedElement.css("transform", "");
 			draggedElement = null;
             changedPhotosOrder = true;
 		}
-	}, "#photosGrid img");
+	}, "#photosGrid .photo");
 }
 
 function photoFromURL(e) {
     e.preventDefault();
     $("#newPhoto button").hide();
     $("#newPhoto input").show().focus();
+    updateNewPhotoForm();
 }
 
 var lastChange = new Date().getTime();
@@ -199,7 +244,7 @@ function onPhotoURLChange(e) {
             if(data.code == 400) {
                 $("#newPhoto .error").css("visibility", "visible");
             } else {
-                $("#newPhoto").before($("<img>").attr({"src": data.path, "draggable": "true", "pid": data.pid}));
+                addPhoto(data);
                 resetNewPhotoForm();
             }
         }).fail(function(xhr, status, error) {
@@ -208,19 +253,14 @@ function onPhotoURLChange(e) {
     }
 }
 
-function resetNewPhotoForm() {
-    $("#newPhoto button").show();
-    $("#newPhoto input").hide().val("");
-}
-
 $(document).ready(function() {
 	//photo grid
 	mh = $("#photosGrid").css("max-height");
 	txt = $("button#morePhotos").text();
 	$("button#morePhotos").on("click", function(e) {
 		var b = $(e.target);
-		if(b.hasClass("off")) expandPhotos();
-		else collapsePhotos();
+		if(photosExpanded) collapsePhotos();
+		else expandPhotos();
 	});
 	$("#newPhoto > input[type='file']").on("change", function() {
 		uploadPhoto();
