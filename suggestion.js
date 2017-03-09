@@ -106,9 +106,9 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			});
 		});
 
-		app.get(/^\/s\//, function(req, res) {
+		app.get("/s/:id", function(req, res) {
 			var url = req.originalUrl;
-			var id = url.substr(url.search("/s/") + 3);
+			var id = req.params.id;
 			function apiCall(loginData) {
 				api.makeLocalAPICall("GET", "/api/suggestion/" + id, loginData ? loginData : {}, function(err, suggestionData) {
 					if(err) {

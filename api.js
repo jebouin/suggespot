@@ -92,13 +92,12 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
-    app.get(/^\/api\/suggestion\//, function(req, res) {
-        var url = urlut.parse(req.originalUrl).pathname;
+    app.get("/api/suggestion/:id", function(req, res) {
         var userId = req.query.id;
         if(userId) {
             userId = parseInt(userId, 36);
         }
-        var id = url.substr(url.search("/suggestion/") + 12);
+        var id = req.params.id;
         if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
             res.status(400);
             res.end("invalid suggestion url");
