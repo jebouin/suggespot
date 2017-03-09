@@ -643,7 +643,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                 res.json({path: newPath, pid: rows.insertId.toString(36)});
                             });
                         }
-                        var newPath = global.config.uploadDir + "/" + thing.id + "_" + count;
+                        var newPath = global.config.uploadDir + "/" + thing.id + "_" + Math.random().toString(36).substr(2);
                         if(fromUrl == "true") getPhotoFromUrl(newPath, cb);
                         else getPhotoFromForm(newPath, cb);
                     });
@@ -677,7 +677,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         var photoId = thing.id;
-        mysqlConnection.query("SELECT * FROM photos LEFT JOIN suggestions ON photos.suggestion = suggestions.id WHERE photos.id = ?", [photoId], function(err, rows, fields) {
+        mysqlConnection.query("SELECT path, author FROM photos LEFT JOIN suggestions ON photos.suggestion = suggestions.id WHERE photos.id = ?", [photoId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404);
@@ -689,10 +689,13 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.end("this suggestion is not yours");
                 return;
             }
+            var path = rows[0].path;
             mysqlConnection.query("DELETE FROM photos WHERE id = ?", [photoId], function(err, rows, fields) {
                 if(err) throw err;
-                res.status(200);
-                res.end();
+                fs.unlink(__dirname + path, function() {
+                    res.status(200);
+                    res.end();
+                });
             });
         });
     });

@@ -57,7 +57,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			})
 		});
 
-		app.post("/upload", function(req, res) {
+		app.post("/uploadPhoto", function(req, res) {
 			res.redirect(307, "/api/upload");
 		});
 

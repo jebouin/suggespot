@@ -21,7 +21,7 @@ function uploadPhoto() {
     formData.append("thingId", "0_" + getSid());
     formData.append("fromUrl", "false");
     $.ajax({
-		url: "/upload",
+		url: "/uploadPhoto",
 			type: "POST",
 			data: formData,
 			cache: false,
@@ -89,6 +89,7 @@ function deletePhoto(e) {
     var photo = $(".photo").has($(e.target));
     $.post("/deletePhoto", {thingId: "3_" + photo.attr("pid")}, function(data) {
         photo.remove();
+        updateNewPhotoForm();
     });
 }
 
@@ -99,7 +100,7 @@ function resetNewPhotoForm() {
 
 function updateNewPhotoForm() {
     var photoCount = $("#photosGrid .photo").length;
-    if(photoCount >= maximumPhotos) {
+    if(photoCount > maximumPhotos) {
         $("#newPhoto").hide();
     } else {
         $("#newPhoto").show();
@@ -242,7 +243,7 @@ function onPhotoURLChange(e) {
         if(!match[1]) {
             url = "http://" + url;
         }
-        $.post("/upload", {"fromUrl": true, "thingId": "0_" + getSid(), "url": url}).done(function(data) {
+        $.post("/uploadPhoto", {"fromUrl": true, "thingId": "0_" + getSid(), "url": url}).done(function(data) {
             if(data.code == 400) {
                 $("#newPhoto .error").css("visibility", "visible");
             } else {
