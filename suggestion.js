@@ -61,6 +61,20 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			res.redirect(307, "/api/upload");
 		});
 
+        app.post("/deletePhoto", function(req, res) {
+            auth.checkUserLoggedIn(req, res, function(data) {
+                api.makeLocalAPICall("POST", "/api/delete", {userId: data.id, thingId: req.body.thingId}, function(err, deleteData) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500);
+                        res.end();
+                        return;
+                    }
+                    res.status(200);
+                    res.end();
+                });
+            });
+        })
+
 		app.post("/publish", function(req, res) {
 			var id = req.body.sid;
 			auth.checkUserLoggedIn(req, res, function(data) {

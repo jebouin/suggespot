@@ -668,7 +668,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var userId = parseInt(checkParam(req.body, "userId"), 36);
             var thingId = checkParam(req.body, "thingId");
             var thing = utils.getThingFromId(thingId);
-            if(thing != 3) {
+            if(thing.type != 3) {
                 throw "you can't delete this";
             }
         } catch(e) {
@@ -676,7 +676,25 @@ module.exports = function(app, mysqlConnection, auth) {
             res.end(e.message);
             return;
         }
-
+        var photoId = thing.id;
+        mysqlConnection.query("SELECT * FROM photos LEFT JOIN suggestions ON photos.suggestion = suggestions.id WHERE photos.id = ?", [photoId], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length != 1) {
+                res.status(404);
+                res.end("this photo doesn't exist");
+                return;
+            }
+            if(rows[0].author != userId) {
+                res.status(401);
+                res.end("this suggestion is not yours");
+                return;
+            }
+            mysqlConnection.query("DELETE FROM photos WHERE id = ?", [photoId], function(err, rows, fields) {
+                if(err) throw err;
+                res.status(200);
+                res.end();
+            });
+        });
     });
 
     app.post("/api/publish", function(req, res) {

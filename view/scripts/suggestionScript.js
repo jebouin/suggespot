@@ -83,13 +83,13 @@ function addPhoto(data) {
     photo.attr("pid", data.pid);
     $("img:eq(0)", photo).attr("src", data.path);
     photo.show();
+}
 
-    /*div.photo(draggable="false" pid=p.id)
-        img(src=p.path draggable="false")
-        img.dragHandle(src="/view/svg/dragArrow.svg" draggable="false")
-
-    $("<img>").attr({"src": data.path, draggable="false"}).wrap("<div class='photo'>").parent().attr({"draggable": "true", "pid": data.pid}).insertBefore("#newPhoto");
-    $("<img>").attr("src": )*/
+function deletePhoto(e) {
+    var photo = $(".photo").has($(e.target));
+    $.post("/deletePhoto", {thingId: "3_" + photo.attr("pid")}, function(data) {
+        photo.remove();
+    });
 }
 
 function resetNewPhotoForm() {
@@ -214,10 +214,6 @@ function initDD() {
             changedPhotosOrder = true;
 		}
 	}, "#photosGrid .photo");
-}
-
-function deletePhoto(e) {
-    $(".photo").has($(e.target)).remove();
 }
 
 function photoFromURL(e) {
