@@ -1,4 +1,5 @@
 body {
+  position: relative;
   background: #E4E6C3;
   margin: 0px;
   padding: 0px;
@@ -97,6 +98,20 @@ button, input[type="button"], input[type="submit"] {
 #suggestionBody {
   display: inline-block; }
 
+#dark {
+  position: fixed;
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  opacity: .8;
+  z-index: 1;
+  overflow: hidden;
+  -webkit-cursor: zoom-out;
+  -moz-cursor: zoom-out;
+  -ms-cursor: zoom-out;
+  cursor: zoom-out; }
+
 #photos {
   background: #E4E6C3; }
 
@@ -117,12 +132,28 @@ button, input[type="button"], input[type="submit"] {
   width: 320px;
   height: 240px; }
 
+#photosGrid .photo[draggable="false"] {
+  -webkit-cursor: zoom-in;
+  -moz-cursor: zoom-in;
+  -ms-cursor: zoom-in;
+  cursor: zoom-in; }
+
 .photo .photoImg {
   display: block;
   position: absolute;
   width: 320px;
   height: 240px;
   z-index: 0; }
+
+.photoImg.enlarged {
+  position: fixed;
+  width: 75%;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: auto;
+  z-index: 2; }
 
 .photo .photoOverlay {
   display: none;

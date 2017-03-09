@@ -2,6 +2,7 @@ var editMode = false;
 var photosExpanded = false;
 var mh, txt;
 var changedPhotosOrder = false;
+var enlargedContainer, enlargedPhoto, enlarged;
 
 window.onbeforeunload = function() {
     if(changedPhotosOrder) {
@@ -91,6 +92,26 @@ function deletePhoto(e) {
         photo.remove();
         updateNewPhotoForm();
     });
+}
+
+function enlargePhoto(e) {
+    if(enlarged) return;
+    enlarged = true;
+    enlargedPhoto = $(e.target);
+    enlargedContainer = enlargedPhoto.parent();
+    enlargedPhoto.remove().appendTo("body").addClass("enlarged");
+    $("body").css("position", "fixed");
+    $("#dark").show();
+}
+
+function shrinkPhoto() {
+    if(!enlarged) return;
+    $("#dark").hide();
+    $("body").css("position", "");
+    enlargedPhoto.remove().appendTo(enlargedContainer).removeClass("enlarged");
+    enlargedContainer = null;
+    enlargedPhoto = null;
+    enlarged = false;
 }
 
 function resetNewPhotoForm() {
@@ -272,7 +293,14 @@ $(document).ready(function() {
     $("#newPhoto > input[name='url']").on("input", onPhotoURLChange);
 	initDD();
     $(document).on("click", ".deleteButton", deletePhoto);
-    //$(".deleteButton").on("click", deletePhoto);
+    $(document).on("click", ".photo", function(e) {
+        if(!editMode) enlargePhoto(e);
+    });
+    $(document).on("click", "#dark", function(e) {
+        if(enlarged) {
+            shrinkPhoto();
+        }
+    })
 	updatePhotos();
 
 	//edit
@@ -285,11 +313,18 @@ $(document).ready(function() {
 			window.location.reload(true);
 		});
 	});
-	//comment
+	//handle keys for accessibility
 	$(document).keydown(function(e) {
-  		if(e.which === 13 && e.ctrlKey) {
-    		$("input[type='submit']:visible").last().click();
-    	}
+        var k = e.which;
+        if(k === 13) {
+            if(k === e.ctrlKey) {
+                $("input[type='submit']:visible").last().click();
+            }
+        } else if(k === 27) {
+            if(enlarged) {
+                shrinkPhoto();
+            }
+        }
 	});
 
 	/*$(document).on("click", ".editLink", function(e) {
