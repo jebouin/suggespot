@@ -470,7 +470,6 @@ module.exports = function(app, mysqlConnection, auth) {
             res.end(e.message);
             return;
         }
-        user.id = parseInt(user.id, 36);
         if(thing.type == 0) {
             mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                 if(err) throw err;
