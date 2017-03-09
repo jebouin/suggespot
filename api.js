@@ -75,6 +75,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var params;
         var confQuery = "upvotes / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
         if(userId) {
+            userId = parseInt(userId, 36);
             query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
             params = [userId];
         } else {
@@ -94,6 +95,9 @@ module.exports = function(app, mysqlConnection, auth) {
     app.get(/^\/api\/suggestion\//, function(req, res) {
         var url = urlut.parse(req.originalUrl).pathname;
         var userId = req.query.id;
+        if(userId) {
+            userId = parseInt(userId, 36);
+        }
         var id = url.substr(url.search("/suggestion/") + 12);
         if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
             res.status(400);
@@ -196,7 +200,7 @@ module.exports = function(app, mysqlConnection, auth) {
     app.post("/api/vote", function(req, res) {
         try {
             var thingId = checkParam(req.body, "thingId");
-            var userId = checkParam(req.body, "userId");
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
             var dir = checkParam(req.body, "dir");
             var thing = utils.getThingFromId(req.body.thingId);
         } catch(e) {
@@ -205,9 +209,6 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         checkUserExists(userId, res, function(ok, row) {
-            if(!ok) {
-                return;
-            }
             var dirField = utils.voteDirToField(dir);
             var username = row.name;
             if(thing.type === 0) {
@@ -365,7 +366,7 @@ module.exports = function(app, mysqlConnection, auth) {
     app.post("/api/comment", function (req, res) {
         try {
             var suggestionId = checkParam(req.body, "suggestionId");
-            var userId = checkParam(req.body, "userId");
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
             var content = checkParam(req.body, "content");
         } catch(e) {
             res.status(400);
@@ -420,7 +421,7 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/submit", function(req, res) {
         try {
-            var userId = checkParam(req.body, "userId");
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
             var title = checkParam(req.body, "title");
             var descr = checkParam(req.body, "descr");
         } catch(e) {
@@ -462,6 +463,7 @@ module.exports = function(app, mysqlConnection, auth) {
     app.post("/api/edit", function(req, res) {
         try {
             var user = checkParam(req.body, "user");
+            user.id = parseInt(user.id, 36);
             var edit = checkParam(req.body, "edit");
             var thingId = checkParam(edit, "thingId");
             var thing = utils.getThingFromId(thingId);
@@ -535,7 +537,7 @@ module.exports = function(app, mysqlConnection, auth) {
             auth.checkUserLoggedIn(req, res, function(data) {
                 req.body.userId = data.id;
                 try {
-                    var userId = checkParam(req.body, "userId");
+                    var userId = parseInt(checkParam(req.body, "userId"), 36);
                     var thingId = checkParam(req.body, "thingId");
                     var fromUrl = checkParam(req.body, "fromUrl");
                     var thing = utils.getThingFromId(thingId);
@@ -663,7 +665,7 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/delete", function(req, res) {
         try {
-            var userId = checkParam(req.body, "userId")
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
             var thingId = checkParam(req.body, "thingId");
             var thing = utils.getThingFromId(thingId);
             if(thing != 3) {
@@ -680,7 +682,7 @@ module.exports = function(app, mysqlConnection, auth) {
     app.post("/api/publish", function(req, res) {
         try {
             var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);
-            var userId = checkParam(req.body, "userId");
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
             if(suggestionId == NaN) {
                 throw "incorrect suggestionId";
             } else if(userId == NaN) {

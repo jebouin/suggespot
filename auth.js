@@ -86,6 +86,7 @@ module.exports = function(app, mysqlConnection, view) {
 					res.end(view.getTemplate("index")());
 				}
                 if(rows.length == 1) {
+                    rows[0].id = rows[0].id.toString(36);
 					var hash = crypto.createHash("sha256").update("" + req.cookies.uid + rows[0].salt).digest("base64");
                     if(hash === req.cookies.uid2) {
 						yesCallback(rows[0]);
