@@ -153,29 +153,42 @@ button, input[type="button"], input[type="submit"] {
 #photosGrid .photo {
 	position: relative;
 	border-radius: 3px;
+	text-align: center;
 	border: 1px solid $black;
 	margin: 5px;
-}
-
-.photo img:first-child {
-	display: block;
 	width: 320px;
 	height: 240px;
 }
 
-.photo .dragHandle {
-	position: absolute;
+.photo .photoImg {
 	display: block;
-	visibility: hidden;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	left: 0;
-	margin: auto;
+	position: absolute;
+	width: 320px;
+	height: 240px;
+	z-index: 0;
 }
 
-.photo:hover .dragHandle {
-	visibility: visible;
+.photo .photoOverlay {
+	display: none;
+	position: relative;
+	width: 100%;
+	height: 100%;
+	z-index: 10;
+}
+
+.photoOverlay .dragHandle {
+	position: absolute;
+	top: 0; right: 0; bottom: 0; left: 0;
+	margin: auto;
+	width: 100px;
+}
+
+.photoOverlay .deleteButton {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	width: 30px;
+	cursor: pointer;
 }
 
 #photosGrid .photo[draggable="true"] .dragHandle {

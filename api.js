@@ -662,6 +662,22 @@ module.exports = function(app, mysqlConnection, auth) {
         }
     });
 
+    app.post("/api/delete", function(req, res) {
+        try {
+            var userId = checkParam(req.body, "userId")
+            var thingId = checkParam(req.body, "thingId");
+            var thing = utils.getThingFromId(thingId);
+            if(thing != 3) {
+                throw "you can't delete this";
+            }
+        } catch(e) {
+            res.status(400);
+            res.end(e.message);
+            return;
+        }
+
+    });
+
     app.post("/api/publish", function(req, res) {
         try {
             var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);

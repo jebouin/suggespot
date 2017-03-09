@@ -62,7 +62,9 @@ module.exports = {
 		var thingId = parseInt(id.substring(pos + 1), 36);
 		//0 = suggestion
 		//1 = comment
-		if(thingType < 0 || thingType > 1) {
+        //2 = user
+        //3 = photo
+		if(thingType < 0 || thingType > 3) {
 			throw "thing type out of bounds";
 		}
 		return {type: thingType, id: thingId};

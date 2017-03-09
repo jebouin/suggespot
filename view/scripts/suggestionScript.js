@@ -119,7 +119,7 @@ function enableEditMode(b) {
     $("#publishButton").css("visibility", "hidden");
 	$("button#morePhotos").css("display", "none");
 	$("#newPhoto").css("display", "");
-    $(".dragHandle").css("display", "");
+    $(".photoOverlay").css("display", "block");
 	$("#photosGrid .photo").attr("draggable", "true");
 	expandPhotos();
     updateNewPhotoForm();
@@ -132,7 +132,7 @@ function disableEditMode(b) {
 	$("#author").css("visibility", "visible");
     $("#publishButton").css("visibility", "visible");
 	$("#newPhoto").css("display", "none");
-    $(".dragHandle").css("display", "none");
+    $(".photoOverlay").css("display", "none");
 	$("#photosGrid .photo").attr("draggable", "false");
 	collapsePhotos();
     updatePhotos();
@@ -141,12 +141,14 @@ function disableEditMode(b) {
     if(changedPhotosOrder) {
         changedPhotosOrder = false;
         var order = [];
-        var photos = $("#photosGrid .photo");
+        var photos = $("#photosGrid .photo:visible");
+        console.log(photos);
         for(var i = 0; i < photos.length; i++) {
             order.push(photos[i].getAttribute("pid"));
         }
         editObject.photosOrder = order;
     }
+    console.log(editObject);
     if(!jQuery.isEmptyObject(editObject)) {
         editObject.thingId = "0_" + getSid();
         $.post("/edit", editObject, function(data) {
@@ -157,7 +159,7 @@ function disableEditMode(b) {
 }
 
 function initDD() {
-    $(".dragHandle").css("display", "none");
+    $(".photoOverlay").css("display", "none");
 	var draggedElement;
     var n = $("#photosGrid .photo").length;
     var target = false;
@@ -173,8 +175,8 @@ function initDD() {
             e.originalEvent.dataTransfer.setData("text/plain", "");
             e.originalEvent.dataTransfer.effectAllowed = "move";
 			draggedElement = $(this);
-            $(".dragHandle").css("display", "none");
-            $(".dragHandle", draggedElement).css("display", "");
+            /*$(".photoOverlay").css("display", "none");
+            $(".photoOverlay", draggedElement).css("display", "");*/
 			setTimeout(function() {
 				draggedElement.css("transform", "translateX(-9000px)");
 			});
@@ -200,18 +202,22 @@ function initDD() {
 
 		}, drop: function(e) {
 			e.preventDefault();
-            $(".dragHandle").css("display", "");
+            //$(".photoOverlay").css("display", "");
 			draggedElement.css("transform", "");
             draggedElement = null;
             changedPhotosOrder = true;
 		}, dragend: function() {
 			if(!draggedElement) return;
-            $(".dragHandle").css("display", "");
+            //$(".photoOverlay").css("display", "");
 			draggedElement.css("transform", "");
 			draggedElement = null;
             changedPhotosOrder = true;
 		}
 	}, "#photosGrid .photo");
+}
+
+function deletePhoto(e) {
+    $(".photo").has($(e.target)).remove();
 }
 
 function photoFromURL(e) {
@@ -268,6 +274,8 @@ $(document).ready(function() {
     $("#newPhoto > button").on("click", photoFromURL);
     $("#newPhoto > input[name='url']").on("input", onPhotoURLChange);
 	initDD();
+    $(document).on("click", ".deleteButton", deletePhoto);
+    //$(".deleteButton").on("click", deletePhoto);
 	updatePhotos();
 
 	//edit

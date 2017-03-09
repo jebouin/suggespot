@@ -103,6 +103,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 					}
 					if(loginData) {
 						suggestionData.user = loginData;
+                        suggestionData.user.id = suggestionData.user.id.toString(36);
 					}
 					res.end(view.getTemplate("suggestion")(suggestionData));
 				});

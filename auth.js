@@ -41,7 +41,7 @@ module.exports = function(app, mysqlConnection, view) {
 
 		app.post("/login", function(req, res) {
 			var username = req.body.username;
-			mysqlConnection.query('SELECT * FROM users WHERE name=?', [username], function(err, rows, fields) {
+			mysqlConnection.query('SELECT * FROM users WHERE name = ?', [username], function(err, rows, fields) {
 				if(err) throw err;
 				if(rows.length === 0) {
 					res.redirect("/");
@@ -63,9 +63,10 @@ module.exports = function(app, mysqlConnection, view) {
 
 	function logUserIn(req, res, id, name) {
 		var salt = utils.getSalt();
-		mysqlConnection.query('UPDATE users SET salt = ? WHERE id = ?', [salt, id], function(err, rows, fields) {
+        mysqlConnection.query('UPDATE users SET salt = ? WHERE id = ?', [salt, id], function(err, rows, fields) {
 			if(err) throw err;
-			var hash = crypto.createHash("sha256").update("" + id + salt).digest("base64");
+            id = id.toString(36);
+            var hash = crypto.createHash("sha256").update("" + id + salt).digest("base64");
 			res.cookie("uid", id, {expires: utils.getMonthsFromNow(1)});
 			res.cookie("uid2", hash, {expires: utils.getMonthsFromNow(1)});
 			res.redirect("/");
@@ -75,7 +76,8 @@ module.exports = function(app, mysqlConnection, view) {
 
 	function checkUserLoggedIn(req, res, yesCallback, noCallback, errCallback) {
 		if(req.cookies.uid) {
-			mysqlConnection.query('SELECT id, name, salt FROM users WHERE id=?', [req.cookies.uid], function(err, rows, fields) {
+            var uid = parseInt(req.cookies.uid, 36);
+            mysqlConnection.query('SELECT id, name, salt FROM users WHERE id = ?', [uid], function(err, rows, fields) {
 				if(err) throw err;
 				function wrongHash() {
 					//logs.log(colors.bold("unknown user tried to log with id " + req.cookies.uid + " from " + req.ip)); //happens when you change device
@@ -83,9 +85,9 @@ module.exports = function(app, mysqlConnection, view) {
 					res.clearCookie("uid2");
 					res.end(view.getTemplate("index")());
 				}
-				if(rows.length == 1) {
+                if(rows.length == 1) {
 					var hash = crypto.createHash("sha256").update("" + req.cookies.uid + rows[0].salt).digest("base64");
-					if(hash === req.cookies.uid2) {
+                    if(hash === req.cookies.uid2) {
 						yesCallback(rows[0]);
 					} else {
 						wrongHash();

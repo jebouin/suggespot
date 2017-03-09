@@ -3,8 +3,10 @@ include editUI
 
 mixin photo(p, hidden)
   div.photo(draggable="false" pid=p.id style=hidden?"display: none":"")
-    img(src=p.path draggable="false")
-    img.dragHandle(src="/view/svg/dragArrow.svg" draggable="false")
+    img.photoImg(src=p.path draggable="false")
+    div.photoOverlay
+      img.dragHandle(src="/view/svg/drag.svg" draggable="false")
+      img.deleteButton(src="/view/svg/delete.svg" draggable="false")
 
 mixin newPhoto()
   form#newPhoto(enctype="multipart/form-data" style="display: none")
