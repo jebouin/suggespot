@@ -358,6 +358,10 @@ module.exports = function(app, mysqlConnection, auth) {
                     res.end();
                     return;
                 });
+            } else {
+                res.status(400);
+                res.end("incorrect thing type");
+                return;
             }
         });
     });
@@ -528,6 +532,10 @@ module.exports = function(app, mysqlConnection, auth) {
                 }
                 return;
             });
+        } else {
+            res.status(400);
+            res.end("incorrect thing type");
+            return;
         }
     });
 
