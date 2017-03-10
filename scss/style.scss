@@ -158,7 +158,7 @@ button, input[type="button"], input[type="submit"] {
 
 #photosGrid {
 	display: flex;
-	max-height: 252px;
+	max-height: 250px;
 	overflow: hidden;
 	flex-wrap: wrap;
 	justify-content: flex-start;
@@ -169,7 +169,6 @@ button, input[type="button"], input[type="submit"] {
 	position: relative;
 	border-radius: 3px;
 	text-align: center;
-	border: 1px solid $black;
 	margin: 5px;
 	width: 320px;
 	height: 240px;

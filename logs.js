@@ -9,7 +9,12 @@ module.exports = {
 		if(this.stream) {
 			this.stream.write(toWrite);
 		} else {
-			this.stream = fs.createWriteStream("logs/log.txt", {flags: "a"});
+            var date = new Date();
+            var year = utils.padString("" + (date.getFullYear() % 100), "0", 2);
+            var month = utils.padString("" + (date.getMonth() + 1), "0", 2);
+            var day = utils.padString("" + date.getDate(), "0", 2);
+            var filename = "logs/" + year + "-" + month + "-" + day + ".txt";
+			this.stream = fs.createWriteStream(filename, {flags: "a"});
 			this.stream.once("open", function() {
 				this.write(toWrite);
 			});
