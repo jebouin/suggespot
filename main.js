@@ -50,8 +50,7 @@ function createRoutes() {
     		}
     	}
     	logs.log("Unauthorized ip " + req.ip);
-    	res.status(401);
-    	return res.send("Soon...");
+    	return res.status(401).send("Soon...");
     });
 
     app.get("/", function(req, res) {
@@ -76,8 +75,7 @@ function createRoutes() {
     	try {
     		utils.sendFile(res, req.url);
     	} catch(e) {
-    		res.status(404);
-    		res.end();
+    		res.status(404).end();
     	}
     });
 
@@ -85,8 +83,7 @@ function createRoutes() {
     	try {
     		utils.sendFile(res, req.url);
     	} catch(e) {
-    		res.status(404);
-    		res.end();
+    		res.status(404).end();
     	}
     });
 

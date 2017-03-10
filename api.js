@@ -51,8 +51,7 @@ module.exports = function(app, mysqlConnection, auth) {
         mysqlConnection.query("SELECT name FROM users WHERE id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
-                res.status(404);
-                res.end("this user doesn't exist");
+                res.status(404).end("this user doesn't exist");
                 return;
             }
             callback(true, rows[0]);
@@ -64,8 +63,7 @@ module.exports = function(app, mysqlConnection, auth) {
             next();
         } else {
             console.log(req.ip);
-            res.status(401);
-            res.end();
+            res.status(401).end();
         }
     });
 
@@ -99,22 +97,19 @@ module.exports = function(app, mysqlConnection, auth) {
         }
         var id = req.params.id;
         if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
-            res.status(400);
-            res.end("invalid suggestion url");
+            res.status(400).end("invalid suggestion url");
             return;
         }
         id = parseInt(id, 36);
         mysqlConnection.query("SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, published FROM suggestions LEFT JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
-                res.status(404);
-                res.end("this suggestion doesn't exist");
+                res.status(404).end("this suggestion doesn't exist");
                 return;
             }
             var suggestionData = rows[0];
             if(suggestionData.published == 0 && (!userId || userId != suggestionData.author)) {
-                res.status(403);
-                res.end("this suggestion is private and you are not the author");
+                res.status(403).end("this suggestion is private and you are not the author");
                 return;
             }
             function sendComments(photos, voteDir) {
@@ -203,8 +198,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var dir = checkParam(req.body, "dir");
             var thing = utils.getThingFromId(req.body.thingId);
         } catch(e) {
-            res.status(400);
-            res.end(e.message)
+            res.status(400).end(e.message)
             return;
         }
         checkUserExists(userId, res, function(ok, row) {
@@ -214,8 +208,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 mysqlConnection.query("SELECT title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length != 1) {
-                        res.status(404);
-                        res.end("this suggestion doesn't exist");
+                        res.status(404).end("this suggestion doesn't exist");
                         return;
                     }
                     var suggestionTitle = rows[0].title;
@@ -223,8 +216,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         mysqlConnection.query("SELECT id, dir FROM votes WHERE suggestion = ? AND user = ?", [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
-                                res.status(400);
-                                res.end("no vote to cancel");
+                                res.status(400).end("no vote to cancel");
                                 return;
                             } else {
                                 var prevDir = rows[0].dir;
@@ -281,16 +273,14 @@ module.exports = function(app, mysqlConnection, auth) {
                             });
                         });
                     }
-                    res.status(200);
-                    res.end();
+                    res.status(200).end();
                     return;
                 });
             } else if(thing.type == 1) {
                 mysqlConnection.query('SELECT author FROM comments WHERE id = ?', [thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length != 1) {
-                        res.status(404);
-                        res.end("this comment doesn't exist");
+                        res.status(404).end("this comment doesn't exist");
                         return;
                     }
                     var commentAuthor = rows[0].author;
@@ -298,8 +288,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         mysqlConnection.query('SELECT id, dir FROM votes WHERE comment = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
-                                res.status(400);
-                                res.end("no vote to cancel");
+                                res.status(400).end("no vote to cancel");
                                 return;
                             } else {
                                 var prevDir = rows[0].dir;
@@ -354,13 +343,11 @@ module.exports = function(app, mysqlConnection, auth) {
                             })
                         });
                     }
-                    res.status(200);
-                    res.end();
+                    res.status(200).end();
                     return;
                 });
             } else {
-                res.status(400);
-                res.end("incorrect thing type");
+                res.status(400).end("incorrect thing type");
                 return;
             }
         });
@@ -372,8 +359,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var userId = parseInt(checkParam(req.body, "userId"), 36);
             var content = checkParam(req.body, "content");
         } catch(e) {
-            res.status(400);
-            res.end(e.message);
+            res.status(400).end(e.message);
             return;
         }
         var id = parseInt(suggestionId, 36);
@@ -382,8 +368,7 @@ module.exports = function(app, mysqlConnection, auth) {
             mysqlConnection.query('SELECT id, title FROM suggestions WHERE id = ?', [id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
-                    res.status(404);
-                    res.end("this suggestion doesn't exist");
+                    res.status(404).end("this suggestion doesn't exist");
                     return;
                 }
                 var suggestionData = rows[0];
@@ -399,8 +384,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     mysqlConnection.query(query, params, function(err, rows, fields) {
                         if(err) throw err;
                         var cid = parseInt(rows.insertId);
-                        res.status(201);
-                        res.end(cid.toString(36));
+                        res.status(201).end(cid.toString(36));
                         logs.log("user " + colors.bold(username) + " commented on " + colors.bold(suggestionData.title));
                     });
                 }
@@ -409,8 +393,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     mysqlConnection.query('SELECT id FROM comments WHERE id = ?', [parent], function(err, rows, fields) {
                         if(err) throw err;
                         if(rows.length != 1) {
-                            res.status(404);
-                            res.end("this parent comment doesn't exist");
+                            res.status(404).end("this parent comment doesn't exist");
                             return;
                         }
                         sendComment(parent);
@@ -428,8 +411,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var title = checkParam(req.body, "title");
             var descr = checkParam(req.body, "descr");
         } catch(e) {
-            res.status(400);
-            res.end(e.message);
+            res.status(400).end(e.message);
             return;
         }
         checkUserExists(userId, res, function(ok, row) {
@@ -456,8 +438,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 if(err) throw err;
                 var sid = parseInt(rows.insertId);
                 logs.log("user " + colors.bold(username) + " posted a new entry " + colors.bold(title));
-                res.status(201);
-                res.end(sid.toString(36));
+                res.status(201).end(sid.toString(36));
                 return;
             });
         });
@@ -471,33 +452,28 @@ module.exports = function(app, mysqlConnection, auth) {
             var thingId = checkParam(edit, "thingId");
             var thing = utils.getThingFromId(thingId);
         } catch(e) {
-            res.status(400);
-            res.end(e.message);
+            res.status(400).end(e.message);
             return;
         }
         if(thing.type == 0) {
             mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
-                    res.status(404);
-                    res.end("this suggestion doesn't exist");
+                    res.status(404).end("this suggestion doesn't exist");
                     return;
                 }
                 var suggestion = rows[0];
                 if(suggestion.author != user.id) {
-                    res.status(401);
-                    res.end("this suggestion is not yours");
+                    res.status(401).end("this suggestion is not yours");
                     return;
                 }
                 var edited = false;
                 function onEditFinished() {
-                    res.status(200);
-                    res.end();
+                    res.status(200).end();
                     logs.log("user " + colors.bold(user.name) + " edited their suggestion " + colors.bold(suggestion.title));
                 }
                 function onInvalidEdit() {
-                    res.status(400);
-                    res.end("invalid edit reqest");
+                    res.status(400).end("invalid edit reqest");
                 }
                 if(edit.descr) {
                     edited = true;
@@ -533,8 +509,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 return;
             });
         } else {
-            res.status(400);
-            res.end("incorrect thing type");
+            res.status(400).end("incorrect thing type");
             return;
         }
     });
@@ -552,8 +527,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         throw "you can't upload a photo for a comment";
                     }
                 } catch(e) {
-                    res.status(400);
-                    res.end(e.message);
+                    res.status(400).end(e.message);
                     return;
                 }
                 function detectAndRename(originalPath, newPath, cb) {
@@ -572,8 +546,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     try {
                         var url = checkParam(req.body, "url");
                     } catch(e) {
-                        res.status(400);
-                        res.end(e.message);
+                        res.status(400).end(e.message);
                         return;
                     }
                     var tempPath = __dirname + newPath + Math.random().toString(36).substring(10);
@@ -586,8 +559,7 @@ module.exports = function(app, mysqlConnection, auth) {
                             if(fileSize > global.config.photoSizeLimit) {
                                 req.abort();
                                 fs.unlink(tempPath);
-                                res.status(400);
-                                res.end("photo is too big");
+                                res.status(400).end("photo is too big");
                                 return;
                             }
                         }).on("end", function() {
@@ -604,8 +576,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     try {
                         checkParam(req, "file");
                     } catch(e) {
-                        res.status(400);
-                        res.end(e.message);
+                        res.status(400).end(e.message);
                         return;
                     }
                     detectAndRename(req.file.path, newPath, cb);
@@ -613,22 +584,19 @@ module.exports = function(app, mysqlConnection, auth) {
                 mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length != 1) {
-                        res.status(404);
-                        res.end("this suggestion doesn't exist");
+                        res.status(404).end("this suggestion doesn't exist");
                         return;
                     }
                     var suggestion = rows[0];
                     if(suggestion.author != userId) {
-                        res.status(401);
-                        res.end("this suggestion is not yours");
+                        res.status(401).end("this suggestion is not yours");
                         return;
                     }
                     mysqlConnection.query("SELECT COUNT(id) AS count FROM photos WHERE suggestion = ?", [thing.id], function(err, rows, fields) {
                         if(err) throw err;
                         var count = rows[0].count;
                         if(count >= global.config.maximumPhotos) {
-                          res.status(422);
-                          res.end("maximum number of photos reached");
+                          res.status(422).end("maximum number of photos reached");
                           return;
                         }
                         function cb(err, newPath, oldPath) {
@@ -636,8 +604,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                 try {
                                     fs.unlinkSync(oldPath);
                                 } catch(e) {};
-                                res.status(200);
-                                res.json(err);
+                                res.status(200).json(err);
                                 return;
                             }
                             mysqlConnection.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
@@ -646,8 +613,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                     throw err;
                                 }
                                 logs.log("new photo for suggestion " + colors.bold(suggestion.title));
-                                res.status(201);
-                                res.json({path: newPath, pid: rows.insertId.toString(36)});
+                                res.status(201).json({path: newPath, pid: rows.insertId.toString(36)});
                             });
                         }
                         var newPath = global.config.uploadDir + "/" + thing.id + "_" + Math.random().toString(36).substr(2);
@@ -656,8 +622,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     });
                 });
             }, function() {
-                res.status(401);
-                res.end("authentification error");
+                res.status(401).end("authentification error");
                 return;
             });
         }
@@ -679,29 +644,25 @@ module.exports = function(app, mysqlConnection, auth) {
                 throw "you can't delete this";
             }
         } catch(e) {
-            res.status(400);
-            res.end(e.message);
+            res.status(400).end(e.message);
             return;
         }
         var photoId = thing.id;
         mysqlConnection.query("SELECT path, author FROM photos LEFT JOIN suggestions ON photos.suggestion = suggestions.id WHERE photos.id = ?", [photoId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
-                res.status(404);
-                res.end("this photo doesn't exist");
+                res.status(404).end("this photo doesn't exist");
                 return;
             }
             if(rows[0].author != userId) {
-                res.status(401);
-                res.end("this suggestion is not yours");
+                res.status(401).end("this suggestion is not yours");
                 return;
             }
             var path = rows[0].path;
             mysqlConnection.query("DELETE FROM photos WHERE id = ?", [photoId], function(err, rows, fields) {
                 if(err) throw err;
                 fs.unlink(__dirname + path, function() {
-                    res.status(200);
-                    res.end();
+                    res.status(200).end();
                 });
             });
         });
@@ -717,27 +678,23 @@ module.exports = function(app, mysqlConnection, auth) {
                 throw "incorrect userId";
             }
         } catch(e) {
-            res.status(400);
-            res.end(e.message);
+            res.status(400).end(e.message);
             return;
         }
         mysqlConnection.query("SELECT id, author FROM suggestions WHERE id = ?", [suggestionId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
-                res.status(404);
-                res.end("this suggestion doesn't exist");
+                res.status(404).end("this suggestion doesn't exist");
                 return;
             }
             if(rows[0].author != userId) {
-                res.status(403);
-                res.end("this suggestion is private and you are not the author");
+                res.status(403).end("this suggestion is private and you are not the author");
                 return;
             }
             mysqlConnection.query("UPDATE suggestions SET published = 1 WHERE id = ?", [suggestionId], function(err, rows, fields) {
                 if(err) throw err;
                 //check rows?
-                res.status(200);
-                res.end();
+                res.status(200).end();
                 return;
             });
         });
@@ -750,15 +707,13 @@ module.exports = function(app, mysqlConnection, auth) {
                 throw "incorrect userId";
             }
         } catch(e) {
-            res.status(400);
-            res.end(e.message);
+            res.status(400).end(e.message);
             return;
         }
         mysqlConnection.query("SELECT id, name, TIMESTAMPDIFF(SECOND, timeRegistered, CURRENT_TIMESTAMP) AS timeSinceRegistered FROM users WHERE id = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
-                res.status(404);
-                res.end("this user doesn't exist");
+                res.status(404).end("this user doesn't exist");
                 return;
             }
             var profileData = rows[0];
