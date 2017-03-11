@@ -56,6 +56,25 @@ CREATE TABLE `comments` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `follows`
+--
+
+DROP TABLE IF EXISTS `follows`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `follows` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `category` int(10) unsigned NOT NULL,
+  `user` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `category` (`category`),
+  KEY `user` (`user`),
+  CONSTRAINT `follows_ibfk_1` FOREIGN KEY (`category`) REFERENCES `categories` (`id`),
+  CONSTRAINT `follows_ibfk_2` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `photos`
 --
 
@@ -165,4 +184,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-11 12:08:21
+-- Dump completed on 2017-03-11 14:05:47
