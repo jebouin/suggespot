@@ -11,6 +11,7 @@ mixin photo(p, hidden)
 mixin newPhoto()
   form#newPhoto(enctype="multipart/form-data" style="display: none")
     h3 New photo
+    br
     input.big(type="file" name="photo" id="photo" accept=".png,.bmp,.jpeg,.jpg,.gif")
     button From an URL
     input.big(type="text" name="url" placeholder="Paste your URL" style="display: none" autocomplete="off")
@@ -54,6 +55,17 @@ html
         + voteUI("0_" + sid, score, voteDir, user)
         h2 #{title}
       div#suggestionBody
+        div#tags
+          | Tags:&nbsp;
+          each t in tags
+            a.tag(tid=t.id)
+              h3 ##{t.name}
+          a.tag#newTag(style="display: none")
+            h3 +New
+          input(style="display: none" type="text" name="category" list="categories")
+          datalist#categories
+          button(style="display: none") +
+          br
         div#photos
           div#photosGrid
             + photo({}, true)

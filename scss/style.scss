@@ -22,7 +22,7 @@ body {
 	background: $berylGreen;
 	margin: 0px;
 	padding: 0px;
-	font-family: sans-serif;
+	font: 16px sans-serif;
 }
 
 #body {
@@ -48,6 +48,11 @@ h2 {
 	text-indent: 0;
 }
 
+h3 {
+	font-size: 20px;
+	display: inline;
+}
+
 img {
 	@include prefix((
 		user-select: none
@@ -63,9 +68,10 @@ form {
 }
 
 input, button {
-	border-radius: 10px;
+	font-size: 16px;
+	border-radius: 4px;
 	outline: none;
-	border: 2px solid grey;
+	border: 1px solid grey;
 }
 
 button, input[type="button"], input[type="submit"] {
@@ -76,6 +82,10 @@ button, input[type="button"], input[type="submit"] {
 
 .error {
 	color: $error;
+}
+
+.upvote, .downvote {
+	min-width: 30px;
 }
 
 .upvote.voted {
@@ -132,6 +142,31 @@ button, input[type="button"], input[type="submit"] {
 	display: inline-block;
 	text-align: center;
 	text-indent: 0;
+}
+
+#tags {
+	margin-left: 10px;
+	margin-bottom: 20px;
+}
+
+.tag {
+	padding: 5px;
+	border: 1px solid grey;
+	border-radius: 3px;
+	margin-right: 5px;
+}
+
+#tags input {
+	font-size: 20px;
+	padding: 5px;
+}
+
+#tags button {
+	margin: 5px;
+}
+
+#newTag {
+	cursor: pointer;
 }
 
 #suggestionBody {
@@ -224,6 +259,7 @@ button, input[type="button"], input[type="submit"] {
 }
 
 #newPhoto {
+	padding-top: 30px;
 	width: 320px;
 	height: 240px;
 	margin: 5px;
@@ -261,7 +297,6 @@ button, input[type="button"], input[type="submit"] {
 #newPhoto label {
 	display: inline-block;
 	position: relative;
-	top: 30%;
 	color: $white;
 	background: $mallard;
 	margin-top: 10px;

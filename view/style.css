@@ -3,7 +3,7 @@ body {
   background: #E4E6C3;
   margin: 0px;
   padding: 0px;
-  font-family: sans-serif; }
+  font: 16px sans-serif; }
 
 #body {
   background: #FFFFFF;
@@ -24,6 +24,10 @@ h2 {
   font-size: 50px;
   text-indent: 0; }
 
+h3 {
+  font-size: 20px;
+  display: inline; }
+
 img {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -37,9 +41,10 @@ form {
   display: inline; }
 
 input, button {
-  border-radius: 10px;
+  font-size: 16px;
+  border-radius: 4px;
   outline: none;
-  border: 2px solid grey; }
+  border: 1px solid grey; }
 
 button, input[type="button"], input[type="submit"] {
   display: inline-block;
@@ -48,6 +53,9 @@ button, input[type="button"], input[type="submit"] {
 
 .error {
   color: #FF0000; }
+
+.upvote, .downvote {
+  min-width: 30px; }
 
 .upvote.voted {
   background-color: green; }
@@ -94,6 +102,26 @@ button, input[type="button"], input[type="submit"] {
   display: inline-block;
   text-align: center;
   text-indent: 0; }
+
+#tags {
+  margin-left: 10px;
+  margin-bottom: 20px; }
+
+.tag {
+  padding: 5px;
+  border: 1px solid grey;
+  border-radius: 3px;
+  margin-right: 5px; }
+
+#tags input {
+  font-size: 20px;
+  padding: 5px; }
+
+#tags button {
+  margin: 5px; }
+
+#newTag {
+  cursor: pointer; }
 
 #suggestionBody {
   display: inline-block; }
@@ -181,6 +209,7 @@ button, input[type="button"], input[type="submit"] {
   cursor: pointer; }
 
 #newPhoto {
+  padding-top: 30px;
   width: 320px;
   height: 240px;
   margin: 5px;
@@ -213,7 +242,6 @@ button, input[type="button"], input[type="submit"] {
 #newPhoto label {
   display: inline-block;
   position: relative;
-  top: 30%;
   color: #FFFFFF;
   background: #1E441E;
   margin-top: 10px;

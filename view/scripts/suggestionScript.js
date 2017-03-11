@@ -3,9 +3,13 @@ var photosExpanded = false;
 var mh, txt;
 var changedPhotosOrder = false;
 var enlargedContainer, enlargedPhoto, enlarged;
+var changes = [];
 
 window.onbeforeunload = function() {
     if(changedPhotosOrder) {
+        return true;
+    }
+    if(changes.length > 0) {
         return true;
     }
 }
@@ -108,7 +112,7 @@ function shrinkPhoto() {
     if(!enlarged) return;
     $("#dark").hide();
     $("body").css("position", "");
-    enlargedPhoto.remove().appendTo(enlargedContainer).removeClass("enlarged");
+    enlargedPhoto.remove().prependTo(enlargedContainer).removeClass("enlarged");
     enlargedContainer = null;
     enlargedPhoto = null;
     enlarged = false;
@@ -143,6 +147,7 @@ function enableEditMode(b) {
 	$("#newPhoto").css("display", "");
     $(".photoOverlay").css("display", "block");
 	$("#photosGrid .photo").attr("draggable", "true");
+    $("#newTag").show();
 	expandPhotos();
     updateNewPhotoForm();
 	b.text("Save changes");
@@ -156,6 +161,8 @@ function disableEditMode(b) {
 	$("#newPhoto").css("display", "none");
     $(".photoOverlay").css("display", "none");
 	$("#photosGrid .photo").attr("draggable", "false");
+    $("#newTag").hide();
+    $("input, datalist, button", "#tags").val("").hide();
 	collapsePhotos();
     updatePhotos();
 	b.text("Edit");
@@ -164,13 +171,11 @@ function disableEditMode(b) {
         changedPhotosOrder = false;
         var order = [];
         var photos = $("#photosGrid .photo:visible");
-        console.log(photos);
         for(var i = 0; i < photos.length; i++) {
             order.push(photos[i].getAttribute("pid"));
         }
         editObject.photosOrder = order;
     }
-    console.log(editObject);
     if(!jQuery.isEmptyObject(editObject)) {
         editObject.thingId = "0_" + getSid();
         $.post("/edit", editObject, function(data) {
@@ -178,6 +183,8 @@ function disableEditMode(b) {
         });
     }
     resetNewPhotoForm();
+    console.log(changes);
+    changes = [];
 }
 
 function initDD() {
@@ -277,7 +284,68 @@ function onPhotoURLChange(e) {
     }
 }
 
+function addTag(name, id) {
+    changes.push({type: "addTag", tid: id, name: name});
+    var tag = $("#newTag").clone().removeAttr("id").attr("tid", id).insertBefore("#newTag").show();
+    tag.html("<h3>#" + name + "</h3>");
+}
+
+function addCategory(name) {
+    changes.push({type: "addCat", name: name});
+    var tag = $("#newTag").clone().removeAttr("id").insertBefore("#newTag").show();
+    tag.html("<h3>#" + name + "</h3>");
+}
+
+function newTagClick() {
+    $("#newTag").hide();
+    $("#tags input").show().focus();
+    $("#tags button").show();
+}
+
+function newCategoryClick(e) {
+    var input = $("#tags input");
+    addCategory(input.val());
+    input.val("");
+}
+
+function newTagInput(e) {
+    //timer...
+    var val = e.target.value;
+    val = val.charAt(0).toUpperCase() + val.slice(1);
+    e.target.value = val;
+    var datalist = $("datalist#categories");
+    datalist.children().each(function(i) {
+        var t = datalist.children().eq(i);
+        if(val === t.val()) {
+            addTag(t.val(), t.cid);
+            e.target.value = "";
+            return;
+        }
+    });
+    $.get("/c", {prefix: val}, function(data) {
+        var tags = $(".tag");
+        datalist.empty();
+        for(var i = 0; i < data.length; i++) {
+            var exists = false;
+            for(var j = 0; j < tags.length; j++) {
+                if(tags.eq(j).attr("tid") == data[i].id) {
+                    exists = true;
+                    break;
+                }
+            }
+            if(exists) {
+                continue;
+            }
+            $("<option>", {cid: data[i].id}).text(data[i].name).appendTo(datalist);
+        }
+    });
+}
+
 $(document).ready(function() {
+    //tags
+    $("#newTag").on("click", newTagClick);
+    $("#tags input").on("input", newTagInput);
+    $("#tags button").on("click", newCategoryClick);
 	//photo grid
 	mh = $("#photosGrid").css("max-height");
 	txt = $("button#morePhotos").text();

@@ -65,8 +65,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             auth.checkUserLoggedIn(req, res, function(data) {
                 api.makeLocalAPICall("POST", "/api/delete", {userId: data.id, thingId: req.body.thingId}, function(err, deleteData) {
                     if(err) {
-                        res.status(err.code ? err.code : 500);
-                        res.end();
+                        res.status(err.code ? err.code : 500).end();
                         return;
                     }
                     res.status(200);
@@ -75,17 +74,38 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             });
         })
 
+        app.get("/c", function(req, res) {
+            auth.checkUserLoggedIn(req, res, function(data) {
+                api.makeLocalAPICall("GET", "/api/categories", req.query, function(err, categoryData) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500).end();
+                    }
+                    res.status(200).json(categoryData);
+                })
+            });
+        });
+
+		app.post("/createCategory", function(req, res) {
+			auth.checkUserLoggedIn(req, res, function(data) {
+				api.makeLocalAPICall("POST", "/api/createCategory", req.body, function(err, categoryData) {
+					if(err) {
+						res.status(err.code ? err.code : 500).end();
+						return;
+					}
+					res.status(200).end();
+				});
+			});
+		});
+
 		app.post("/publish", function(req, res) {
 			var id = req.body.sid;
 			auth.checkUserLoggedIn(req, res, function(data) {
 				api.makeLocalAPICall("POST", "/api/publish", {userId: data.id, suggestionId: id}, function(err, publishData) {
 					if(err) {
-						res.status(err.code ? err.code : 500);
-						res.end();
+						res.status(err.code ? err.code : 500).end();
 						return;
 					}
-					res.status(200);
-					res.end();
+					res.status(200).end();
 				});
 			});
 		})

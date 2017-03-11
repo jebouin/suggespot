@@ -155,17 +155,22 @@ module.exports = function(app, mysqlConnection, auth) {
                     if(author) {
                         author = author.toString(36);
                     }
-                    res.json({title: suggestionData.title,
-                              descr: suggestionData.descr,
-                              author: author,
-                              authorName: suggestionData.authorName,
-                              sid: suggestionData.id.toString(36),
-                              score: suggestionData.score,
-                              comments: formattedComments,
-                              photos: photos,
-                              voteDir: voteDir,
-                              maximumPhotos: global.config.maximumPhotos,
-                              published: suggestionData.published});
+                    //get tags and send response with everything
+                    mysqlConnection.query("SELECT categories.id, name FROM tags LEFT JOIN categories ON categories.id = tags.category WHERE tags.suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
+                        if(err) throw err;
+                        res.json({title: suggestionData.title,
+                                  descr: suggestionData.descr,
+                                  author: author,
+                                  authorName: suggestionData.authorName,
+                                  sid: suggestionData.id.toString(36),
+                                  score: suggestionData.score,
+                                  comments: formattedComments,
+                                  tags: tagRows,
+                                  photos: photos,
+                                  voteDir: voteDir,
+                                  maximumPhotos: global.config.maximumPhotos,
+                                  published: suggestionData.published});
+                    });
                 });
             }
 
@@ -668,6 +673,16 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.post("/api/createCategory", function(req, res) {
+        try {
+            var name = checkParam(req.body, "name");
+        } catch(e) {
+            res.status(400).end(e.message);
+        }
+        console.log(name);
+        //todo
+    });
+
     app.post("/api/publish", function(req, res) {
         try {
             var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);
@@ -699,6 +714,18 @@ module.exports = function(app, mysqlConnection, auth) {
             });
         });
     });
+
+    app.get("/api/categories", function(req, res) {
+        var prefix = req.query.prefix;
+        if(prefix === null || prefix === undefined || prefix === "") {
+            res.status(200).json({});
+            return;
+        }
+        mysqlConnection.query("SELECT id, name FROM categories WHERE name LIKE ? LIMIT 10", [prefix + "%"], function(err, rows, fields) {
+            if(err) throw err;
+            res.status(200).json(rows);
+        });
+    })
 
     app.get("/api/profile", function(req, res) {
         try {
