@@ -164,8 +164,7 @@ function disableEditMode(b) {
     $(".photoOverlay").css("display", "none");
 	$("#photosGrid .photo").attr("draggable", "false");
     $("#newTag").hide();
-    $("input", "#tags").val("");
-    $("form", "#tags").hide();
+    closeNewTagForm();
 	collapsePhotos();
     updatePhotos();
 	b.text("Edit");
@@ -304,6 +303,7 @@ function addTag(name, id) {
     editObject.tagsAdded.push({cid: id, name : name});
     var tag = $("#newTag").clone().removeAttr("id").attr("cid", id).insertBefore("#newTag").show();
     tag.html("<h3>" + name + "</h3>");
+    closeNewTagForm();
 }
 
 function addCategory(name) {
@@ -311,6 +311,7 @@ function addCategory(name) {
     editObject.tagsAdded.push({name : name});
     var tag = $("#newTag").clone().removeAttr("id").insertBefore("#newTag").show();
     tag.html("<h3>" + name + "</h3>");
+    closeNewTagForm();
 }
 
 function removeTag(e) {
@@ -334,11 +335,16 @@ function newTagClick() {
     $("#tags input").eq(0).focus();
 }
 
+function closeNewTagForm() {
+    $("input", "#tags").eq(0).val("");
+    $("form", "#tags").hide();
+    $("#newTag").show();
+}
+
 function newCategoryClick(e) {
     e.preventDefault();
     var input = $("#tags input").eq(0);
     addCategory(input.val());
-    input.val("");
 }
 
 function newTagInput(e) {

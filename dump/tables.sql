@@ -26,7 +26,7 @@ CREATE TABLE `categories` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(256) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -70,7 +70,7 @@ CREATE TABLE `photos` (
   PRIMARY KEY (`id`),
   KEY `suggestion` (`suggestion`),
   CONSTRAINT `photos_ibfk_1` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=254 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=262 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -113,7 +113,7 @@ CREATE TABLE `tags` (
   KEY `suggestion` (`suggestion`),
   CONSTRAINT `tags_ibfk_1` FOREIGN KEY (`category`) REFERENCES `categories` (`id`),
   CONSTRAINT `tags_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -153,7 +153,7 @@ CREATE TABLE `votes` (
   CONSTRAINT `votes_ibfk_4` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `votes_ibfk_5` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `votes_ibfk_6` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=83 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -165,4 +165,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-11  6:37:19
+-- Dump completed on 2017-03-11 12:08:21

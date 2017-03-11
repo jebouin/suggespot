@@ -498,10 +498,10 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             function editDescription(callback) {
                 edited = true;
-                mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
+                /*mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     callback();
-                });
+                });*/
             }
             function editTagsAdded(callback) {
                 edited = true;
@@ -510,13 +510,24 @@ module.exports = function(app, mysqlConnection, auth) {
                     if(err) throw err;
                     var queryFunctions = [];
                     Array.prototype.forEach.call(tags, function(tag) {
-                        if(!tag.cid) return;
-                        queryFunctions.push(function(callback) {
-                            mysqlConnection.query("INSERT INTO tags (suggestion, category) VALUES (?, ?)", [suggestion.id, tag.cid], function(err, rows, fields) {
-                                testTransactionError(err);
-                                callback();
+                        if(tag.cid) {
+                            queryFunctions.push(function(callback) {
+                                mysqlConnection.query("INSERT INTO tags (suggestion, category) VALUES (?, ?)", [suggestion.id, tag.cid], function(err, rows, fields) {
+                                    testTransactionError(err);
+                                    callback();
+                                });
                             });
-                        });
+                        } else if(tag.name) {
+                            queryFunctions.push(function(callback) {
+                                mysqlConnection.query("INSERT INTO categories (name) VALUES (?)", [tag.name], function(err, rows, fields) {
+                                    testTransactionError(err);
+                                    mysqlConnection.query("INSERT INTO tags (suggestion, category) VALUES (?, ?)", [suggestion.id, rows.insertId], function(err, rows, fields) {
+                                        testTransactionError(err);
+                                        callback();
+                                    });
+                                });
+                            });
+                        }
                     });
                     async.parallel(queryFunctions, function(err, results) {
                         if(err) {
