@@ -111,7 +111,14 @@ button, input[type="button"], input[type="submit"] {
   padding: 5px;
   border: 1px solid grey;
   border-radius: 3px;
-  margin-right: 5px; }
+  margin-right: 5px;
+  cursor: pointer; }
+
+.tag:not(#newTag) h3:before {
+  content: "#"; }
+
+.tag:hover {
+  background: red; }
 
 #tags input {
   font-size: 20px;

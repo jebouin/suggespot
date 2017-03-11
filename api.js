@@ -157,7 +157,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         author = author.toString(36);
                     }
                     //get tags and send response with everything
-                    mysqlConnection.query("SELECT categories.id, name FROM tags LEFT JOIN categories ON categories.id = tags.category WHERE tags.suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
+                    mysqlConnection.query("SELECT categories.id AS cid, tags.id AS tid, name FROM tags LEFT JOIN categories ON categories.id = tags.category WHERE tags.suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
                         if(err) throw err;
                         res.json({title: suggestionData.title,
                                   descr: suggestionData.descr,
@@ -530,9 +530,37 @@ module.exports = function(app, mysqlConnection, auth) {
                     })
                 });
             }
+            function editTagsRemoved(callback) {
+                edited = true;
+                var tags = edit.tagsRemoved;
+                mysqlConnection.beginTransaction(function(err) {
+                    if(err) throw err;
+                    var queryFunctions = [];
+                    Array.prototype.forEach.call(tags, function(tag) {
+                        if(!tag.tid) return;
+                        queryFunctions.push(function(callback) {
+                            mysqlConnection.query("DELETE FROM tags WHERE id = ?", [tag.tid], function(err, rows, fields) {
+                                testTransactionError(err);
+                                callback();
+                            });
+                        });
+                    });
+                    async.parallel(queryFunctions, function(err, results) {
+                        if(err) {
+                            callback(true);
+                            return;
+                        }
+                        mysqlConnection.commit(function(err) {
+                            testTransactionError(err);
+                            callback();
+                        });
+                    })
+                });
+            }
             var fa = [];
             if(edit.photosOrder && edit.photosOrder.length > 0) fa.push(editPhotoOrder);
             if(edit.tagsAdded && edit.tagsAdded.length > 0) fa.push(editTagsAdded);
+            if(edit.tagsRemoved && edit.tagsRemoved.length > 0) fa.push(editTagsRemoved);
             async.parallel(fa, function(err, results) {
                 if(!edited) {
                     onInvalidEdit();
