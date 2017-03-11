@@ -4,11 +4,9 @@ var mh, txt;
 var changedPhotosOrder = false;
 var enlargedContainer, enlargedPhoto, enlarged;
 var changes = [];
+var editObject = {thingId: "0_" + getSid()};
 
 window.onbeforeunload = function() {
-    if(changedPhotosOrder) {
-        return true;
-    }
     if(changes.length > 0) {
         return true;
     }
@@ -141,6 +139,9 @@ function setEditMode(e) {
 function enableEditMode(b) {
 	if(editMode) return;
 	editMode = true;
+    //reset edit object
+    editObject.tagsAdded = [];
+    editObject.photosOrder = [];
 	$("#author").css("visibility", "hidden");
     $("#publishButton").css("visibility", "hidden");
 	$("button#morePhotos").css("display", "none");
@@ -166,7 +167,6 @@ function disableEditMode(b) {
 	collapsePhotos();
     updatePhotos();
 	b.text("Edit");
-    var editObject = {};
     if(changedPhotosOrder) {
         changedPhotosOrder = false;
         var order = [];
@@ -176,8 +176,15 @@ function disableEditMode(b) {
         }
         editObject.photosOrder = order;
     }
-    if(!jQuery.isEmptyObject(editObject)) {
-        editObject.thingId = "0_" + getSid();
+    if(editObject.photosOrder.length == 0) {
+        delete editObject.photosOrder;
+    }
+    if(editObject.tagsAdded.length == 0) {
+        delete editObject.tagsAdded;
+    }
+    if((editObject.photosOrder && editObject.photosOrder.length > 0) ||
+       (editObject.tagsAdded && editObject.tagsAdded.length > 0)) {
+        console.log(editObject);
         $.post("/edit", editObject, function(data) {
             //edit succesful
         });
@@ -232,12 +239,14 @@ function initDD() {
 		}, drop: function(e) {
 			e.preventDefault();
             //$(".photoOverlay").css("display", "");
+            changes.push({type: "movePhoto"});
 			draggedElement.css("transform", "");
             draggedElement = null;
             changedPhotosOrder = true;
 		}, dragend: function() {
 			if(!draggedElement) return;
             //$(".photoOverlay").css("display", "");
+            changes.push({type: "movePhoto"});
 			draggedElement.css("transform", "");
 			draggedElement = null;
             changedPhotosOrder = true;
@@ -285,13 +294,15 @@ function onPhotoURLChange(e) {
 }
 
 function addTag(name, id) {
-    changes.push({type: "addTag", tid: id, name: name});
-    var tag = $("#newTag").clone().removeAttr("id").attr("tid", id).insertBefore("#newTag").show();
+    changes.push({type: "addTag", cid: id, name: name});
+    editObject.tagsAdded.push({cid: id, name : name});
+    var tag = $("#newTag").clone().removeAttr("id").attr("cid", id).insertBefore("#newTag").show();
     tag.html("<h3>#" + name + "</h3>");
 }
 
 function addCategory(name) {
     changes.push({type: "addCat", name: name});
+    editObject.tagsAdded.push({name : name});
     var tag = $("#newTag").clone().removeAttr("id").insertBefore("#newTag").show();
     tag.html("<h3>#" + name + "</h3>");
 }
@@ -317,7 +328,7 @@ function newTagInput(e) {
     datalist.children().each(function(i) {
         var t = datalist.children().eq(i);
         if(val === t.val()) {
-            addTag(t.val(), t.cid);
+            addTag(t.val(), t.attr("cid"));
             e.target.value = "";
             return;
         }
@@ -328,7 +339,7 @@ function newTagInput(e) {
         for(var i = 0; i < data.length; i++) {
             var exists = false;
             for(var j = 0; j < tags.length; j++) {
-                if(tags.eq(j).attr("tid") == data[i].id) {
+                if(tags.eq(j).attr("cid") == data[i].id) {
                     exists = true;
                     break;
                 }

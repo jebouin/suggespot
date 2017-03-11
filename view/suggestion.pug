@@ -58,7 +58,7 @@ html
         div#tags
           | Tags:&nbsp;
           each t in tags
-            a.tag(tid=t.id)
+            a.tag(cid=t.id)
               h3 ##{t.name}
           a.tag#newTag(style="display: none")
             h3 +New

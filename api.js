@@ -9,6 +9,7 @@ const multer = require("multer");
 const mime = require("mime-types");
 const mmmagic = require("mmmagic");
 const mmm = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
+const async = require("async");
 
 var storage = multer.diskStorage({
     destination: function (req, file, callback) {
@@ -460,6 +461,90 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
+        function editSuggestion(suggestion) {
+            var edited = false;
+            function onEditFinished() {
+                res.status(200).end();
+                logs.log("user " + colors.bold(user.name) + " edited their suggestion " + colors.bold(suggestion.title));
+            }
+            function onInvalidEdit() {
+                res.status(400).end("invalid edit reqest");
+            }
+            function editPhotoOrder(callback) {
+                edited = true;
+                var order = edit.photosOrder;
+                mysqlConnection.beginTransaction(function(err) {
+                    if(err) throw err;
+                    var queryFunctions = [];
+                    Array.prototype.forEach.call(order, function(photoId, i) {
+                        queryFunctions.push(function(callback) {
+                            mysqlConnection.query("UPDATE photos SET position = ? WHERE id = ?", [i, parseInt(photoId, 36)], function(err, rows, fields) {
+                                testTransactionError(err);
+                                callback();
+                            });
+                        });
+                    });
+                    async.parallel(queryFunctions, function(err, results) {
+                        if(err) {
+                            callback(true);
+                            return;
+                        }
+                        mysqlConnection.commit(function(err) {
+                            testTransactionError(err);
+                            callback();
+                        });
+                    })
+                });
+            }
+            function editDescription(callback) {
+                edited = true;
+                mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
+                    if(err) throw err;
+                    callback();
+                });
+            }
+            function editTagsAdded(callback) {
+                edited = true;
+                var tags = edit.tagsAdded;
+                mysqlConnection.beginTransaction(function(err) {
+                    if(err) throw err;
+                    var queryFunctions = [];
+                    Array.prototype.forEach.call(tags, function(tag) {
+                        if(!tag.cid) return;
+                        queryFunctions.push(function(callback) {
+                            mysqlConnection.query("INSERT INTO tags (suggestion, category) VALUES (?, ?)", [suggestion.id, tag.cid], function(err, rows, fields) {
+                                testTransactionError(err);
+                                callback();
+                            });
+                        });
+                    });
+                    async.parallel(queryFunctions, function(err, results) {
+                        if(err) {
+                            callback(true);
+                            return;
+                        }
+                        mysqlConnection.commit(function(err) {
+                            testTransactionError(err);
+                            callback();
+                        });
+                    })
+                });
+            }
+            var fa = [];
+            if(edit.photosOrder && edit.photosOrder.length > 0) fa.push(editPhotoOrder);
+            if(edit.tagsAdded && edit.tagsAdded.length > 0) fa.push(editTagsAdded);
+            async.parallel(fa, function(err, results) {
+                if(!edited) {
+                    onInvalidEdit();
+                    return;
+                } else if(err) {
+                    res.status(500).end();
+                    return;
+                }
+                onEditFinished();
+            });
+
+        }
         if(thing.type == 0) {
             mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
                 if(err) throw err;
@@ -472,45 +557,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     res.status(401).end("this suggestion is not yours");
                     return;
                 }
-                var edited = false;
-                function onEditFinished() {
-                    res.status(200).end();
-                    logs.log("user " + colors.bold(user.name) + " edited their suggestion " + colors.bold(suggestion.title));
-                }
-                function onInvalidEdit() {
-                    res.status(400).end("invalid edit reqest");
-                }
-                if(edit.descr) {
-                    edited = true;
-                    mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
-                        if(err) throw err;
-                        onEditFinished();
-                    });
-                }
-                if(edit.photosOrder) {
-                    edited = true;
-                    var order = edit.photosOrder;
-                    if(order.length == 0) {
-                        onInvalidEdit();
-                    } else {
-                        mysqlConnection.beginTransaction(function(err) {
-                            if(err) throw err;
-                            for(var i = 0; i < order.length; i++) {
-                                var photoId = parseInt(order[i], 36);
-                                mysqlConnection.query("UPDATE photos SET position = ? WHERE id = ?", [i, photoId], function(err, rows, fields) {
-                                    testTransactionError(err);
-                                });
-                            }
-                            mysqlConnection.commit(function(err) {
-                                testTransactionError(err);
-                                onEditFinished();
-                            });
-                        });
-                    }
-                }
-                if(!edited) {
-                    onInvalidEdit();
-                }
+                editSuggestion(suggestion);
                 return;
             });
         } else {
