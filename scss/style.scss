@@ -158,7 +158,7 @@ button, input[type="button"], input[type="submit"] {
 	cursor: pointer;
 }
 
-.tag:not(#newTag) h3:before {
+.tagText:before {
 	content: "#";
 }
 

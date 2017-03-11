@@ -64,6 +64,7 @@ module.exports = {
 		//1 = comment
         //2 = user
         //3 = photo
+        //4 = category
 		if(thingType < 0 || thingType > 3) {
 			throw "thing type out of bounds";
 		}

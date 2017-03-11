@@ -59,7 +59,7 @@ html
           | Tags:&nbsp;
           each t in tags
             button.tag(cid=t.cid tid=t.tid)
-              h3 #{t.name}
+              h3.tagText #{t.name}
           button.tag#newTag(style="display: none")
             h3 +New
           form(style="display: none")

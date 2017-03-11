@@ -770,14 +770,26 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
-    app.post("/api/createCategory", function(req, res) {
+    app.post("/api/follow", function(req, res) {
         try {
-            var name = checkParam(req.body, "name");
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            var categoryId = checkParam(req.body, "categoryId");
         } catch(e) {
             res.status(400).end(e.message);
+            return;
         }
-        console.log(name);
-        //todo
+        var params = [categoryId, userId];
+        mysqlConnection.query("SELECT id FROM follows WHERE category = ? AND user = ?", params, function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length > 0) {
+                res.status(400).end("you are already following this tag");
+                return;
+            }
+            mysqlConnection.query("INSERT INTO follows (category, user) VALUES (?, ?)", [categoryId, userId], function(err, rows, fields) {
+                if(err) throw err;
+                res.status(200).end();
+            });
+        });
     });
 
     app.post("/api/publish", function(req, res) {
@@ -822,7 +834,7 @@ module.exports = function(app, mysqlConnection, auth) {
             if(err) throw err;
             res.status(200).json(rows);
         });
-    })
+    });
 
     app.get("/api/profile", function(req, res) {
         try {

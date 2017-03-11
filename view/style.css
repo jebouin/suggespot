@@ -115,7 +115,7 @@ button, input[type="button"], input[type="submit"] {
   margin-right: 5px;
   cursor: pointer; }
 
-.tag:not(#newTag) h3:before {
+.tagText:before {
   content: "#"; }
 
 .tag:hover {

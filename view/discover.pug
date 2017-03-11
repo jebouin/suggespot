@@ -24,6 +24,11 @@ html
         button.big(onclick="location.href='/preferences'") Preferences
         button.big(onclick="location.href='/logout'") Log Out
       br
+      if user && tag
+        button.follow
+          | Follow&nbsp;
+          span.tagText #{tag}
+        br
       if suggestions && suggestions.length
         h2
           | Suggestions&nbsp;
@@ -40,5 +45,8 @@ html
         form(name="register" action="/register" method="POST")
           input.big(type="text" name="username" placeholder="Username" required)
           input.big(type="submit" value="Register")
+    script.
+      var cid = "#{cid}";
     script(src="/libs/jquery.js")
+    script(src="/view/scripts/discoverScript.js")
     script(src="/view/scripts/voteUI.js")
