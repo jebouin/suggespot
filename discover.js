@@ -8,7 +8,10 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			params.lat = req.body.lat;
 			params.lon = req.body.lon;
 		}
-		if(loginData) {
+        if(req.query.tag) {
+            params.categoryName = req.query.tag;
+        }
+        if(loginData) {
 			params.userId = loginData.id;
 			loginData.id = loginData.id.toString(36);
 		}
@@ -18,6 +21,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			} else {
 				res.end(view.getTemplate("discover")({
 					suggestions: suggestionData.suggestions,
+                    tag: suggestionData.tag,
 					user: loginData
 				}));
 			}

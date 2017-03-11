@@ -70,24 +70,34 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.get("/api/suggestions", function(req, res) {
         var userId = req.query.userId;
+        var categoryName = req.query.categoryName;
         var query;
         var params;
         var confQuery = "upvotes / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
+        var descrQuery = "IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr";
+        var photoJoin = "LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0";
+        var queryWhere = "WHERE published = 1";
+        var queryOrderBy = "ORDER BY conf DESC";
         if(userId) {
             userId = parseInt(userId, 36);
-            query = "SELECT suggestions.id AS id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id AS id, title, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
             params = [userId];
         } else {
-            query = "SELECT suggestions.id, title, IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb FROM suggestions LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0 WHERE published = 1 ORDER BY conf DESC";
+            query = "SELECT suggestions.id, title, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb FROM suggestions ";
             params = [];
         }
+        if(categoryName) {
+            query += "INNER JOIN tags ON suggestions.id = tags.suggestion INNER JOIN categories ON tags.category = categories.id AND categories.name = ? ";
+            params.push(categoryName);
+        }
+        query += photoJoin + " " + queryWhere + " " + queryOrderBy
         mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             for(var i=0; i<rows.length; i++) {
                 rows[i].id = rows[i].id.toString(36);
                 rows[i].href = "/s/" + rows[i].id;
             }
-            res.json({suggestions: rows});
+            res.json({suggestions: rows, tag: categoryName});
         });
     });
 
@@ -523,6 +533,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                     testTransactionError(err);
                                     mysqlConnection.query("INSERT INTO tags (suggestion, category) VALUES (?, ?)", [suggestion.id, rows.insertId], function(err, rows, fields) {
                                         testTransactionError(err);
+                                        logs.log("user " + colors.bold(user.name) + " created a new category " + colors.bold(tag.name));
                                         callback();
                                     });
                                 });

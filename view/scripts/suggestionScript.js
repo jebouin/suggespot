@@ -303,7 +303,6 @@ function addTag(name, id) {
     editObject.tagsAdded.push({cid: id, name : name});
     var tag = $("#newTag").clone().removeAttr("id").attr("cid", id).insertBefore("#newTag").show();
     tag.html("<h3>" + name + "</h3>");
-    closeNewTagForm();
 }
 
 function addCategory(name) {
@@ -311,7 +310,6 @@ function addCategory(name) {
     editObject.tagsAdded.push({name : name});
     var tag = $("#newTag").clone().removeAttr("id").insertBefore("#newTag").show();
     tag.html("<h3>" + name + "</h3>");
-    closeNewTagForm();
 }
 
 function removeTag(e) {
@@ -330,21 +328,22 @@ function removeTag(e) {
 }
 
 function newTagClick() {
+    $("input", "#tags").eq(0).val("");
     $("#newTag").hide();
     $("#tags form").show();
     $("#tags input").eq(0).focus();
-}
-
-function closeNewTagForm() {
-    $("input", "#tags").eq(0).val("");
-    $("form", "#tags").hide();
-    $("#newTag").show();
 }
 
 function newCategoryClick(e) {
     e.preventDefault();
     var input = $("#tags input").eq(0);
     addCategory(input.val());
+}
+
+function closeNewTagForm() {
+    $("input", "#tags").eq(0).val("");
+    $("form", "#tags").hide();
+    $("#newTag").show();
 }
 
 function newTagInput(e) {
@@ -380,6 +379,10 @@ function newTagInput(e) {
     });
 }
 
+function newTagInputFocusOut(e) {
+    closeNewTagForm();
+}
+
 function onTagHover(e) {
     var tag = $(e.target);
 }
@@ -388,7 +391,7 @@ function onTagClick(e) {
     if(editMode) {
         removeTag(e);
     } else {
-        //redirect...
+        window.location.href = "/discover?tag=" + $(e.target).text();
     }
 }
 
@@ -397,6 +400,7 @@ $(document).ready(function() {
     $("#newTag").on("click", newTagClick);
     $("#tags input").on("input", newTagInput);
     $("#tags form").on("submit", newCategoryClick);
+    $("#tags form input").eq(0).on("focusout", newTagInputFocusOut);
     $(document).on({
         mouseover: onTagHover,
         click: onTagClick

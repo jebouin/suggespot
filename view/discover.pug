@@ -18,15 +18,18 @@ html
     #body
       include header
       if user
-        h2 Logged as #{user.name}
-        br
+        h2 Logged as #{user.name}&nbsp;
         button.big(onclick="location.href='/submit'") Submit
         button.big(onclick="location.href='/p/"+user.id+"'") Profile
         button.big(onclick="location.href='/preferences'") Preferences
         button.big(onclick="location.href='/logout'") Log Out
+      br
       if suggestions && suggestions.length
-        if false
-          h2 Suggestions (#{suggestions.length})
+        h2
+          | Suggestions&nbsp;
+          if tag
+            | tagged as #{tag}&nbsp;
+          |(#{suggestions.length})
         each s in suggestions
           +suggestion(s)
       else
