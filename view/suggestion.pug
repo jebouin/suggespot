@@ -1,5 +1,6 @@
 include voteUI
 include editUI
+include tagUI
 
 mixin photo(p, hidden)
   div.photo(draggable="false" pid=p.id style=hidden?"display: none":"")
@@ -58,8 +59,7 @@ html
         div#tags
           | Tags:&nbsp;
           each t in tags
-            button.tag(tid=t.tid)
-              h3.tagText #{t.name}
+            + tagUI(t)
           button.tag#newTag(style="display: none")
             h3 +New
           form(style="display: none")

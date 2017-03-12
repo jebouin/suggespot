@@ -11,7 +11,7 @@ mixin suggestion(data, canVote)
       a(href=data.href)
         span.title #{data.title}
       if !data.published
-        | &nbsp(Private)
+        | &nbsp;(Private)
       div.descr #{data.descr}
 
 mixin suggestionUI(suggestions, canVote)

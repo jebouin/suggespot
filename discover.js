@@ -22,7 +22,6 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 				res.end(view.getTemplate("discover")({
 					suggestions: suggestionData.suggestions,
                     tag: suggestionData.tag,
-                    tid: suggestionData.tid,
 					user: loginData
 				}));
 			}
@@ -39,8 +38,8 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 		});
 
         app.post("/follow", function(req, res) {
-            auth.checkUserLoggedIn(req, res, function(data) {
-                api.makeLocalAPICall("POST", "/api/follow", req.body, function(err, followData) {
+            auth.checkUserLoggedIn(req, res, function(loginData) {
+                api.makeLocalAPICall("POST", "/api/follow", {userId: loginData.id, tagName: req.body.tagName}, function(err, followData) {
                     res.status(200).end();
                 });
             });

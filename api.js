@@ -72,8 +72,9 @@ module.exports = function(app, mysqlConnection, auth) {
             authorId = parseInt(authorId, 36);
         }
         var tagName = req.query.tagName;
-        var query;
         var params;
+        var selectQuery;
+        var fromQuery;
         var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
         var descrQuery = "IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr";
         var photoJoin = "LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0";
@@ -81,14 +82,17 @@ module.exports = function(app, mysqlConnection, auth) {
         var queryOrderBy = "ORDER BY conf DESC";
         if(userId) {
             userId = parseInt(userId, 36);
-            query = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
+            selectQuery = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb ";
+            fromQuery = "FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
             params = [userId];
         } else {
-            query = "SELECT suggestions.id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb FROM suggestions ";
+            selectQuery = "SELECT suggestions.id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb ";
+            fromQuery = "FROM suggestions ";
             params = [];
         }
         if(tagName) {
-            query += "INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN tags ON suggestionTags.tag = tags.id AND tags.name = ? ";
+            //selectQuery += ", tags.id AS tid ";
+            fromQuery += "INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN tags ON suggestionTags.tag = tags.id AND tags.name = ? ";
             params.push(tagName);
         }
         if(authorId) {
@@ -96,7 +100,7 @@ module.exports = function(app, mysqlConnection, auth) {
             params.push(authorId);
             queryOrderBy = "ORDER BY published, conf DESC";
         }
-        query += photoJoin + " " + queryWhere + " " + queryOrderBy;
+        var query = selectQuery + fromQuery + photoJoin + " " + queryWhere + " " + queryOrderBy;
         mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             for(var i=0; i<rows.length; i++) {
@@ -509,7 +513,7 @@ module.exports = function(app, mysqlConnection, auth) {
                             testTransactionError(err);
                             callback();
                         });
-                    })
+                    });
                 });
             }
             function editDescription(callback) {
@@ -779,22 +783,15 @@ module.exports = function(app, mysqlConnection, auth) {
     app.post("/api/follow", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var categoryId = checkParam(req.body, "categoryId");
+            var tagName = checkParam(req.body, "tagName");
         } catch(e) {
             res.status(400).end(e.message);
             return;
         }
-        var params = [categoryId, userId];
-        mysqlConnection.query("SELECT id FROM follows WHERE category = ? AND user = ?", params, function(err, rows, fields) {
+        var params = [tagName, userId];
+        mysqlConnection.query("INSERT INTO userTags (user, tag) VALUES (?, (SELECT id FROM tags WHERE name = ?))", [userId, tagName], function(err, rows, fields) {
             if(err) throw err;
-            if(rows.length > 0) {
-                res.status(400).end("you are already following this tag");
-                return;
-            }
-            mysqlConnection.query("INSERT INTO follows (category, user) VALUES (?, ?)", [categoryId, userId], function(err, rows, fields) {
-                if(err) throw err;
-                res.status(200).end();
-            });
+            res.status(200).end();
         });
     });
 
@@ -830,19 +827,7 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
-    app.get("/api/tags", function(req, res) {
-        var prefix = req.query.prefix;
-        if(prefix === null || prefix === undefined || prefix === "") {
-            res.status(200).json({});
-            return;
-        }
-        mysqlConnection.query("SELECT id, name FROM tags WHERE name LIKE ? LIMIT 10", [prefix + "%"], function(err, rows, fields) {
-            if(err) throw err;
-            res.status(200).json(rows);
-        });
-    });
-
-    app.get("/api/profile", function(req, res) {
+    app.get("/api/user", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.query, "userId"), 36);
             if(userId == NaN) {
@@ -861,6 +846,34 @@ module.exports = function(app, mysqlConnection, auth) {
             var profileData = rows[0];
             profileData.timeSinceRegistered = utils.formatProfileTime(profileData.timeSinceRegistered);
             res.json(profileData);
+        });
+    });
+
+    app.get("/api/tags", function(req, res) {
+        var prefix = req.query.prefix;
+        if(prefix === null || prefix === undefined || prefix === "") {
+            res.status(200).json({});
+            return;
+        }
+        mysqlConnection.query("SELECT id, name FROM tags WHERE name LIKE ? LIMIT 10", [prefix + "%"], function(err, rows, fields) {
+            if(err) throw err;
+            res.status(200).json(rows);
+        });
+    });
+
+    app.get("/api/userTags", function(req, res) {
+        try {
+            var userId = parseInt(checkParam(req.query, "userId"), 36);
+            if(userId == NaN) {
+                throw "incorrect userId";
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        mysqlConnection.query("SELECT tags.id AS tid, name FROM userTags INNER JOIN tags ON userTags.tag = tags.id WHERE user = ?", [userId], function(err, rows, fields) {
+            if(err) throw err;
+            res.status(200).json(rows);
         });
     });
 

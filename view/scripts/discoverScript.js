@@ -1,8 +1,9 @@
 function onFollowClick(e) {
-    var cat = 
-    $.post("/follow", {})
+    $.post("/follow", {tagName: tag}, function(data) {
+        $(".follow").hide();
+    });
 }
 
 $(document).ready(function() {
-  $(".follow").on("click", onFollowClick);
+    $(".follow").on("click", onFollowClick);
 });

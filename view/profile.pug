@@ -1,4 +1,6 @@
 include suggestionUI
+include tagUI
+
 doctype html
 html
 	include head
@@ -7,8 +9,16 @@ html
 			include header
 			h2 #{name}'s profile
 			p user for #{timeSinceRegistered}
+			if tags && tags.length
+				h2 Followed Tags
+				br
+				each t in tags
+					+ tagUI(t)
+				br
 			if suggestions && suggestions.length
 				h2
 					| My suggestions&nbsp;(#{suggestions.length})
 				br
 				+ suggestionUI(suggestions, true)
+		script(src="/libs/jquery.js")
+		script(src="/view/scripts/profileScript.js")
