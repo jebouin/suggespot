@@ -67,6 +67,10 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.get("/api/suggestions", function(req, res) {
         var userId = req.query.userId;
+        var authorId = req.query.authorId;
+        if(authorId) {
+            authorId = parseInt(authorId, 36);
+        }
         var tagName = req.query.tagName;
         var query;
         var params;
@@ -77,17 +81,22 @@ module.exports = function(app, mysqlConnection, auth) {
         var queryOrderBy = "ORDER BY conf DESC";
         if(userId) {
             userId = parseInt(userId, 36);
-            query = "SELECT suggestions.id AS id, title, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
+            query = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
             params = [userId];
         } else {
-            query = "SELECT suggestions.id, title, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb FROM suggestions ";
+            query = "SELECT suggestions.id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb FROM suggestions ";
             params = [];
         }
         if(tagName) {
             query += "INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN tags ON suggestionTags.tag = tags.id AND tags.name = ? ";
             params.push(tagName);
         }
-        query += photoJoin + " " + queryWhere + " " + queryOrderBy
+        if(authorId) {
+            queryWhere = "WHERE author = ?";
+            params.push(authorId);
+            queryOrderBy = "ORDER BY published, conf DESC";
+        }
+        query += photoJoin + " " + queryWhere + " " + queryOrderBy;
         mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             for(var i=0; i<rows.length; i++) {

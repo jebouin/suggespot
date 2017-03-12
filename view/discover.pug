@@ -1,15 +1,4 @@
-include voteUI
-mixin suggestion(data)
-  div.suggestion
-    +voteUI("0_" + data.id, data.score, data.dir, user)
-    if data.thumb
-      img(src=data.thumb)
-    else
-      img(src="uploads/default.png")
-    div.suggestionBody
-      a(href=data.href)
-        span.title #{data.title}
-      div.descr #{data.descr}
+include suggestionUI
 
 doctype html
 html
@@ -35,8 +24,7 @@ html
           if tag
             | tagged as #{tag}&nbsp;
           |(#{suggestions.length})
-        each s in suggestions
-          +suggestion(s)
+        + suggestionUI(suggestions, typeof(user) !== "undefined")
       else
         h2 No suggestions for you right now...
       if !user

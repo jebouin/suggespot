@@ -1,3 +1,4 @@
+include suggestionUI
 doctype html
 html
 	include head
@@ -6,3 +7,8 @@ html
 			include header
 			h2 #{name}'s profile
 			p user for #{timeSinceRegistered}
+			if suggestions && suggestions.length
+				h2
+					| My suggestions&nbsp;(#{suggestions.length})
+				br
+				+ suggestionUI(suggestions, true)

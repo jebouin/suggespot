@@ -1,0 +1,19 @@
+include voteUI
+
+mixin suggestion(data, canVote)
+  div.suggestion
+    + voteUI("0_" + data.id, data.score, data.dir, canVote)
+    if data.thumb
+      img(src=data.thumb)
+    else
+      img(src="/uploads/default.png")
+    div.suggestionBody
+      a(href=data.href)
+        span.title #{data.title}
+      if !data.published
+        | &nbsp(Private)
+      div.descr #{data.descr}
+
+mixin suggestionUI(suggestions, canVote)
+  each s in suggestions
+    +suggestion(s, canVote)

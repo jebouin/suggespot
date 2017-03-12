@@ -1,10 +1,10 @@
-mixin voteUI(tid, upvotes, dir, user)
+mixin voteUI(tid, upvotes, dir, canVote)
 	div.voteUI(tid=tid)
-		if user
+		if canVote
 			button.upvote(class= dir === 1 ? "voted" : undefined) +
 			| &nbsp;
 		div.upvoteCount #{upvotes}
-		if user
+		if canVote
 			| &nbsp;
 			button.downvote(class= dir === -1 ? "voted" : undefined) -
 		| &nbsp;
