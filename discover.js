@@ -9,7 +9,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			params.lon = req.body.lon;
 		}
         if(req.query.tag) {
-            params.categoryName = req.query.tag;
+            params.tagName = req.query.tag;
         }
         if(loginData) {
 			params.userId = loginData.id;
@@ -22,7 +22,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 				res.end(view.getTemplate("discover")({
 					suggestions: suggestionData.suggestions,
                     tag: suggestionData.tag,
-                    cid: suggestionData.cid,
+                    tid: suggestionData.tid,
 					user: loginData
 				}));
 			}

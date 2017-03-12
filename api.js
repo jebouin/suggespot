@@ -1,6 +1,3 @@
-//todo: add database error
-//todo: generalize errors
-
 const logs = require("./logs");
 const http = require("http");
 const rq = require("request");
@@ -70,7 +67,7 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.get("/api/suggestions", function(req, res) {
         var userId = req.query.userId;
-        var categoryName = req.query.categoryName;
+        var tagName = req.query.tagName;
         var query;
         var params;
         var confQuery = "upvotes / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
@@ -86,9 +83,9 @@ module.exports = function(app, mysqlConnection, auth) {
             query = "SELECT suggestions.id, title, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb FROM suggestions ";
             params = [];
         }
-        if(categoryName) {
-            query += "INNER JOIN tags ON suggestions.id = tags.suggestion INNER JOIN categories ON tags.category = categories.id AND categories.name = ? ";
-            params.push(categoryName);
+        if(tagName) {
+            query += "INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN tags ON suggestionTags.tag = tags.id AND tags.name = ? ";
+            params.push(tagName);
         }
         query += photoJoin + " " + queryWhere + " " + queryOrderBy
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -97,7 +94,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 rows[i].id = rows[i].id.toString(36);
                 rows[i].href = "/s/" + rows[i].id;
             }
-            res.json({suggestions: rows, tag: categoryName});
+            res.json({suggestions: rows, tag: tagName});
         });
     });
 
@@ -167,7 +164,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         author = author.toString(36);
                     }
                     //get tags and send response with everything
-                    mysqlConnection.query("SELECT categories.id AS cid, tags.id AS tid, name FROM tags LEFT JOIN categories ON categories.id = tags.category WHERE tags.suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
+                    mysqlConnection.query("SELECT tags.id AS tid, tags.name AS name FROM suggestionTags LEFT JOIN tags ON tags.id = tag WHERE suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
                         if(err) throw err;
                         res.json({title: suggestionData.title,
                                   descr: suggestionData.descr,
@@ -520,20 +517,20 @@ module.exports = function(app, mysqlConnection, auth) {
                     if(err) throw err;
                     var queryFunctions = [];
                     Array.prototype.forEach.call(tags, function(tag) {
-                        if(tag.cid) {
+                        if(tag.tid) {
                             queryFunctions.push(function(callback) {
-                                mysqlConnection.query("INSERT INTO tags (suggestion, category) VALUES (?, ?)", [suggestion.id, tag.cid], function(err, rows, fields) {
+                                mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [suggestion.id, tag.tid], function(err, rows, fields) {
                                     testTransactionError(err);
                                     callback();
                                 });
                             });
                         } else if(tag.name) {
                             queryFunctions.push(function(callback) {
-                                mysqlConnection.query("INSERT INTO categories (name) VALUES (?)", [tag.name], function(err, rows, fields) {
+                                mysqlConnection.query("INSERT INTO tags (name) VALUES (?)", [tag.name], function(err, rows, fields) {
                                     testTransactionError(err);
-                                    mysqlConnection.query("INSERT INTO tags (suggestion, category) VALUES (?, ?)", [suggestion.id, rows.insertId], function(err, rows, fields) {
+                                    mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [suggestion.id, rows.insertId], function(err, rows, fields) {
                                         testTransactionError(err);
-                                        logs.log("user " + colors.bold(user.name) + " created a new category " + colors.bold(tag.name));
+                                        logs.log("user " + colors.bold(user.name) + " created a new tag " + colors.bold(tag.name));
                                         callback();
                                     });
                                 });
@@ -561,7 +558,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     Array.prototype.forEach.call(tags, function(tag) {
                         if(!tag.tid) return;
                         queryFunctions.push(function(callback) {
-                            mysqlConnection.query("DELETE FROM tags WHERE id = ?", [tag.tid], function(err, rows, fields) {
+                            mysqlConnection.query("DELETE FROM suggestionTags WHERE (suggestion, tag) = (?, ?)", [suggestion.id, tag.tid], function(err, rows, fields) {
                                 testTransactionError(err);
                                 callback();
                             });
@@ -824,13 +821,13 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
-    app.get("/api/categories", function(req, res) {
+    app.get("/api/tags", function(req, res) {
         var prefix = req.query.prefix;
         if(prefix === null || prefix === undefined || prefix === "") {
             res.status(200).json({});
             return;
         }
-        mysqlConnection.query("SELECT id, name FROM categories WHERE name LIKE ? LIMIT 10", [prefix + "%"], function(err, rows, fields) {
+        mysqlConnection.query("SELECT id, name FROM tags WHERE name LIKE ? LIMIT 10", [prefix + "%"], function(err, rows, fields) {
             if(err) throw err;
             res.status(200).json(rows);
         });

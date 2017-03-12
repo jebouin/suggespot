@@ -74,28 +74,16 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             });
         })
 
-        app.get("/c", function(req, res) {
+        app.get("/t", function(req, res) {
             auth.checkUserLoggedIn(req, res, function(data) {
-                api.makeLocalAPICall("GET", "/api/categories", req.query, function(err, categoryData) {
+                api.makeLocalAPICall("GET", "/api/tags", req.query, function(err, tagData) {
                     if(err) {
                         res.status(err.code ? err.code : 500).end();
                     }
-                    res.status(200).json(categoryData);
+                    res.status(200).json(tagData);
                 })
             });
         });
-
-		app.post("/createCategory", function(req, res) {
-			auth.checkUserLoggedIn(req, res, function(data) {
-				api.makeLocalAPICall("POST", "/api/createCategory", req.body, function(err, categoryData) {
-					if(err) {
-						res.status(err.code ? err.code : 500).end();
-						return;
-					}
-					res.status(200).end();
-				});
-			});
-		});
 
 		app.post("/publish", function(req, res) {
 			var id = req.body.sid;

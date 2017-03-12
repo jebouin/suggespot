@@ -299,17 +299,24 @@ function onPhotoURLChange(e) {
 }
 
 function addTag(name, id) {
-    changes.push({type: "addTag", cid: id, name: name});
-    editObject.tagsAdded.push({cid: id, name : name});
-    var tag = $("#newTag").clone().removeAttr("id").attr("cid", id).insertBefore("#newTag").show();
-    tag.html("<h3>" + name + "</h3>");
+    changes.push({type: "addTag", tid: id, name: name});
+    var found = editObject.tagsRemoved.findIndex(function findTag(t) {
+        return t.tid === id;
+    });
+    if(found >= 0) {
+        editObject.tagsRemoved.splice(found, 1);
+    } else {
+        editObject.tagsAdded.push({tid: id, name : name});
+    }
+    var tag = $("#newTag").clone().removeAttr("id").attr("tid", id).insertBefore("#newTag").show();
+    tag.html("<h3 class='tagText'>" + name + "</h3>");
 }
 
 function addCategory(name) {
     changes.push({type: "addCat", name: name});
     editObject.tagsAdded.push({name : name});
     var tag = $("#newTag").clone().removeAttr("id").insertBefore("#newTag").show();
-    tag.html("<h3>" + name + "</h3>");
+    tag.html("<h3 class='tagText'>" + name + "</h3>");
 }
 
 function removeTag(e) {
@@ -317,9 +324,9 @@ function removeTag(e) {
     var tid = tag.attr("tid");
     var name = tag.eq(0).val();
     var found = editObject.tagsAdded.findIndex(function findName(t) {
-        return t.name == name;
+        return t.name === name;
     });
-    if(found > 0) {
+    if(found >= 0) {
         editObject.tagsAdded.splice(found, 1);
     } else if(tid) {
         editObject.tagsRemoved.push({tid: tid});
@@ -343,7 +350,6 @@ function newCategoryClick(e) {
 function closeNewTagForm() {
     $("input", "#tags").eq(0).val("");
     $("form", "#tags").hide();
-    $("#newTag").show();
 }
 
 function newTagInput(e) {
@@ -355,18 +361,18 @@ function newTagInput(e) {
     datalist.children().each(function(i) {
         var t = datalist.children().eq(i);
         if(val === t.val()) {
-            addTag(t.val(), t.attr("cid"));
+            addTag(t.val(), t.attr("tid"));
             e.target.value = "";
             return;
         }
     });
-    $.get("/c", {prefix: val}, function(data) {
+    $.get("/t", {prefix: val}, function(data) {
         var tags = $(".tag");
         datalist.empty();
         for(var i = 0; i < data.length; i++) {
             var exists = false;
             for(var j = 0; j < tags.length; j++) {
-                if(tags.eq(j).attr("cid") == data[i].id) {
+                if(tags.eq(j).attr("tid") == data[i].id) {
                     exists = true;
                     break;
                 }
@@ -374,13 +380,14 @@ function newTagInput(e) {
             if(exists) {
                 continue;
             }
-            $("<option>", {cid: data[i].id}).text(data[i].name).appendTo(datalist);
+            $("<option>", {tid: data[i].id}).text(data[i].name).appendTo(datalist);
         }
     });
 }
 
 function newTagInputFocusOut(e) {
     closeNewTagForm();
+    $("#newTag").show();
 }
 
 function onTagHover(e) {

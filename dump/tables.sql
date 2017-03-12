@@ -16,20 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `categories`
---
-
-DROP TABLE IF EXISTS `categories`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `categories` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(256) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `comments`
 --
 
@@ -56,25 +42,6 @@ CREATE TABLE `comments` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `follows`
---
-
-DROP TABLE IF EXISTS `follows`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `follows` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `category` int(10) unsigned NOT NULL,
-  `user` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `category` (`category`),
-  KEY `user` (`user`),
-  CONSTRAINT `follows_ibfk_1` FOREIGN KEY (`category`) REFERENCES `categories` (`id`),
-  CONSTRAINT `follows_ibfk_2` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `photos`
 --
 
@@ -90,6 +57,23 @@ CREATE TABLE `photos` (
   KEY `suggestion` (`suggestion`),
   CONSTRAINT `photos_ibfk_1` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=271 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `suggestionTags`
+--
+
+DROP TABLE IF EXISTS `suggestionTags`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `suggestionTags` (
+  `suggestion` int(10) unsigned NOT NULL,
+  `tag` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`suggestion`,`tag`),
+  KEY `tag` (`tag`),
+  CONSTRAINT `suggestionTags_ibfk_1` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `suggestionTags_ibfk_2` FOREIGN KEY (`tag`) REFERENCES `tags` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -124,15 +108,27 @@ DROP TABLE IF EXISTS `tags`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `tags` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `category` int(10) unsigned NOT NULL,
-  `suggestion` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `category` (`category`),
-  KEY `suggestion` (`suggestion`),
-  CONSTRAINT `tags_ibfk_1` FOREIGN KEY (`category`) REFERENCES `categories` (`id`),
-  CONSTRAINT `tags_ibfk_2` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=latin1;
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(256) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `userTags`
+--
+
+DROP TABLE IF EXISTS `userTags`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `userTags` (
+  `user` int(10) unsigned NOT NULL,
+  `tag` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`user`,`tag`),
+  KEY `tag` (`tag`),
+  CONSTRAINT `userTags_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `userTags_ibfk_2` FOREIGN KEY (`tag`) REFERENCES `tags` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -172,7 +168,7 @@ CREATE TABLE `votes` (
   CONSTRAINT `votes_ibfk_4` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `votes_ibfk_5` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `votes_ibfk_6` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=95 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -184,4 +180,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-11 17:41:56
+-- Dump completed on 2017-03-12  9:17:51
