@@ -56,17 +56,8 @@ html
         + voteUI("0_" + sid, score, voteDir, user)
         h2 #{title}
       div#suggestionBody
-        div#tags
-          | Tags:&nbsp;
-          each t in tags
-            + tagUI(t)
-          button.tag#newTag(style="display: none")
-            h3 +New
-          form(style="display: none")
-            input(type="text" name="category" list="categories" autocomplete="off")
-            datalist#categories
-            input(type="submit" value="+")
-          br
+        | Tags:&nbsp;
+        + tagsUI(tags, true, "+New")
         div#photos
           div#photosGrid
             + photo({}, true)
@@ -113,5 +104,6 @@ html
     script.
       var maximumPhotos = "#{maximumPhotos}";
     script(src="/libs/jquery.js")
+    script(src="/view/scripts/tagScript.js")
     script(src="/view/scripts/suggestionScript.js")
     script(src="/view/scripts/voteUI.js")

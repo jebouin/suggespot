@@ -12,13 +12,12 @@ html
 			if tags && tags.length
 				h2 Followed Tags
 				br
-				each t in tags
-					+ tagUI(t)
-				br
+				+ tagsUI(tags, false, "Edit")
 			if suggestions && suggestions.length
 				h2
 					| My suggestions&nbsp;(#{suggestions.length})
 				br
 				+ suggestionUI(suggestions, true)
 		script(src="/libs/jquery.js")
+		script(src="/view/scripts/tagScript.js")
 		script(src="/view/scripts/profileScript.js")

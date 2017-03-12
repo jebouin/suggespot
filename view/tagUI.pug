@@ -1,3 +1,14 @@
 mixin tagUI(t)
   button.tag(tid=t.tid)
     h3.tagText #{t.name}
+
+mixin tagsUI(tags, hideNewTag, newTagText)
+  div#tags
+    each t in tags
+      + tagUI(t)
+    button.tag#newTag(style=hideNewTag?"display: none":"")
+      h3 #{newTagText}
+    form(style="display:none")
+      input(type="text" name="category" list="categories" autocomplete="off")
+      datalist#categories
+      input(type="submit" value="+")

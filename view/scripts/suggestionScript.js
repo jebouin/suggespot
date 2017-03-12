@@ -150,6 +150,7 @@ function enableEditMode(b) {
     $(".photoOverlay").css("display", "block");
 	$("#photosGrid .photo").attr("draggable", "true");
     $("#newTag").show();
+    tagUI.editMode = true;
 	expandPhotos();
     updateNewPhotoForm();
 	b.text("Save changes");
@@ -164,7 +165,8 @@ function disableEditMode(b) {
     $(".photoOverlay").css("display", "none");
 	$("#photosGrid .photo").attr("draggable", "false");
     $("#newTag").hide();
-    closeNewTagForm();
+    tagUI.editMode = false;
+    tagUI.closeNewTagForm();
 	collapsePhotos();
     updatePhotos();
 	b.text("Edit");
@@ -298,29 +300,9 @@ function onPhotoURLChange(e) {
     }
 }
 
-function addTag(name, id) {
-    changes.push({type: "addTag", tid: id, name: name});
-    var found = editObject.tagsRemoved.findIndex(function findTag(t) {
-        return t.tid === id;
-    });
-    if(found >= 0) {
-        editObject.tagsRemoved.splice(found, 1);
-    } else {
-        editObject.tagsAdded.push({tid: id, name : name});
-    }
-    var tag = $("#newTag").clone().removeAttr("id").attr("tid", id).insertBefore("#newTag").show();
-    tag.html("<h3 class='tagText'>" + name + "</h3>");
-}
-
-function addCategory(name) {
-    changes.push({type: "addCat", name: name});
-    editObject.tagsAdded.push({name : name});
-    var tag = $("#newTag").clone().removeAttr("id").insertBefore("#newTag").show();
-    tag.html("<h3 class='tagText'>" + name + "</h3>");
-}
-
-function removeTag(e) {
-    var tag = $(".tag").has($(e.target)).remove();
+//tags
+tagUI.canAddCategory = true;
+tagUI.removeTagCallback = function(tag) {
     var tid = tag.attr("tid");
     var name = tag.eq(0).val();
     var found = editObject.tagsAdded.findIndex(function findName(t) {
@@ -334,84 +316,24 @@ function removeTag(e) {
     changes.push({type: "removeTag", name: name, tid: tid});
 }
 
-function newTagClick() {
-    $("input", "#tags").eq(0).val("");
-    $("#newTag").hide();
-    $("#tags form").show();
-    $("#tags input").eq(0).focus();
-}
-
-function newCategoryClick(e) {
-    e.preventDefault();
-    var input = $("#tags input").eq(0);
-    addCategory(input.val());
-}
-
-function closeNewTagForm() {
-    $("input", "#tags").eq(0).val("");
-    $("form", "#tags").hide();
-}
-
-function newTagInput(e) {
-    //timer...
-    var val = e.target.value;
-    val = val.charAt(0).toUpperCase() + val.slice(1);
-    e.target.value = val;
-    var datalist = $("datalist#categories");
-    datalist.children().each(function(i) {
-        var t = datalist.children().eq(i);
-        if(val === t.val()) {
-            addTag(t.val(), t.attr("tid"));
-            e.target.value = "";
-            return;
-        }
+tagUI.addTagCallback = function(name, id) {
+    changes.push({type: "addTag", tid: id, name: name});
+    var found = editObject.tagsRemoved.findIndex(function findTag(t) {
+        return t.tid === id;
     });
-    $.get("/t", {prefix: val}, function(data) {
-        var tags = $(".tag");
-        datalist.empty();
-        for(var i = 0; i < data.length; i++) {
-            var exists = false;
-            for(var j = 0; j < tags.length; j++) {
-                if(tags.eq(j).attr("tid") == data[i].id) {
-                    exists = true;
-                    break;
-                }
-            }
-            if(exists) {
-                continue;
-            }
-            $("<option>", {tid: data[i].id}).text(data[i].name).appendTo(datalist);
-        }
-    });
-}
-
-function newTagInputFocusOut(e) {
-    closeNewTagForm();
-    $("#newTag").show();
-}
-
-function onTagHover(e) {
-    var tag = $(e.target);
-}
-
-function onTagClick(e) {
-    if(editMode) {
-        removeTag(e);
+    if(found >= 0) {
+        editObject.tagsRemoved.splice(found, 1);
     } else {
-        window.location.href = "/discover?tag=" + $(e.target).text();
+        editObject.tagsAdded.push({tid: id, name : name});
     }
 }
 
+tagUI.addCategoryCallback = function(name) {
+    changes.push({type: "addCat", name: name});
+    editObject.tagsAdded.push({name : name});
+}
+
 $(document).ready(function() {
-    //tags
-    $("#newTag").on("click", newTagClick);
-    $("#tags input").on("input", newTagInput);
-    $("#tags form").on("submit", newCategoryClick);
-    $("#tags form input").eq(0).on("focusout", newTagInputFocusOut);
-    $(document).on({
-        mouseover: onTagHover,
-        click: onTagClick
-    }, "#tags .tag:not(#newTag)");
 	//photo grid
 	mh = $("#photosGrid").css("max-height");
 	txt = $("button#morePhotos").text();
