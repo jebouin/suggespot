@@ -100,7 +100,16 @@ $(document).ready(function() {
     $("#tags form").on("submit", function(e) {
         e.preventDefault();
         if(tagUI.canAddCategory) {
-            tagUI.addCategory($("#tags input").eq(0).val());
+            var name = $("#tags input").eq(0).val();
+            var found = $(".tagText").toArray().findIndex(function(e, i) {
+                if($(e).text() === name) {
+                    return true;
+                }
+                return false;
+            });
+            if(found == -1) {
+                tagUI.addCategory(name);
+            }
         }
     });
 });

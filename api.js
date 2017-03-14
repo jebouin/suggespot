@@ -543,12 +543,23 @@ module.exports = function(app, mysqlConnection, auth) {
                             });
                             queryFunctions.push(function(callback) {
                                 mysqlConnection.query("INSERT INTO tags (name) VALUES (?)", [tag.name], function(err, rows, fields) {
-                                    testTransactionError(err);
-                                    mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [suggestion.id, rows.insertId], function(err, rows, fields) {
-                                        testTransactionError(err);
-                                        logs.log("user " + colors.bold(user.name) + " created a new tag " + colors.bold(tag.name));
-                                        callback();
-                                    });
+                                    //if duplicate, don't throw error
+                                    if(err) {
+                                        if(err.code == "ER_DUP_ENTRY") {
+                                            mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, (SELECT id FROM tags WHERE name = ?))", [suggestion.id, tag.name], function(err, rows, fields) {
+                                                testTransactionError(err);
+                                                callback();
+                                            });
+                                        } else {
+                                            testTransactionError(err);
+                                        }
+                                    } else {
+                                        mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [suggestion.id, rows.insertId], function(err, rows, fields) {
+                                            testTransactionError(err);
+                                            logs.log("user " + colors.bold(user.name) + " created a new tag " + colors.bold(tag.name));
+                                            callback();
+                                        });
+                                    }
                                 });
                             });
                         }
