@@ -538,6 +538,9 @@ module.exports = function(app, mysqlConnection, auth) {
                                 });
                             });
                         } else if(tag.name) {
+                            tag.name = tag.name.replace(/\w\S*/g, function(t) {
+                                return t.charAt(0).toUpperCase() + t.substr(1).toLowerCase();
+                            });
                             queryFunctions.push(function(callback) {
                                 mysqlConnection.query("INSERT INTO tags (name) VALUES (?)", [tag.name], function(err, rows, fields) {
                                     testTransactionError(err);

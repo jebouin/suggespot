@@ -57,7 +57,9 @@ $(document).ready(function() {
     $("#tags input").on("input", function(e) {
         //timer...
         var val = e.target.value;
-        val = val.charAt(0).toUpperCase() + val.slice(1);
+        val = val.replace(/\w\S*/g, function(t) {
+            return t.charAt(0).toUpperCase() + t.substr(1).toLowerCase();
+        });
         e.target.value = val;
         var datalist = $("datalist#categories");
         datalist.children().each(function(i) {
