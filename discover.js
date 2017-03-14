@@ -36,14 +36,6 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 				discover(req, res);
 			});
 		});
-
-        app.post("/follow", function(req, res) {
-            auth.checkUserLoggedIn(req, res, function(loginData) {
-                api.makeLocalAPICall("POST", "/api/follow", {userId: loginData.id, tagName: req.body.tagName}, function(err, followData) {
-                    res.status(200).end();
-                });
-            });
-        });
 	}
 
 	return {

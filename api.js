@@ -795,6 +795,21 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.post("/api/unfollow", function(req, res) {
+        try {
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            var tagName = checkParam(req.body, "tagName");
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        var params = [tagName, userId];
+        mysqlConnection.query("DELETE FROM userTags WHERE user = ? AND tag = (SELECT id FROM tags WHERE name = ?)", [userId, tagName], function(err, rows, fields) {
+            if(err) throw err;
+            res.status(200).end();
+        });
+    });
+
     app.post("/api/publish", function(req, res) {
         try {
             var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);

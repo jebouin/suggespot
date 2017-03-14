@@ -9,7 +9,7 @@ html
 			include header
 			h2 #{name}'s profile
 			p user for #{timeSinceRegistered}
-			if tags && tags.length
+			if tags
 				h2 Followed Tags
 				br
 				+ tagsUI(tags, false, "Edit")

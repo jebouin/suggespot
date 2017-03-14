@@ -4,6 +4,13 @@ tagUI.addTagCallback = function(name, id) {
     });
 }
 
+tagUI.removeTagCallback = function(tag) {
+    var name = $(".tagText", tag).text();
+    $.post("/unfollow", {tagName: name}, function(data) {
+
+    });
+}
+
 tagUI.newTagClickCallback = function() {
     tagUI.editMode = true;
 }
