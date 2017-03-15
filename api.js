@@ -82,16 +82,21 @@ module.exports = function(app, mysqlConnection, auth) {
         var queryOrderBy = "ORDER BY conf DESC";
         if(userId) {
             userId = parseInt(userId, 36);
-            selectQuery = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb ";
-            fromQuery = "FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
-            params = [userId];
+            if(!tagName) {
+                selectQuery = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb ";
+                fromQuery = "FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? LEFT JOIN votes ON suggestions.id = votes.suggestion AND votes.user = ? ";
+                params = [userId, userId];
+            } else {
+                selectQuery = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb ";
+                fromQuery = "FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
+                params = [userId];
+            }
         } else {
             selectQuery = "SELECT suggestions.id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb ";
             fromQuery = "FROM suggestions ";
             params = [];
         }
         if(tagName) {
-            //selectQuery += ", tags.id AS tid ";
             fromQuery += "INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN tags ON suggestionTags.tag = tags.id AND tags.name = ? ";
             params.push(tagName);
         }
