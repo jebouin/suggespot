@@ -6,6 +6,10 @@ html
   body
     #body
       include header
+      a(href="/") Interests
+      | &nbsp;
+      a(href="/all") All
+      br
       if user
         h2 Logged as #{user.name}&nbsp;
         button.big(onclick="location.href='/submit'") Submit

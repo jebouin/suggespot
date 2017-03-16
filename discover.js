@@ -15,7 +15,8 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			params.userId = loginData.id;
 			loginData.id = loginData.id.toString(36);
 		}
-		api.makeLocalAPICall("GET", "/api/suggestions", params, function(err, suggestionData) {
+        var mode = req.params.mode || "interests";
+		api.makeLocalAPICall("GET", "/api/suggestions/" + mode, params, function(err, suggestionData) {
 			if(err) {
 				res.end();
 			} else {
@@ -29,7 +30,8 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 	}
 
 	function createRoutes() {
-		app.get("/discover", function(req, res) {
+		app.get("/all", function(req, res) {
+            req.params.mode = "all";
 			auth.checkUserLoggedIn(req, res, function(data) {
 				discover(req, res, data);
 			}, function() {

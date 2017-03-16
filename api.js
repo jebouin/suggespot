@@ -65,7 +65,8 @@ module.exports = function(app, mysqlConnection, auth) {
         }
     });
 
-    app.get("/api/suggestions", function(req, res) {
+    app.get("/api/suggestions/:mode", function(req, res) {
+        var mode = req.params.mode;
         var userId = req.query.userId;
         var authorId = req.query.authorId;
         if(authorId) {
@@ -82,7 +83,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var queryOrderBy = "ORDER BY conf DESC";
         if(userId) {
             userId = parseInt(userId, 36);
-            if(!tagName) {
+            if(mode == "interests") {
                 selectQuery = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb ";
                 fromQuery = "FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? LEFT JOIN votes ON suggestions.id = votes.suggestion AND votes.user = ? ";
                 params = [userId, userId];
