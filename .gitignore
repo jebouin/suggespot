@@ -11,4 +11,5 @@ logs
 tests
 todo.txt
 uploads/*
-view/style.css
+view/style/*.css
+view/style/*.css.map

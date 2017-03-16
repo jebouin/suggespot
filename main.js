@@ -54,7 +54,7 @@ function createRoutes() {
     });
 
     app.get("/", function(req, res) {
-    	auth.checkUserLoggedIn(req, res, function(data) {
+        auth.checkUserLoggedIn(req, res, function(data) {
     		discover.discover(req, res, data);
     	});
     });
@@ -63,9 +63,7 @@ function createRoutes() {
     	utils.sendFile(res, "view/indexDivs.html");
     });
 
-    app.get("/style.css", function(req, res) {
-    	utils.sendFile(res, "view/style.css");
-    });
+    app.use("/style", express.static(__dirname + "/view/style"));
 
     app.get("/libs/jquery.js", function(req, res) {
     	utils.sendFile(res, "libs/jquery.js");
@@ -90,6 +88,12 @@ function createRoutes() {
     var server = app.listen(80, function() {
         logs.log(colors.bold("server started"));
     });
+
+    /*app._router.stack.forEach(function(r) {
+        if(r.route && r.route.path){
+            console.log(r.route.path)
+        }
+    });*/
 }
 
 process.on("SIGINT", function() {

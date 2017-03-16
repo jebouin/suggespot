@@ -1,36 +1,4 @@
-$black: #000000;
-$blueCharcoal: #02111B;
-$logCabin: #1A1F16;
-$mallard: #1E441E;
-$laPalma: #119822;
-$yellowGreen: #C5D86D;
-$berylGreen: #E4E6C3;
-$white: #FFFFFF;
-$error: #FF0000;
-
-@mixin prefix($declarations, $prefixes: ()) {
-	@each $prop, $val in $declarations {
-		@each $pre in $prefixes {
-			#{'-' + $pre + '-' + $prop}: $val;
-		}
-		#{$prop}: $val;
-	}
-}
-
-body {
-	position: relative;
-	background: $berylGreen;
-	margin: 0px;
-	padding: 0px;
-	font: 16px sans-serif;
-}
-
-#body {
-	background: $white;
-	padding: 10px 20px 20px 20px;
-	margin: 0px 30px 20px 30px;
-	height: 100%;
-}
+@import "common";
 
 a {
 	color: $logCabin;
@@ -68,19 +36,6 @@ form {
 	display: inline;
 }
 
-input, button {
-	font-size: 16px;
-	border-radius: 4px;
-	outline: none;
-	border: 1px solid grey;
-}
-
-button, input[type="button"], input[type="submit"] {
-	display: inline-block;
-	cursor: pointer;
-	font-size: 16px;
-}
-
 .error {
 	color: $error;
 }
@@ -115,11 +70,6 @@ button, input[type="button"], input[type="submit"] {
 	margin: auto;
 	text-align: center;
 	vertical-align: middle;
-}
-
-#map {
-	height: 800px;
-	width: 100%;
 }
 
 .suggestion {

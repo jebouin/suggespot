@@ -1,8 +1,10 @@
+include head
+
 doctype html
 html
-  include head.pug
+  +head()
   body
-    include header.pug
+    include header
     div#contentLeft
       input.big(type="submit" value="Discover Anonymously" onclick="location.href='/discover'")
     div#contentRight

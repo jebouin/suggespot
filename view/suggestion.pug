@@ -1,3 +1,4 @@
+include head
 include voteUI
 include editUI
 include tagUI
@@ -47,7 +48,7 @@ mixin commentUI(sid)
 
 doctype html
 html
-  include head
+  +head()
   body
     div#dark
     #body

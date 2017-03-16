@@ -65,8 +65,11 @@ module.exports = function(app, mysqlConnection, auth) {
         }
     });
 
-    app.get("/api/suggestions/:mode", function(req, res) {
+    app.get(["/api/suggestions/:mode", "/api/suggestions/"], function(req, res) {
         var mode = req.params.mode;
+        if(!mode) {
+            mode = "all";
+        }
         var userId = req.query.userId;
         var authorId = req.query.authorId;
         if(authorId) {
