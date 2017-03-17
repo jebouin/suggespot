@@ -76,27 +76,30 @@ module.exports = function(app, mysqlConnection, auth) {
             authorId = parseInt(authorId, 36);
         }
         var tagName = req.query.tagName;
+        var query;
         var params;
         var selectQuery;
         var fromQuery;
         var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
         var descrQuery = "IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr";
+        var scoreQuery = "CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score";
         var photoJoin = "LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0";
         var queryWhere = "WHERE published = 1";
         var queryOrderBy = "ORDER BY conf DESC";
         if(userId) {
             userId = parseInt(userId, 36);
             if(mode == "interests") {
-                selectQuery = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb ";
-                fromQuery = "FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? LEFT JOIN votes ON suggestions.id = votes.suggestion AND votes.user = ? ";
+                var interestSubquery = "(SELECT suggestions.id, title, published, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + " FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? GROUP BY suggestions.id) AS suggestions";
+                selectQuery = "SELECT suggestions.id AS id, title, published, descr, score, conf, author, dir, path AS thumb ";
+                fromQuery = "FROM " + interestSubquery + " LEFT JOIN votes ON suggestions.id = votes.suggestion AND votes.user = ? ";
                 params = [userId, userId];
             } else {
-                selectQuery = "SELECT suggestions.id AS id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, dir, path AS thumb ";
+                selectQuery = "SELECT suggestions.id AS id, title, published, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", dir, path AS thumb ";
                 fromQuery = "FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
                 params = [userId];
             }
         } else {
-            selectQuery = "SELECT suggestions.id, title, published, " + descrQuery + ", CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", author, path AS thumb ";
+            selectQuery = "SELECT suggestions.id, title, published, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb ";
             fromQuery = "FROM suggestions ";
             params = [];
         }
