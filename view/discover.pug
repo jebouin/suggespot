@@ -7,11 +7,11 @@ html
   body
     #body
       include header
-      a(href="/") Interests
-      | &nbsp;
-      a(href="/all") All
-      br
       if user
+        a(href="/") Interests
+        | &nbsp;
+        a(href="/all") All
+        br
         h2 Logged as #{user.name}&nbsp;
         button.big(onclick="location.href='/submit'") Submit
         button.big(onclick="location.href='/p/"+user.id+"'") Profile
