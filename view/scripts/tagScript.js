@@ -41,7 +41,7 @@ $(document).ready(function() {
             var tag = $(".tag").has($(e.target)).remove();
             tagUI.removeTagCallback(tag);
         } else {
-            window.location.href = "/discover?tag=" + $(e.target).text();
+            window.location.href = "/all?tag=" + $(e.target).text();
         }
     });
     $("#newTag").on("click", function(e) {
