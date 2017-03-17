@@ -662,6 +662,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         throw "you can't upload a photo for a comment";
                     }
                 } catch(e) {
+
                     res.status(400).end(e.message);
                     return;
                 }
@@ -763,6 +764,9 @@ module.exports = function(app, mysqlConnection, auth) {
         }
         if(!Object.keys(req.body).length) {
             uploadPhoto(req, res, function(err) {
+                if(err) {
+                    res.status(400).end("Wrong file type");
+                }
                 onPhotoUpload();
             });
         } else {

@@ -46,15 +46,15 @@ function uploadPhoto() {
 				return xhr;
 			},
 			error: function(xhr, err) {
-
+                var errorText = xhr.responseText || "Error while uploading";
+                $("#newPhoto .error").css("visibility", "visible").text(errorText);
             },
 			success: function(data) {
-                //todo
+                $("#newPhoto .error").css("visibility", "hidden");
                 addPhoto(data);
 				updatePhotos();
                 resetNewPhotoForm();
                 updateNewPhotoForm();
-				//reset input value?
 			}
 	});
 }
@@ -289,7 +289,7 @@ function onPhotoURLChange(e) {
         }
         $.post("/uploadPhoto", {"fromUrl": true, "thingId": "0_" + getSid(), "url": url}).done(function(data) {
             if(data.code == 400) {
-                $("#newPhoto .error").css("visibility", "visible");
+                $("#newPhoto .error").css("visibility", "visible").text("Invalid file");
             } else {
                 addPhoto(data);
                 resetNewPhotoForm();
