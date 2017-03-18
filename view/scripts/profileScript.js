@@ -21,9 +21,24 @@ tagUI.closeNewTagFormCallback = function(name, id) {
     tagUI.editMode = false;
 }
 
-$(document).ready(function() {
-    $.post("/suggestions", {start: $(".suggestion").length, limit: 10}, function(data) {
+function loadMore() {
+    if(loadingMore) return;
+    loadingMore = true;
+    $.post("/suggestions", {start: $(".suggestion").length, limit: 10, authorId: authorId, mode: "profile"}, function(data) {
         $("#suggestionsContainer").append($(data));
         loadingMore = false;
+    });
+}
+
+$(document).ready(function() {
+    loadMore();
+    $(window).scroll(function() {
+        if(!loadingMore) {
+            var cont = $("#suggestionsContainer");
+            var windowBottom = $(window).scrollTop() + $(window).height();
+            if(windowBottom + 50 >= cont.position().top + cont.outerHeight()) {
+                loadMore();
+            }
+        }
     });
 });

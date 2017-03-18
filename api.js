@@ -70,53 +70,99 @@ module.exports = function(app, mysqlConnection, auth) {
         if(!mode) {
             mode = "all";
         }
+        var start = parseInt(req.query.start) || 0;
+        var limit = parseInt(req.query.limit) || 10;
+        if(limit > 50) limit = 50;
         var userId = req.query.userId;
+        if(userId) {
+            userId = parseInt(userId, 36);
+        }
         var authorId = req.query.authorId;
         if(authorId) {
             authorId = parseInt(authorId, 36);
         }
         var tagName = req.query.tagName;
-        var start = parseInt(req.query.start) || 0;
-        var limit = parseInt(req.query.limit) || 10;
-        if(limit > 50) limit = 50;
+        var location = req.query.lat && req.query.lon;
 
-        var query;
-        var params;
-        var selectQuery;
-        var fromQuery;
+        var selectParams = [];
+        var subqueryParams = [];
+        var joinParams = [];
+        var whereParams = [];
         var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
         var descrQuery = "IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr";
         var scoreQuery = "CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score";
+        var distanceQuery = "12742000 * ASIN(SQRT(POW(SIN(RADIANS(lat / 10000000 - ?) / 2), 2) + COS(RADIANS(lat / 10000000)) * COS(RADIANS(?)) * POW(SIN(RADIANS(lon / 10000000 - ?) / 2), 2))) AS dist";
+        var voteJoin = "LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ?";
         var photoJoin = "LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0";
-        var queryWhere = "WHERE published = 1";
-        var queryOrderBy = "ORDER BY conf DESC";
-        if(userId) {
-            userId = parseInt(userId, 36);
-            if(mode == "interests") {
-                var interestSubquery = "(SELECT suggestions.id, title, published, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + " FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? GROUP BY suggestions.id) AS suggestions";
-                selectQuery = "SELECT suggestions.id AS id, title, published, descr, score, conf, author, dir, path AS thumb ";
-                fromQuery = "FROM " + interestSubquery + " LEFT JOIN votes ON suggestions.id = votes.suggestion AND votes.user = ? ";
-                params = [userId, userId];
+
+        var selectQuery = "SELECT";
+        var fromQuery = "FROM suggestions";
+        var whereQuery = "WHERE published = 1";
+        var havingQuery = "";
+        var orderByQuery = "ORDER BY conf DESC";
+        try {
+            if(mode == "all") {
+                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb";
+                if(userId) {
+                    selectQuery += ", dir";
+                    fromQuery += " " + voteJoin;
+                    joinParams.push(userId);
+                }
+            } else if(mode == "interests") {
+                if(userId) {
+                    var interestSubquery = "(SELECT";
+                    if(location) {
+                        interestSubquery += " lat, lon, ";
+                    }
+                    interestSubquery += " suggestions.id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + " FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? GROUP BY suggestions.id) AS suggestions";
+                    selectQuery += " suggestions.id AS id, title, published, timeCreated, descr, score, conf, author, dir, path AS thumb ";
+                    subqueryParams.push(userId);
+                    fromQuery = "FROM " + interestSubquery + " " + voteJoin;
+                    joinParams.push(userId);
+                } else {
+                    throw new Error("you need to be logged in to see your interests");
+                }
+            } else if(mode == "tag") {
+                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb";
+                if(userId) {
+                    selectQuery += ", dir";
+                    fromQuery += " " + voteJoin;
+                    joinParams.push(userId);
+                }
+                fromQuery += " " + "INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN tags ON suggestionTags.tag = tags.id AND tags.name = ?";
+                joinParams.push(tagName);
+            } else if(mode == "profile") {
+                if(!authorId) {
+                    throw new Error("please specify a valid authorId");
+                }
+                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb";
+                if(userId) {
+                    selectQuery += ", dir";
+                    fromQuery += " " + voteJoin;
+                    joinParams.push(userId);
+                    if(userId == authorId) {
+                        whereQuery = "";
+                    }
+                }
+                whereQuery += " AND author = ?";
+                whereParams.push(authorId);
+                orderByQuery = "ORDER BY published ASC, timeCreated DESC";
             } else {
-                selectQuery = "SELECT suggestions.id AS id, title, published, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", dir, path AS thumb ";
-                fromQuery = "FROM suggestions LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ? ";
-                params = [userId];
+                throw new Error("invalid mode");
             }
-        } else {
-            selectQuery = "SELECT suggestions.id, title, published, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb ";
-            fromQuery = "FROM suggestions ";
-            params = [];
+            if(location) {
+                selectQuery += ", " + distanceQuery;
+                havingQuery = "HAVING dist < 100000";
+                selectParams.push(req.query.lat);
+                selectParams.push(req.query.lat);
+                selectParams.push(req.query.lon);
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
         }
-        if(tagName) {
-            fromQuery += "INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN tags ON suggestionTags.tag = tags.id AND tags.name = ? ";
-            params.push(tagName);
-        }
-        if(authorId) {
-            queryWhere = "WHERE author = ?";
-            params.push(authorId);
-            queryOrderBy = "ORDER BY published, conf DESC";
-        }
-        var query = selectQuery + fromQuery + photoJoin + " " + queryWhere + " " + queryOrderBy + " LIMIT ?, ?";
+
+        var query = selectQuery + " " + fromQuery + " " + photoJoin + " " + whereQuery + " " + havingQuery + " " + orderByQuery + " LIMIT ?, ?";
+        var params = selectParams.concat(subqueryParams).concat(joinParams).concat(whereParams);
         params.push(start);
         params.push(limit);
         mysqlConnection.query(query, params, function(err, rows, fields) {
@@ -125,7 +171,11 @@ module.exports = function(app, mysqlConnection, auth) {
                 rows[i].id = rows[i].id.toString(36);
                 rows[i].href = "/s/" + rows[i].id;
             }
-            res.json({suggestions: rows, tag: tagName});
+            if(tagName) {
+                res.status(200).json({suggestions: rows, tag: tagName});
+            } else {
+                res.status(200).json({suggestions: rows});
+            }
         });
     });
 

@@ -14,28 +14,16 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
     					res.redirect("/");
     					return;
     				}
-                    var isAuthor = loggedIn && (profileData.id === parseInt(loginData.id, 36));
-                    if(isAuthor) {
-                        api.makeLocalAPICall("GET", "/api/suggestions/interests", {userId: id, authorId: id}, function(err, suggestionData) {
-                            if(err) {
-                                throw err;
-                                res.redirect("/");
-                                return;
-                            }
-                            profileData.suggestions = suggestionData.suggestions;
-                            api.makeLocalAPICall("GET", "/api/userTags", {userId: id}, function(err, tagData) {
-                                if(err) {
-                                    throw err;
-                                    res.redirect("/");
-                                    return;
-                                }
-                                profileData.tags = tagData;
-                                sendProfile(profileData);
-                            });
-                        });
-                    } else {
+                    api.makeLocalAPICall("GET", "/api/userTags", {userId: id}, function(err, tagData) {
+                        if(err) {
+                            throw err;
+                            res.redirect("/");
+                            return;
+                        }
+                        profileData.tags = tagData;
+                        profileData.authorId = id;
                         sendProfile(profileData);
-                    }
+                    });
     			});
             }
             function sendProfile(profileData) {

@@ -4,7 +4,71 @@ const qs = require("querystring");
 
 module.exports = function(app, mysqlConnection, auth, view, api) {
 
+    function sendSuggestions(req, res, loginData) {
+        var params = {};
+        if(loginData) {
+			params.userId = loginData.id;
+			loginData.id = loginData.id.toString(36);
+		}
+        if(req.body.lat && req.body.lon) {
+			params.lat = req.body.lat;
+			params.lon = req.body.lon;
+		}
+        if(req.body.tag) {
+            params.tagName = req.body.tag;
+            req.body.mode = "tag";
+        }
+        if(req.body.authorId) {
+            params.authorId = req.body.authorId;
+        }
+        params.start = req.body.start || 0;
+        params.limit = req.body.limit || 10;
+        var mode = req.body.mode || "all";
+        api.makeLocalAPICall("GET", "/api/suggestions/" + mode, params, function(err, suggestionData) {
+            if(err) {
+				res.end();
+			} else {
+                res.end(view.getTemplate("suggestionUI")({
+					suggestions: suggestionData.suggestions,
+                    tag: suggestionData.tag,
+					user: loginData
+				}));
+			}
+        });
+    }
+
 	function createRoutes() {
+        app.post("/suggestions", function(req, res) {
+            auth.checkUserLoggedIn(req, res, function(data) {
+                sendSuggestions(req, res, data);
+            }, function() {
+                sendSuggestions(req, res);
+            });
+        });
+
+        app.get("/s/:id", function(req, res) {
+            var url = req.originalUrl;
+            var id = req.params.id;
+            function apiCall(loginData) {
+                api.makeLocalAPICall("GET", "/api/suggestion/" + id, loginData ? loginData : {}, function(err, suggestionData) {
+                    if(err) {
+                        res.redirect("/");
+                        return;
+                    }
+                    if(loginData) {
+                        suggestionData.user = loginData;
+                        suggestionData.user.id = suggestionData.user.id.toString(36);
+                    }
+                    res.end(view.getTemplate("suggestion")(suggestionData));
+                });
+            }
+            auth.checkUserLoggedIn(req, res, function(data) {
+                apiCall(data);
+            }, function() {
+                apiCall();
+            });
+        });
+
 		app.post("/vote", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
 				api.makeLocalAPICall("POST", "/api/vote", {thingId: req.body.thingId, userId: data.id, dir: req.body.dir}, function(err, data) {
@@ -111,29 +175,6 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 						});
 					}
 				});
-			});
-		});
-
-		app.get("/s/:id", function(req, res) {
-			var url = req.originalUrl;
-			var id = req.params.id;
-			function apiCall(loginData) {
-				api.makeLocalAPICall("GET", "/api/suggestion/" + id, loginData ? loginData : {}, function(err, suggestionData) {
-					if(err) {
-                        res.redirect("/");
-						return;
-					}
-					if(loginData) {
-						suggestionData.user = loginData;
-                        suggestionData.user.id = suggestionData.user.id.toString(36);
-					}
-					res.end(view.getTemplate("suggestion")(suggestionData));
-				});
-			}
-			auth.checkUserLoggedIn(req, res, function(data) {
-				apiCall(data);
-			}, function() {
-				apiCall();
 			});
 		});
 	}

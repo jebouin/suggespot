@@ -54,6 +54,7 @@ function createRoutes() {
     });
 
     app.get("/", function(req, res) {
+        req.query.mode = "interests";
         auth.checkUserLoggedIn(req, res, function(data) {
     		discover.discover(req, res, data);
     	});
