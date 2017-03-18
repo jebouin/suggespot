@@ -76,6 +76,10 @@ module.exports = function(app, mysqlConnection, auth) {
             authorId = parseInt(authorId, 36);
         }
         var tagName = req.query.tagName;
+        var start = parseInt(req.query.start) || 0;
+        var limit = parseInt(req.query.limit) || 10;
+        if(limit > 50) limit = 50;
+
         var query;
         var params;
         var selectQuery;
@@ -112,8 +116,9 @@ module.exports = function(app, mysqlConnection, auth) {
             params.push(authorId);
             queryOrderBy = "ORDER BY published, conf DESC";
         }
-        var query = selectQuery + fromQuery + photoJoin + " " + queryWhere + " " + queryOrderBy + " LIMIT ?";
-        params.push(10);
+        var query = selectQuery + fromQuery + photoJoin + " " + queryWhere + " " + queryOrderBy + " LIMIT ?, ?";
+        params.push(start);
+        params.push(limit);
         mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             for(var i=0; i<rows.length; i++) {

@@ -41,6 +41,8 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
         if(req.query.tag) {
             params.tagName = req.query.tag;
         }
+        params.start = req.body.start || 0;
+        params.limit = req.body.limit || 10;
         api.makeLocalAPICall("GET", "/api/suggestions/all", params, function(err, suggestionData) {
             if(err) {
 				res.end();

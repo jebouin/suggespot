@@ -1,3 +1,5 @@
+var loadingMore = false;
+
 tagUI.addTagCallback = function(name, id) {
     $.post("/follow", {tagName: name}, function(data) {
 
@@ -20,7 +22,7 @@ tagUI.closeNewTagFormCallback = function(name, id) {
 }
 
 $(document).ready(function() {
-    $.post("/suggestions", {}, function(data) {
+    $.post("/suggestions", {start: $(".suggestion").length, limit: 10}, function(data) {
         $("#suggestionsContainer").append($(data));
         loadingMore = false;
     });

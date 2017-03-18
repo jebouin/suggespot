@@ -9,7 +9,7 @@ function onFollowClick(e) {
 function loadMore() {
     if(loadingMore) return;
     loadingMore = true;
-    $.post("/suggestions", {}, function(data) {
+    $.post("/suggestions", {start: $(".suggestion").length, limit: 10}, function(data) {
         $("#suggestionsContainer").append($(data));
         loadingMore = false;
     });
