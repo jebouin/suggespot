@@ -14,6 +14,6 @@ mixin suggestion(data, canVote)
         | &nbsp;(Private)
       div.descr #{data.descr}
 
-mixin suggestionUI(suggestions, canVote)
+if suggestions && suggestions.length
   each s in suggestions
-    +suggestion(s, canVote)
+    +suggestion(s, typeof(user) !== "undefined")

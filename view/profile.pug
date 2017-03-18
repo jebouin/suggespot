@@ -1,5 +1,4 @@
 include head
-include suggestionUI
 include tagUI
 
 doctype html
@@ -18,7 +17,7 @@ html
 				h2
 					| My suggestions&nbsp;(#{suggestions.length})
 				br
-				+ suggestionUI(suggestions, true)
+				#suggestionsContainer
 		script(src="/libs/jquery.js")
 		script(src="/view/scripts/tagScript.js")
 		script(src="/view/scripts/profileScript.js")

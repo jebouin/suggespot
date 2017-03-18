@@ -20,5 +20,8 @@ tagUI.closeNewTagFormCallback = function(name, id) {
 }
 
 $(document).ready(function() {
-
+    $.post("/suggestions", {}, function(data) {
+        $("#suggestionsContainer").append($(data));
+        loadingMore = false;
+    });
 });

@@ -3,7 +3,7 @@ const utils = require("./utils");
 module.exports = function(app, mysqlConnection, auth, view, api) {
 
 	function discover(req, res, loginData) {
-		var params = {};
+		/*var params = {};
 		if(req.body.lat && req.body.lon) {
 			params.lat = req.body.lat;
 			params.lon = req.body.lon;
@@ -26,8 +26,33 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 					user: loginData
 				}));
 			}
-		});
+		});*/
+        res.end(view.getTemplate("discover")({
+            user: loginData
+        }));
 	}
+
+    function sendSuggestions(req, res, loginData) {
+        var params = {};
+        if(loginData) {
+			params.userId = loginData.id;
+			loginData.id = loginData.id.toString(36);
+		}
+        if(req.query.tag) {
+            params.tagName = req.query.tag;
+        }
+        api.makeLocalAPICall("GET", "/api/suggestions/all", params, function(err, suggestionData) {
+            if(err) {
+				res.end();
+			} else {
+                res.end(view.getTemplate("suggestionUI")({
+					suggestions: suggestionData.suggestions,
+                    tag: suggestionData.tag,
+					user: loginData
+				}));
+			}
+        });
+    }
 
 	function createRoutes() {
 		app.get("/all", function(req, res) {
@@ -38,6 +63,13 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 				discover(req, res);
 			});
 		});
+        app.post("/suggestions", function(req, res) {
+            auth.checkUserLoggedIn(req, res, function(data) {
+                sendSuggestions(req, res, data);
+            }, function() {
+                sendSuggestions(req, res);
+            });
+        });
 	}
 
 	return {

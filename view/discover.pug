@@ -23,15 +23,11 @@ html
           | Follow&nbsp;
           span.tagText #{tag}
         br
-      if suggestions && suggestions.length
-        h2
-          | Suggestions&nbsp;
-          if tag
-            | tagged as #{tag}&nbsp;
-          |(#{suggestions.length})
-        + suggestionUI(suggestions, typeof(user) !== "undefined")
-      else
-        h2 No suggestions for you right now...
+      h2
+        | Suggestions&nbsp;
+        if tag
+          | tagged as #{tag}&nbsp;
+      div#suggestionsContainer
       if !user
         h2 Do you want custom suggestions?
         br

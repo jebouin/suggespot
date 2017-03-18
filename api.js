@@ -112,7 +112,8 @@ module.exports = function(app, mysqlConnection, auth) {
             params.push(authorId);
             queryOrderBy = "ORDER BY published, conf DESC";
         }
-        var query = selectQuery + fromQuery + photoJoin + " " + queryWhere + " " + queryOrderBy;
+        var query = selectQuery + fromQuery + photoJoin + " " + queryWhere + " " + queryOrderBy + " LIMIT ?";
+        params.push(10);
         mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             for(var i=0; i<rows.length; i++) {

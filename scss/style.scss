@@ -72,21 +72,17 @@ form {
 	vertical-align: middle;
 }
 
+#suggestionsContainer {
+	background: $berylGreen;
+	padding: 10px;
+}
+
 .suggestion {
+	background: $white;
+	padding: 4px;
 	word-wrap: break-word;
 	border: 1px solid $black;
 	margin: 10px 10px 10px 10px;
-}
-
-.suggestion .title {
-	font-size: 22px;
-}
-
-.suggestion img {
-	display: inline-block;
-	vertical-align: middle;
-	width: 120px;
-	height: 80px;
 }
 
 .voteUI {
@@ -94,6 +90,21 @@ form {
 	text-align: center;
 	text-indent: 0;
 }
+
+.suggestion img {
+	display: inline-block;
+	width: 120px;
+	height: 80px;
+}
+
+.suggestionBody {
+	display: inline-block;
+}
+
+.suggestion .title {
+	font-size: 22px;
+}
+
 
 #tags {
 	margin-left: 10px;
@@ -127,10 +138,6 @@ form {
 
 #newTag {
 	cursor: pointer;
-}
-
-#suggestionBody {
-	display: inline-block;
 }
 
 #dark {
