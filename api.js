@@ -932,6 +932,45 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.post("/api/report", function(req, res) {
+        try {
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            var thingId = checkParam(req.body, "thingId");
+            var thing = utils.getThingFromId(thingId);
+            var type = checkParam(req.body, "type");
+            var message = req.body.message;
+            if(type == "other") {
+                    if(!message) {
+                        throw new Error("please enter a message");
+                    }
+            } else {
+                message = type;
+            }
+            if(thing.type != 0) {
+                throw new Error("you can't report this");
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        mysqlConnection.query("SELECT id FROM reports WHERE (author, suggestion) = (?, ?)", [userId, thing.id], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length > 0) {
+                mysqlConnection.query("UPDATE reports SET author = ?, suggestion = ?, message = ? WHERE id = ?", [userId, thing.id, message, rows[0].id], function(err, rows, fields) {
+                    if(err) throw err;
+                    res.status(200).end();
+                    return;
+                });
+            } else {
+                mysqlConnection.query("INSERT INTO reports (author, suggestion, message) VALUES (?, ?, ?)", [userId, thing.id, message], function(err, rows, fields) {
+                    if(err) throw err;
+                    res.status(200).end();
+                    return;
+                });
+            }
+        });
+    });
+
     app.get("/api/user", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.query, "userId"), 36);

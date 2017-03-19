@@ -180,8 +180,15 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 
         app.post("/report", function(req, res) {
             auth.checkUserLoggedIn(req, res, function(loginData) {
-                //report...
-                res.status(200).end("LOL");
+                var params = req.body;
+				params.userId = loginData.id;
+                api.makeLocalAPICall("POST", "/api/report", params, function(err, data) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500).end();
+                        return;
+                    }
+                    res.status(200).end();
+                })
             }, function() {
                 res.status(401).end();
             });
