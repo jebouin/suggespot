@@ -284,14 +284,14 @@ form {
 #description {
 	background: $berylGreen;
 	margin-top: 25px;
-	padding: 5px;
 }
 
 #description p {
 	white-space: pre-wrap;
 	display: inline-block;
-	padding: 0px;
+	padding: 5px;
 	margin: 0px;
+	width: 100%;
 }
 
 .comment {

@@ -11,6 +11,9 @@ window.onbeforeunload = function() {
     if(changes.length > 0) {
         return true;
     }
+    if(prevDescription && prevDescription != $("#description p").html()) {
+        return true;
+    }
 }
 
 function getSid() {
