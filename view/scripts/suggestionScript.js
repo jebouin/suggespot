@@ -176,6 +176,7 @@ function disableEditMode(b) {
     if(newDescription != prevDescription) {
         editObject.descr = newDescription.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
         changes.push({type: "editDescr"});
+        prevDescription = newDescription;
     }
     tagUI.editMode = false;
     tagUI.closeNewTagForm();
@@ -369,7 +370,7 @@ $(document).ready(function() {
         if(enlarged) {
             shrinkPhoto();
         }
-    })
+    });
 	updatePhotos();
 
 	//edit
@@ -386,8 +387,14 @@ $(document).ready(function() {
 	$(document).keydown(function(e) {
         var k = e.which;
         if(k === 13) {
-            if(k === e.ctrlKey) {
-                $("input[type='submit']:visible").last().click();
+            if(e.ctrlKey) {
+                var focused = $(document.activeElement);
+                if(editMode) {
+                    disableEditMode($("#info button"));
+                } else {
+                    //test focused...
+                    $("input[type='submit']:visible").last().click();
+                }
             }
         } else if(k === 27) {
             if(enlarged) {
