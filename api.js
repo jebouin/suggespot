@@ -934,6 +934,7 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/report", function(req, res) {
         try {
+            console.log(req.body);
             var userId = parseInt(checkParam(req.body, "userId"), 36);
             var thingId = checkParam(req.body, "thingId");
             var thing = utils.getThingFromId(thingId);

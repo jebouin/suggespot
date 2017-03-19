@@ -7,6 +7,8 @@ var enlargedContainer, enlargedPhoto, enlarged;
 var changes = [];
 var editObject = {thingId: "0_" + getSid()};
 var prevDescription;
+var reportButtonPushed;
+var reportCid;
 
 window.onbeforeunload = function() {
     if(changes.length > 0) {
@@ -354,13 +356,19 @@ tagUI.addCategoryCallback = function(name) {
 }
 
 //report
-function reportSuggestionSubmit(e) {
+function reportSubmit(e) {
     e.preventDefault();
     //test if radio button ...
     var checkedRadio = $("input[type='radio']:checked", "#reportContainer");
+    var thingId;
+    if(reportCid) {
+        thingId = "1_" + reportCid;
+    } else {
+        thingId = "0_" + getSid();
+    }
     if(checkedRadio.length == 1) {
         var val = checkedRadio.val();
-        var reportJSON = {thingId: "0_" + getSid(), type: val};
+        var reportJSON = {thingId: thingId, type: val};
         if(val == "other") {
             var message = $("#reportOtherInput").val();
             if(message.length == 0) {
@@ -378,19 +386,36 @@ function reportSuggestionSubmit(e) {
     return false;
 }
 
-function reportSuggestion(e) {
-    if(reportMode) disableReportMode();
-    else enableReportMode();
+function report(e) {
+    var button = $(e.target);
+    if(reportMode) {
+        disableReportMode(e);
+        if(reportButtonPushed && !button.is(reportButtonPushed)) {
+            enableReportMode(e);
+        }
+    } else {
+        enableReportMode(e);
+    }
+    reportButtonPushed = button;
 }
 
-function enableReportMode() {
-    if(reportMode) return;
+function enableReportMode(e) {
+    if(!e || reportMode) return;
     reportMode = true;
-    $("#reportOtherInput").hide();
+    var target = $(e.target);
+    var cid = target.attr("cid");
+    if(!cid) {
+        reportCid = null;
+        $("#reportContainer").remove().appendTo($("#suggestionBody"));
+    } else {
+        reportCid = cid;
+        $("#reportContainer").remove().appendTo(target.parent().parent());
+    }
     $("#reportContainer").show();
+    $("#reportOtherInput").hide();
 }
 
-function disableReportMode() {
+function disableReportMode(e) {
     if(!reportMode) return;
     reportMode = false;
     $("input", "#reportContainer").prop("checked", false);
@@ -427,7 +452,7 @@ $(document).ready(function() {
 	$("#editButton").click(setEditMode);
 
     //report
-    $("input[type='radio']", "#reportContainer").on("change", function(e) {
+    $(document).on("change", $("input[type='radio']", "#reportContainer"), function(e) {
         if($(e.target).val() == "other") {
             $("#reportOtherInput").val("");
             $("#reportOtherInput").show();

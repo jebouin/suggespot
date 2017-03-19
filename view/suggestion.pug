@@ -47,19 +47,21 @@ mixin reportUI()
       | Other&nbsp;
     input#reportOtherInput(type="text" name="message" placeholder="Reason" required autocomplete="off" style="display: none")
     br
-    input(type="submit" value="submit" onclick="reportSuggestionSubmit(event)")
+    input(type="submit" value="submit" onclick="reportSubmit(event)")
 
 mixin comment(c)
   div.comment
     + voteUI("1_" + c.id, c.score, c.dir, user)
-    b
-      if(c.author)
-        a(href="/p/"+c.authorId) #{c.author}
-      else
-        | [deleted]
-      | &nbsp;at #{c.time}
-    | :&nbsp; #{c.content}
-    | &nbsp;
+    div.commentBody
+      b
+        if(c.author)
+          a(href="/p/"+c.authorId) #{c.author}
+        else
+          | [deleted]
+        | &nbsp;at #{c.time}
+      | :&nbsp; #{c.content}
+      br
+      a(href="javascript:void(0)" onclick="report(event)" cid=""+c.id) Report
 
 mixin commentUI(sid)
   div.commentUI(style="display:none")
@@ -106,7 +108,7 @@ html
               else
                 | [deleted]
             | &nbsp;
-            a(href="javascript:void(0)" onclick="reportSuggestion(event)") Report
+            a(href="javascript:void(0)" onclick="report(event)") Report
             | &nbsp;
           if isAuthor
             button#editButton Edit

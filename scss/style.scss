@@ -318,12 +318,16 @@ form {
 	width: 250px;
 }
 
+.commentThread {
+	margin-bottom: 15px;
+}
+
 .comment {
 	margin-bottom: 3px;
 }
 
-.commentThread {
-	margin-bottom: 15px;
+.commentBody {
+	display: inline-block;
 }
 
 .replies {
