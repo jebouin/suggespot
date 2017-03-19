@@ -136,7 +136,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                     res.end();
                 });
             });
-        })
+        });
 
         app.get("/t", function(req, res) {
             auth.checkUserLoggedIn(req, res, function(data) {
@@ -160,7 +160,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 					res.status(200).end();
 				});
 			});
-		})
+		});
 
 		app.post("/comment", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
@@ -177,6 +177,15 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 				});
 			});
 		});
+
+        app.post("/report", function(req, res) {
+            auth.checkUserLoggedIn(req, res, function(loginData) {
+                //report...
+                res.status(200).end("LOL");
+            }, function() {
+                res.status(401).end();
+            });
+        });
 	}
 
 	return {

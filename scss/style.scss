@@ -276,11 +276,6 @@ form {
 	background: $logCabin;
 }
 
-#suggestionBody #info {
-	text-align: right;
-	margin-right: 50px;
-}
-
 #description {
 	background: $berylGreen;
 	margin: 25px 0 25px 0;
@@ -292,6 +287,27 @@ form {
 	padding: 5px;
 	margin: 0px;
 	width: 100%;
+}
+
+#suggestionBar {
+	text-align: right;
+	margin-right: 50px;
+}
+
+#suggestionBody #info {
+
+}
+
+#editButton {
+	display: inline-block;
+}
+
+#reportContainer {
+	display: inline-block;
+	float: right;
+	right: 0;
+	background: $berylGreen;
+	padding: 5px;
 }
 
 .comment {

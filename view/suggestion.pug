@@ -70,17 +70,44 @@ html
           button#morePhotos(style="display: none") More
         div#description
           p(contentEditable="false") #{descr}
-        div#info
-          span#author
-            | By&nbsp;
-            if author != null
-              a(href="/p/"+author) #{authorName}
-            else
-              | [deleted]
-          if isAuthor
+        div#suggestionBar
+          span#info
+            span#author
+              | By&nbsp;
+              if author != null
+                a(href="/p/"+author) #{authorName}
+              else
+                | [deleted]
             | &nbsp;
-            button Edit
-      br
+            a(href="javascript:void(0)" onclick="reportSuggestion(event)") Report
+            | &nbsp;
+          if isAuthor
+            button#editButton Edit
+          br
+        form#reportContainer(action="" style="display: none")
+          | Report
+          br
+          label
+            input(type="radio" name="report" value="spam")
+            | This suggestion is spam
+            br
+          label
+            input(type="radio" name="report" value="inappropriate")
+            | This suggestion is inappropriate
+            br
+          label
+            input(type="radio" name="report" value="personal")
+            | This suggestion contains personal/private information
+            br
+          label
+            input(type="radio" name="report" value="experience")
+            | This suggestion doesn't describe an experience
+            br
+          label
+            input(type="radio" name="report" value="other")
+            | Other
+            br
+          input(type="submit" value="submit" onclick="reportSuggestionSubmit(event)")
       if published
         h2.indented Comments
         br

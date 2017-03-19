@@ -1,4 +1,5 @@
 var editMode = false;
+var reportMode = false;
 var photosExpanded = false;
 var mh, txt;
 var changedPhotosOrder = false;
@@ -155,6 +156,7 @@ function enableEditMode(b) {
 	$("#photosGrid .photo").attr("draggable", "true");
     $("#newTag").show();
     $("#description p").attr("contentEditable", "true");
+    $("#info").hide();
     prevDescription = $("#description p").html();
     tagUI.editMode = true;
 	expandPhotos();
@@ -172,6 +174,10 @@ function disableEditMode(b) {
 	$("#photosGrid .photo").attr("draggable", "false");
     $("#newTag").hide();
     $("#description p").attr("contentEditable", "false");
+    $("#info").show();
+    if(reportMode) {
+        disableReportMode();
+    }
     var newDescription = $("#description p").html();
     if(newDescription != prevDescription) {
         editObject.descr = newDescription.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
@@ -347,6 +353,40 @@ tagUI.addCategoryCallback = function(name) {
     editObject.tagsAdded.push({name : name});
 }
 
+//report
+function reportSuggestionSubmit(e) {
+    e.preventDefault();
+    //test if radio button ...
+    var checkedRadio = $("input[type='radio']:checked", "#reportContainer");
+    if(checkedRadio.length == 1) {
+        $.post("/report", {thingId: "0_" + getSid(), type: checkedRadio.val()}).done(function(data) {
+            console.log(data);
+            disableReportMode();
+        }).fail(function(xhr, status, data) {
+
+        });
+    }
+    return false;
+}
+
+function reportSuggestion(e) {
+    if(reportMode) disableReportMode();
+    else enableReportMode();
+}
+
+function enableReportMode() {
+    if(reportMode) return;
+    reportMode = true;
+    $("#reportContainer").show();
+}
+
+function disableReportMode() {
+    if(!reportMode) return;
+    reportMode = false;
+    $("input", "#reportContainer").prop("checked", false);
+    $("#reportContainer").hide();
+}
+
 $(document).ready(function() {
 	//photo grid
 	mh = $("#photosGrid").css("max-height");
@@ -374,7 +414,7 @@ $(document).ready(function() {
 	updatePhotos();
 
 	//edit
-	$("#info button").click(setEditMode);
+	$("#editButton").click(setEditMode);
 
 	//publish
 	$("#publishButton").click(function(e) {
@@ -390,7 +430,7 @@ $(document).ready(function() {
             if(e.ctrlKey) {
                 var focused = $(document.activeElement);
                 if(editMode) {
-                    disableEditMode($("#info button"));
+                    disableEditMode($("#editButton"));
                 } else {
                     //test focused...
                     $("input[type='submit']:visible").last().click();
