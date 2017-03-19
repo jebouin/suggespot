@@ -157,6 +157,9 @@ function enableEditMode(b) {
     $("#newTag").show();
     $("#description p").attr("contentEditable", "true");
     $("#info").hide();
+    if(reportMode) {
+        disableReportMode();
+    }
     prevDescription = $("#description p").html();
     tagUI.editMode = true;
 	expandPhotos();
@@ -175,9 +178,6 @@ function disableEditMode(b) {
     $("#newTag").hide();
     $("#description p").attr("contentEditable", "false");
     $("#info").show();
-    if(reportMode) {
-        disableReportMode();
-    }
     var newDescription = $("#description p").html();
     if(newDescription != prevDescription) {
         editObject.descr = newDescription.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
@@ -359,7 +359,16 @@ function reportSuggestionSubmit(e) {
     //test if radio button ...
     var checkedRadio = $("input[type='radio']:checked", "#reportContainer");
     if(checkedRadio.length == 1) {
-        $.post("/report", {thingId: "0_" + getSid(), type: checkedRadio.val()}).done(function(data) {
+        var val = checkedRadio.val();
+        var reportJSON = {thingId: "0_" + getSid(), type: val};
+        if(val == "other") {
+            var message = $("#reportOtherInput").val();
+            if(message.length == 0) {
+                return false;
+            }
+            reportJSON.message = message;
+        }
+        $.post("/report", reportJSON).done(function(data) {
             console.log(data);
             disableReportMode();
         }).fail(function(xhr, status, data) {
@@ -377,6 +386,7 @@ function reportSuggestion(e) {
 function enableReportMode() {
     if(reportMode) return;
     reportMode = true;
+    $("#reportOtherInput").hide();
     $("#reportContainer").show();
 }
 
@@ -415,6 +425,16 @@ $(document).ready(function() {
 
 	//edit
 	$("#editButton").click(setEditMode);
+
+    //report
+    $("input[type='radio']", "#reportContainer").on("change", function(e) {
+        if($(e.target).val() == "other") {
+            $("#reportOtherInput").val("");
+            $("#reportOtherInput").show();
+        } else {
+            $("#reportOtherInput").hide();
+        }
+    });
 
 	//publish
 	$("#publishButton").click(function(e) {

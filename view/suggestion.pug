@@ -22,6 +22,33 @@ mixin newPhoto()
     br
     span.error(style="visibility: hidden")
 
+mixin reportUI()
+  form#reportContainer(action="" style="display: none")
+    | Report
+    br
+    label
+      input(type="radio" name="report" value="spam")
+      | This suggestion is spam
+      br
+    label
+      input(type="radio" name="report" value="inappropriate")
+      | This suggestion is inappropriate
+      br
+    label
+      input(type="radio" name="report" value="personal")
+      | This suggestion contains personal/private information
+      br
+    label
+      input(type="radio" name="report" value="experience")
+      | This suggestion doesn't describe an experience
+      br
+    label
+      input(type="radio" name="report" value="other")
+      | Other&nbsp;
+    input#reportOtherInput(type="text" name="message" placeholder="Reason" required autocomplete="off" style="display: none")
+    br
+    input(type="submit" value="submit" onclick="reportSuggestionSubmit(event)")
+
 mixin comment(c)
   div.comment
     + voteUI("1_" + c.id, c.score, c.dir, user)
@@ -84,30 +111,7 @@ html
           if isAuthor
             button#editButton Edit
           br
-        form#reportContainer(action="" style="display: none")
-          | Report
-          br
-          label
-            input(type="radio" name="report" value="spam")
-            | This suggestion is spam
-            br
-          label
-            input(type="radio" name="report" value="inappropriate")
-            | This suggestion is inappropriate
-            br
-          label
-            input(type="radio" name="report" value="personal")
-            | This suggestion contains personal/private information
-            br
-          label
-            input(type="radio" name="report" value="experience")
-            | This suggestion doesn't describe an experience
-            br
-          label
-            input(type="radio" name="report" value="other")
-            | Other
-            br
-          input(type="submit" value="submit" onclick="reportSuggestionSubmit(event)")
+        + reportUI()
       if published
         h2.indented Comments
         br
