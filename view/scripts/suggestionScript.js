@@ -5,6 +5,7 @@ var changedPhotosOrder = false;
 var enlargedContainer, enlargedPhoto, enlarged;
 var changes = [];
 var editObject = {thingId: "0_" + getSid()};
+var prevDescription;
 
 window.onbeforeunload = function() {
     if(changes.length > 0) {
@@ -150,6 +151,8 @@ function enableEditMode(b) {
     $(".photoOverlay").css("display", "block");
 	$("#photosGrid .photo").attr("draggable", "true");
     $("#newTag").show();
+    $("#description p").attr("contentEditable", "true");
+    prevDescription = $("#description p").html();
     tagUI.editMode = true;
 	expandPhotos();
     updateNewPhotoForm();
@@ -165,6 +168,12 @@ function disableEditMode(b) {
     $(".photoOverlay").css("display", "none");
 	$("#photosGrid .photo").attr("draggable", "false");
     $("#newTag").hide();
+    $("#description p").attr("contentEditable", "false");
+    var newDescription = $("#description p").html();
+    if(newDescription != prevDescription) {
+        editObject.descr = newDescription.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
+        changes.push({type: "editDescr"});
+    }
     tagUI.editMode = false;
     tagUI.closeNewTagForm();
 	collapsePhotos();
@@ -190,7 +199,8 @@ function disableEditMode(b) {
     }
     if((editObject.photosOrder && editObject.photosOrder.length > 0) ||
        (editObject.tagsAdded && editObject.tagsAdded.length > 0) ||
-       (editObject.tagsRemoved && editObject.tagsRemoved.length > 0)) {
+       (editObject.tagsRemoved && editObject.tagsRemoved.length > 0) ||
+       (typeof(editObject.descr) !== "undefined")) {
         console.log(editObject);
         $.post("/edit", editObject, function(data) {
             //edit succesful
@@ -382,44 +392,6 @@ $(document).ready(function() {
             }
         }
 	});
-
-	/*$(document).on("click", ".editLink", function(e) {
-		var target = $(e.target);
-		target.text("Save");
-		target.attr("class", "saveLink");
-		var editUI = $("#editUI");
-		var descr = $("p#descr");
-		editUI.css("display", "block");
-		descr.css("display", "none");
-		$("textarea", editUI).text(descr.text());
-		editUI.insertAfter(descr);
-	});
-	$(document).on("click", ".saveLink", function(e) {
-		var target = $(e.target);
-		target.text("Edit");
-		target.attr("class", "editLink");
-		var editUI = $("#editUI");
-		var descr = $("textarea", editUI).val();
-		$.post("/edit", {thingId: "0_" + getSid(), descr: descr}, function(data) {
-			editUI.css("display", "none");
-			$("p#descr").text(descr).css("display", "block");
-		});
-	});
-
-	$(document).on("click", ".uploadLink", function(e) {
-		var target = $(e.target);
-		target.text("Cancel upload");
-		target.attr("class", "cancelUploadLink");
-		var uploadUI = $(".uploadUI");
-		uploadUI.css("display", "block");
-	});
-	$(document).on("click", ".cancelUploadLink", function(e) {
-		var target = $(e.target);
-		target.text("Upload photo");
-		target.attr("class", "uploadLink");
-		var uploadUI = $(".uploadUI");
-		uploadUI.css("display", "none");
-	});*/
 });
 
 function reply(event) {

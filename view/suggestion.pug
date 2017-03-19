@@ -20,7 +20,7 @@ mixin newPhoto()
     br
     label(for="photo") From your computer
     br
-    span.error(style="visibility: hidden") 
+    span.error(style="visibility: hidden")
 
 mixin comment(c)
   div.comment
@@ -68,7 +68,8 @@ html
             if isAuthor
               + newPhoto()
           button#morePhotos(style="display: none") More
-        p#descr #{descr}
+        div#description
+          p(contentEditable="false") #{descr}
         div#info
           span#author
             | By&nbsp;

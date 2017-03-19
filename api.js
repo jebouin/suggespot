@@ -152,7 +152,7 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             if(location) {
                 selectQuery += ", " + distanceQuery;
-                havingQuery = "HAVING dist < 100000";
+                havingQuery = "HAVING dist < 51000";
                 selectParams.push(req.query.lat);
                 selectParams.push(req.query.lat);
                 selectParams.push(req.query.lon);
@@ -586,10 +586,10 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             function editDescription(callback) {
                 edited = true;
-                /*mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
+                mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE id = ?", [edit.descr, thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     callback();
-                });*/
+                });
             }
             function editTagsAdded(callback) {
                 edited = true;
@@ -675,6 +675,7 @@ module.exports = function(app, mysqlConnection, auth) {
             if(edit.photosOrder && edit.photosOrder.length > 0) fa.push(editPhotoOrder);
             if(edit.tagsAdded && edit.tagsAdded.length > 0) fa.push(editTagsAdded);
             if(edit.tagsRemoved && edit.tagsRemoved.length > 0) fa.push(editTagsRemoved);
+            if(edit.descr) fa.push(editDescription);
             async.parallel(fa, function(err, results) {
                 if(!edited) {
                     onInvalidEdit();

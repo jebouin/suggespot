@@ -281,6 +281,19 @@ form {
 	margin-right: 50px;
 }
 
+#description {
+	background: $berylGreen;
+	margin-top: 25px;
+	padding: 5px;
+}
+
+#description p {
+	white-space: pre-wrap;
+	display: inline-block;
+	padding: 0px;
+	margin: 0px;
+}
+
 .comment {
 	margin-bottom: 3px;
 }
