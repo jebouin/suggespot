@@ -140,11 +140,12 @@ module.exports = function(app, mysqlConnection, auth) {
                     selectQuery += ", dir";
                     fromQuery += " " + voteJoin;
                     joinParams.push(userId);
-                    if(userId == authorId) {
-                        whereQuery = "";
-                    }
                 }
-                whereQuery += " AND author = ?";
+                if(userId && userId == authorId) {
+                    whereQuery = "WHERE author = ?";
+                } else {
+                    whereQuery += " AND author = ?";
+                }
                 whereParams.push(authorId);
                 orderByQuery = "ORDER BY published ASC, timeCreated DESC";
             } else {
@@ -165,6 +166,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var params = selectParams.concat(subqueryParams).concat(joinParams).concat(whereParams);
         params.push(start);
         params.push(limit);
+        //console.log(query, params);
         mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             for(var i=0; i<rows.length; i++) {
@@ -198,6 +200,7 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             var suggestionData = rows[0];
             if(suggestionData.published == 0 && (!userId || userId != suggestionData.author)) {
+                console.log(userId, suggestionData.author);
                 res.status(403).end("this suggestion is private and you are not the author");
                 return;
             }
