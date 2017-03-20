@@ -1,30 +1,34 @@
 $(document).ready(function() {
-  function addEvents(elm, dir) {
-    var type = dir === 1 ? "up" : "down";
-    function addVotes(nv) {
-      $(".upvoteCount", elm).text(parseInt($(".upvoteCount", elm).text()) + nv);
-    }
-    $("." + type + "vote", elm).click(function(event) {
-      var tid = $(this).parent().attr("tid");
-      if($(this).hasClass("voted")) {
-        $.post("/vote", {thingId: tid, dir: 0});
-        $(this).removeClass("voted");
-        addVotes(-dir);
-      } else {
-        $.post("/vote", {thingId: tid, dir: dir});
-        var optype = (type === "up" ? "down" : "up");
-        $(this).addClass("voted");
-        if($("." + optype + "vote", elm).hasClass("voted")) {
-          $("." + optype + "vote", elm).removeClass("voted");
-          addVotes(dir * 2);
-        } else {
-          addVotes(dir);
+    function addEvents(dir) {
+        var type = dir === 1 ? "up" : "down";
+        function addVotes(voteUI, nv) {
+            $(".upvoteCount", voteUI).text(parseInt($(".upvoteCount", voteUI).text()) + nv);
         }
-      }
-    });
-  }
-  $(".voteUI").each(function() {
-    addEvents($(this), -1);
-    addEvents($(this), 1);
-  });
+        $(document).on("click", "." + type + "vote", function(e) {
+            var target = $(e.target);
+            var voteUI = target.parent();
+            var tid = voteUI.attr("tid");
+            if(target.hasClass("voted")) {
+                $.post("/vote", {thingId: tid, dir: 0}).done(function(data) {
+                    //ok
+                });
+                target.removeClass("voted");
+                addVotes(voteUI, -dir);
+            } else {
+                $.post("/vote", {thingId: tid, dir: dir}).done(function(data) {
+                    //ok
+                });
+                var optype = (type === "up" ? "down" : "up");
+                target.addClass("voted");
+                if($("." + optype + "vote", voteUI).hasClass("voted")) {
+                    $("." + optype + "vote", voteUI).removeClass("voted");
+                    addVotes(voteUI, dir * 2);
+                } else {
+                    addVotes(voteUI, dir);
+                }
+            }
+        });
+    }
+    addEvents(-1);
+    addEvents(1);
 });
