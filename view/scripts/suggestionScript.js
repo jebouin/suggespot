@@ -493,7 +493,7 @@ $(document).ready(function() {
     currentLocation.get(function(err) {
         if(err) return;
         $.post("/s/" + getSid() + "/d", {lat: currentLocation.lat, lon: currentLocation.lon}, function(data) {
-            console.log(data);
+            $("h2").first().append(" (" + locationUtils.formatDistance(data.distance) + ")");
         });
     });
 });

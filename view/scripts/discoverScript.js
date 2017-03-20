@@ -17,7 +17,10 @@ function loadMore() {
         postData.mode = discoverMode;
     }
     $.post("/suggestions", postData, function(data) {
-        $("#suggestionsContainer").append($(data));
+        var toAppend = $(data);
+        var distanceSpan = $(".distance", toAppend);
+        distanceSpan.text(locationUtils.formatDistance(parseFloat(distanceSpan.text())));
+        $("#suggestionsContainer").append(toAppend);
         loadingMore = false;
     });
 }

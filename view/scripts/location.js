@@ -38,3 +38,9 @@ currentLocation = {
         });
     }
 };
+
+locationUtils = {
+    formatDistance: function(d) {
+        return d < 1000 ? Math.round(d / 10) * 10 + " m" : Math.floor(d / 100) / 10 + " km";
+    }
+};

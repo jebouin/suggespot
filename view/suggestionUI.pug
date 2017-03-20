@@ -11,7 +11,9 @@ mixin suggestion(data, canVote)
       a(href=data.href)
         span.title #{data.title}
       if data.dist
-        | &nbsp;(#{data.dist < 1000 ? Math.round(data.dist / 10) * 10 + " m" : Math.floor(data.dist / 100) / 10 + " km"})
+        | &nbsp;(
+        span.distance #{data.dist}
+        | )
       if !data.published
         | &nbsp;(Private)
       div.descr #{data.descr}
