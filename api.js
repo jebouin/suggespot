@@ -65,6 +65,11 @@ module.exports = function(app, mysqlConnection, auth) {
         }
     });
 
+    var queries = {
+        score: "CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score",
+        distance: "12742000 * ASIN(SQRT(POW(SIN(RADIANS(lat / 10000000 - ?) / 2), 2) + COS(RADIANS(lat / 10000000)) * COS(RADIANS(?)) * POW(SIN(RADIANS(lon / 10000000 - ?) / 2), 2))) AS dist"
+    }
+
     app.get(["/api/suggestions/:mode", "/api/suggestions/"], function(req, res) {
         var mode = req.params.mode;
         if(!mode) {
@@ -73,16 +78,34 @@ module.exports = function(app, mysqlConnection, auth) {
         var start = parseInt(req.query.start) || 0;
         var limit = parseInt(req.query.limit) || 10;
         if(limit > 50) limit = 50;
-        var userId = req.query.userId;
-        if(userId) {
-            userId = parseInt(userId, 36);
+        try {
+            var userId = req.query.userId;
+            if(userId) {
+                userId = parseInt(userId, 36);
+                if(userId == NaN) {
+                    throw new Error("invalid userId");
+                }
+            }
+            var authorId = req.query.authorId;
+            if(authorId) {
+                authorId = parseInt(authorId, 36);
+                if(authorId == NaN) {
+                    throw new Error("invalid authorId");
+                }
+            }
+            var tagName = req.query.tagName;
+            var location = req.query.lat && req.query.lon, lat, lon;
+            if(location) {
+                lat = parseFloat(req.query.lat);
+                lon = parseFloat(req.query.lon);
+                if(lat == NaN || lon == NaN) {
+                    throw new Error("invalid coordinates");
+                }
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
         }
-        var authorId = req.query.authorId;
-        if(authorId) {
-            authorId = parseInt(authorId, 36);
-        }
-        var tagName = req.query.tagName;
-        var location = req.query.lat && req.query.lon;
 
         var selectParams = [];
         var subqueryParams = [];
@@ -90,11 +113,8 @@ module.exports = function(app, mysqlConnection, auth) {
         var whereParams = [];
         var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) AS conf";
         var descrQuery = "IF(LENGTH(descr) > 256, CONCAT(SUBSTRING(descr, 1, 256), '...'), descr) AS descr";
-        var scoreQuery = "CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score";
-        var distanceQuery = "12742000 * ASIN(SQRT(POW(SIN(RADIANS(lat / 10000000 - ?) / 2), 2) + COS(RADIANS(lat / 10000000)) * COS(RADIANS(?)) * POW(SIN(RADIANS(lon / 10000000 - ?) / 2), 2))) AS dist";
         var voteJoin = "LEFT JOIN votes ON suggestions.id = votes.suggestion AND user = ?";
         var photoJoin = "LEFT JOIN photos ON photos.suggestion = suggestions.id AND position = 0";
-
         var selectQuery = "SELECT";
         var fromQuery = "FROM suggestions";
         var whereQuery = "WHERE published = 1";
@@ -102,7 +122,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var orderByQuery = "ORDER BY conf DESC";
         try {
             if(mode == "all") {
-                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb";
+                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
                 if(userId) {
                     selectQuery += ", dir";
                     fromQuery += " " + voteJoin;
@@ -114,7 +134,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     if(location) {
                         interestSubquery += " lat, lon, ";
                     }
-                    interestSubquery += " suggestions.id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + " FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? GROUP BY suggestions.id) AS suggestions";
+                    interestSubquery += " suggestions.id, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + " FROM suggestions INNER JOIN suggestionTags ON suggestions.id = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? GROUP BY suggestions.id) AS suggestions";
                     selectQuery += " suggestions.id AS id, title, published, timeCreated, descr, score, conf, author, dir, path AS thumb ";
                     subqueryParams.push(userId);
                     fromQuery = "FROM " + interestSubquery + " " + voteJoin;
@@ -123,7 +143,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     throw new Error("you need to be logged in to see your interests");
                 }
             } else if(mode == "tag") {
-                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb";
+                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
                 if(userId) {
                     selectQuery += ", dir";
                     fromQuery += " " + voteJoin;
@@ -135,7 +155,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 if(!authorId) {
                     throw new Error("please specify a valid authorId");
                 }
-                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + scoreQuery + ", " + confQuery + ", path AS thumb";
+                selectQuery += " suggestions.id AS id, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
                 if(userId) {
                     selectQuery += ", dir";
                     fromQuery += " " + voteJoin;
@@ -152,11 +172,11 @@ module.exports = function(app, mysqlConnection, auth) {
                 throw new Error("invalid mode");
             }
             if(location) {
-                selectQuery += ", " + distanceQuery;
+                selectQuery += ", " + queries.distance;
                 havingQuery = "HAVING dist < 51000";
-                selectParams.push(req.query.lat);
-                selectParams.push(req.query.lat);
-                selectParams.push(req.query.lon);
+                selectParams.push(lat);
+                selectParams.push(lat);
+                selectParams.push(lon);
             }
         } catch(e) {
             res.status(400).end(e.message);
@@ -192,7 +212,22 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         id = parseInt(id, 36);
-        mysqlConnection.query("SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, published FROM suggestions LEFT JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?", [id], function(err, rows, fields) {
+        var location = req.query.lat && req.query.lon, lat, lon;
+        var selectQuery = "SELECT suggestions.id AS id, title, descr, author, users.name AS authorName, " + queries.score + ", published";
+        var params = [];
+        if(location) {
+            lat = parseFloat(req.query.lat);
+            lon = parseFloat(req.query.lon);
+            if(lat == NaN || lon == NaN) {
+                res.status(400).end("invalid coordinates");
+                return;
+            }
+            selectQuery += ", " + queries.distance;
+            params = params.concat([lat, lat, lon]);
+        }
+        var query = selectQuery + " FROM suggestions LEFT JOIN users ON suggestions.author = users.id WHERE suggestions.id = ?";
+        params.push(id);
+        mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404).end("this suggestion doesn't exist");
@@ -200,7 +235,6 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             var suggestionData = rows[0];
             if(suggestionData.published == 0 && (!userId || userId != suggestionData.author)) {
-                console.log(userId, suggestionData.author);
                 res.status(403).end("this suggestion is private and you are not the author");
                 return;
             }
@@ -285,6 +319,39 @@ module.exports = function(app, mysqlConnection, auth) {
                     sendComments(photoRows);
                 }
             });
+        });
+    });
+
+    app.post("/api/suggestion/:id/distance", function(req, res) {
+        try {
+            var id = req.params.id;
+            if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
+                throw new Error("invalid suggestion url");
+            }
+            id = parseInt(id, 36);
+            if(id == NaN) {
+                throw new Error("invalid suggestion url");
+            }
+            var location = req.body.lat && req.body.lon;
+            if(!location) {
+                throw new Error("no coordinates specified");
+            }
+            var lat = parseFloat(req.body.lat);
+            var lon = parseFloat(req.body.lon);
+            if(lat == NaN || lon == NaN) {
+                throw new Error("invalid coordinates");
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        mysqlConnection.query("SELECT id, " + queries.distance + " FROM suggestions WHERE id = ?", [lat, lat, lon, id], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length != 1) {
+                res.status(404).end("this suggestion doesn't exist");
+                return;
+            }
+            res.status(200).json({distance: rows[0].dist});
         });
     });
 

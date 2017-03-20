@@ -468,6 +468,7 @@ $(document).ready(function() {
 			window.location.reload(true);
 		});
 	});
+
 	//handle keys for accessibility
 	$(document).keydown(function(e) {
         var k = e.which;
@@ -487,6 +488,14 @@ $(document).ready(function() {
             }
         }
 	});
+
+    //location
+    currentLocation.get(function(err) {
+        if(err) return;
+        $.post("/s/" + getSid() + "/d", {lat: currentLocation.lat, lon: currentLocation.lon}, function(data) {
+            console.log(data);
+        });
+    });
 });
 
 function reply(event) {

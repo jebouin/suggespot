@@ -69,6 +69,16 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             });
         });
 
+        app.post("/s/:id/d", function(req, res) {
+            api.makeLocalAPICall("POST", "/api/suggestion/" + req.params.id + "/distance", req.body, function(err, data) {
+                if(err) {
+                    res.status(err.code ? err.code : 500).end();
+                    return;
+                }
+                res.status(200).json(data);
+            });
+        });
+
 		app.post("/vote", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
 				api.makeLocalAPICall("POST", "/api/vote", {thingId: req.body.thingId, userId: data.id, dir: req.body.dir}, function(err, data) {
