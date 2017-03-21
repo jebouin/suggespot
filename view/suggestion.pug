@@ -52,16 +52,25 @@ mixin reportUI()
 mixin comment(c)
   div.comment
     + voteUI("1_" + c.id, c.score, c.dir, user)
-    div.commentBody
-      b
-        if(c.author)
-          a(href="/p/"+c.authorId) #{c.author}
-        else
-          | [deleted]
-        | &nbsp;at #{c.time}
-      | :&nbsp; #{c.content}
-      br
-      a(href="javascript:void(0)" onclick="report(event)" cid=""+c.id) Report
+    div.commentContainer
+      div.commentHeader
+        b
+          if(c.author)
+            a(href="/p/"+c.authorId) #{c.author}
+          else
+            | [deleted]
+          | &nbsp;at #{c.time}
+      p.commentBody
+        | #{c.content}
+      div.commentFooter
+        a(href="javascript:void(0)" onclick="report(event)" cid=""+c.id) Report
+        if c.authorId == user.id
+          | &nbsp;
+          a(href="javascript:void(0)" onclick="editComment(event)") Edit
+      div.commentFooter.editFooter(style="display: none")
+        a(href="javascript:void(0)" onclick="saveCommentEdit(event)") Save
+        | &nbsp;
+        a(href="javascript:void(0)" onclick="cancelCommentEdit(event)") Cancel
 
 mixin commentUI(sid)
   div.commentUI(style="display:none")

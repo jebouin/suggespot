@@ -1,5 +1,6 @@
 var editMode = false;
 var reportMode = false;
+var commentEditMode = false;
 var photosExpanded = false;
 var mh, txt;
 var changedPhotosOrder = false;
@@ -9,6 +10,7 @@ var editObject = {thingId: "0_" + getSid()};
 var prevDescription;
 var reportButtonPushed;
 var reportCid;
+var prevCommentText;
 
 window.onbeforeunload = function() {
     if(changes.length > 0) {
@@ -420,6 +422,45 @@ function disableReportMode(e) {
     reportMode = false;
     $("input", "#reportContainer").prop("checked", false);
     $("#reportContainer").hide();
+}
+
+//edit comment
+function editComment(e) {
+    if(commentEditMode) disableCommentEditMode($(e.target).parent().parent());
+    else enableCommentEditMode(e);
+}
+
+function enableCommentEditMode(e) {
+    if(commentEditMode) return;
+    commentEditMode = true;
+    var comment = $(e.target).parent().parent();
+    $("p", comment).attr("contentEditable", "true");
+    $(".commentFooter", comment).hide();
+    $(".commentFooter.editFooter", comment).show();
+}
+
+function disableCommentEditMode(comment) {
+    if(!commentEditMode) return;
+    commentEditMode = false;
+    $("p", comment).attr("contentEditable", "false");
+    $(".commentFooter", comment).hide().first().show();
+}
+
+function saveCommentEdit(e) {
+    var comment = $(e.target).parent().parent();
+    var newCommentText = $("p", comment).html();
+    if(newCommentText != prevCommentText) {
+        var text = newCommentText.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
+        console.log(text);
+        prevCommentText = newCommentText;
+    }
+    disableCommentEditMode(comment);
+}
+
+function cancelCommentEdit(e) {
+    var comment = $(e.target).parent().parent();
+    $("p", comment).text(prevCommentText);
+    disableCommentEditMode(comment);
 }
 
 $(document).ready(function() {

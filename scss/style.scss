@@ -326,8 +326,25 @@ form {
 	margin-bottom: 3px;
 }
 
-.commentBody {
+.commentContainer {
 	display: inline-block;
+	vertical-align: top;
+	background: $berylGreen;
+}
+
+.commentHeader {
+
+}
+
+p.commentBody {
+	white-space: pre-wrap;
+	display: inline-block;
+	width: 100%;
+	background: $berylGreen;
+}
+
+.commentFooter {
+
 }
 
 .replies {
