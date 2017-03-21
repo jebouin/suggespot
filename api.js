@@ -756,21 +756,39 @@ module.exports = function(app, mysqlConnection, auth) {
                 }
                 onEditFinished();
             });
-
         }
-        if(thing.type == 0) {
-            mysqlConnection.query("SELECT id, author, title FROM suggestions WHERE id = ?", [thing.id], function(err, rows, fields) {
+        function editComment(comment) {
+            try {
+                var commentContent = checkParam(edit, "content");
+            } catch(e) {
+                res.status(400).end("no comment content provided");
+                return;
+            }
+            mysqlConnection.query("UPDATE comments SET content = ? WHERE id = ?", [commentContent, comment.id], function(err, rows, fields) {
+                if(err) throw err;
+                res.status(200).end();
+            });
+        }
+        if(thing.type == 0 || thing.type == 1) {
+            var thingName = utils.thingTypeToString(thing.type);
+            var tableName = thingName + "s";
+            var selectQuery = "SELECT id, author";
+            var onCanEdit = thing.type == 0 ? editSuggestion : editComment;
+            if(thing.type == 0) {
+                selectQuery += ", title";
+            }
+            mysqlConnection.query(selectQuery + " FROM " + tableName + " WHERE id = ?", [thing.id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
-                    res.status(404).end("this suggestion doesn't exist");
+                    res.status(404).end("this " + thingName + " doesn't exist");
                     return;
                 }
-                var suggestion = rows[0];
-                if(suggestion.author != user.id) {
-                    res.status(401).end("this suggestion is not yours");
+                var row = rows[0];
+                if(row.author != user.id) {
+                    res.status(401).end("this " + thingName + " is not yours");
                     return;
                 }
-                editSuggestion(suggestion);
+                onCanEdit(row);
                 return;
             });
         } else {

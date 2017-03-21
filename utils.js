@@ -64,12 +64,21 @@ module.exports = {
 		//1 = comment
         //2 = user
         //3 = photo
-        //4 = category
-		if(thingType < 0 || thingType > 3) {
+        //4 = tag
+		if(thingType < 0 || thingType > 4) {
 			throw "thing type out of bounds";
 		}
 		return {type: thingType, id: thingId};
 	},
+    thingTypeToString: function(type) {
+        if(type < 0 || type > 4) {
+            throw "thing type out of bounds";
+        }
+        return ["suggestion", "comment", "user", "photo", "tag"][type];
+    },
+    thingTypeToTableName: function(type) {
+        return thingTypeToString(type) + "s";
+    },
 	fileExtension: function(fileName) {
 		return ("." + fileName.split('.').pop()).toLowerCase();
 	},

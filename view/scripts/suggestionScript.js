@@ -451,8 +451,11 @@ function saveCommentEdit(e) {
     var newCommentText = $("p", comment).html();
     if(newCommentText != prevCommentText) {
         var text = newCommentText.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
-        console.log(text);
-        prevCommentText = newCommentText;
+        var thingId = "1_" + $(e.target).attr("cid");
+        $.post("/edit", {thingId: thingId, content: text}, function(data) {
+            //edit succesful
+            prevCommentText = newCommentText;
+        });
     }
     disableCommentEditMode(comment);
 }
@@ -518,6 +521,8 @@ $(document).ready(function() {
                 var focused = $(document.activeElement);
                 if(editMode) {
                     disableEditMode($("#editButton"));
+                } else if(commentEditMode) {
+                    $("a", ".editFooter:visible").first().click();
                 } else {
                     //test focused...
                     $("input[type='submit']:visible").last().click();

@@ -68,7 +68,7 @@ mixin comment(c)
           | &nbsp;
           a(href="javascript:void(0)" onclick="editComment(event)") Edit
       div.commentFooter.editFooter(style="display: none")
-        a(href="javascript:void(0)" onclick="saveCommentEdit(event)") Save
+        a(href="javascript:void(0)" onclick="saveCommentEdit(event)" cid=""+c.id) Save
         | &nbsp;
         a(href="javascript:void(0)" onclick="cancelCommentEdit(event)") Cancel
 
