@@ -161,6 +161,7 @@ function enableEditMode(b) {
     $("#newTag").show();
     $("#description p").attr("contentEditable", "true");
     $("#info").hide();
+    $("#publishedContainer").hide();
     if(reportMode) {
         disableReportMode();
     }
@@ -182,6 +183,7 @@ function disableEditMode(b) {
     $("#newTag").hide();
     $("#description p").attr("contentEditable", "false");
     $("#info").show();
+    $("#publishedContainer").show();
     var newDescription = $("#description p").html();
     if(newDescription != prevDescription) {
         editObject.descr = newDescription.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
@@ -361,7 +363,8 @@ tagUI.addCategoryCallback = function(name) {
 function reportSubmit(e) {
     e.preventDefault();
     //test if radio button ...
-    var checkedRadio = $("input[type='radio']:checked", "#reportContainer");
+    var container = $(".reportContainer:visible");
+    var checkedRadio = $("input[type='radio']:checked", container);
     var thingId;
     if(reportCid) {
         thingId = "1_" + reportCid;
@@ -372,7 +375,7 @@ function reportSubmit(e) {
         var val = checkedRadio.val();
         var reportJSON = {thingId: thingId, type: val};
         if(val == "other") {
-            var message = $("#reportOtherInput").val();
+            var message = $(".reportOtherInput", container).val();
             if(message.length == 0) {
                 return false;
             }
@@ -408,20 +411,19 @@ function enableReportMode(e) {
     var cid = target.attr("cid");
     if(!cid) {
         reportCid = null;
-        $("#reportContainer").remove().appendTo($("#suggestionBody"));
+        $(".reportContainer.reportSuggestion").remove().appendTo($("#suggestionBody")).show();
     } else {
         reportCid = cid;
-        $("#reportContainer").remove().appendTo(target.parent().parent());
+        $(".reportContainer.reportComment").remove().appendTo(target.parent().parent()).show();
     }
-    $("#reportContainer").show();
-    $("#reportOtherInput").hide();
+    $(".reportOtherInput").hide();
 }
 
 function disableReportMode(e) {
     if(!reportMode) return;
     reportMode = false;
-    $("input", "#reportContainer").prop("checked", false);
-    $("#reportContainer").hide();
+    $("input", ".reportContainer:visible").prop("checked", false);
+    $(".reportContainer").hide();
 }
 
 //edit comment
@@ -496,12 +498,12 @@ $(document).ready(function() {
 	$("#editButton").click(setEditMode);
 
     //report
-    $(document).on("change", $("input[type='radio']", "#reportContainer"), function(e) {
+    $(document).on("change", $("input[type='radio']", ".reportContainer"), function(e) {
         if($(e.target).val() == "other") {
-            $("#reportOtherInput").val("");
-            $("#reportOtherInput").show();
+            $(".reportOtherInput").val("");
+            $(".reportOtherInput").show();
         } else {
-            $("#reportOtherInput").hide();
+            $(".reportOtherInput").hide();
         }
     });
 

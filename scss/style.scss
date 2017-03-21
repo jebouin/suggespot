@@ -302,7 +302,7 @@ form {
 	display: inline-block;
 }
 
-#reportContainer {
+.reportContainer {
 	display: inline-block;
 	float: right;
 	right: 0;
@@ -310,11 +310,11 @@ form {
 	padding: 5px;
 }
 
-#reportContainer input {
+.reportContainer input {
 	margin: 5px;
 }
 
-#reportOtherInput {
+.reportOtherInput {
 	width: 250px;
 }
 
