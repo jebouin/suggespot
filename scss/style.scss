@@ -72,6 +72,20 @@ form {
 	vertical-align: middle;
 }
 
+
+#notifications {
+	display: inline-block;
+	background: $berylGreen;
+	padding: 10px;
+	width: auto;
+}
+
+.notification {
+	border: 1px solid $black;
+	margin: 10px;
+	background: $white;
+}
+
 #suggestionsContainer {
 	background: $berylGreen;
 	padding: 10px;

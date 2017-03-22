@@ -579,6 +579,51 @@ module.exports = function(app, mysqlConnection, auth) {
                         var cid = parseInt(rows.insertId);
                         res.status(201).end(cid.toString(36));
                         logs.log("user " + colors.bold(username) + " commented on " + colors.bold(suggestionData.title));
+                        function handleMentions() {
+                            var expr = /(^|\s)@([a-zA-Z0-9_]+)/g;
+                            var match;
+                            var notificationFunctions = [];
+                            do {
+                                match = expr.exec(content);
+                                if(match) {
+                                    var mentionned = match[2];
+                                    notificationFunctions.push(function(callback) {
+                                        mysqlConnection.query("SELECT id FROM users WHERE name = ?", [mentionned], function(err, rows, fields) {
+                                            if(err) {
+                                                callback(err);
+                                                return;
+                                            }
+                                            if(rows.length != 1) {
+                                                callback(new Error("mentionned user doesn't exist"));
+                                                return;
+                                            }
+                                            var mentionnedId = rows[0].id;
+                                            mysqlConnection.beginTransaction(function(err) {
+                                                if(err) {
+                                                    callback(err);
+                                                    return;
+                                                }
+                                                mysqlConnection.query("INSERT INTO notifications (thingType, thingId, author, action) VALUES (1, ?, ?, 'mention')", [cid, userId], function(err, rows, fields) {
+                                                    if(err) {
+                                                        callback(err);
+                                                        return;
+                                                    }
+                                                    sendNotification(rows.insertId, mentionnedId, function(err) {
+                                                        testTransactionError(err);
+                                                        mysqlConnection.commit();
+                                                        callback();
+                                                    });
+                                                });
+                                            });
+                                        });
+                                    });
+                                }
+                            } while(match);
+                            async.series(notificationFunctions, function(err) {
+                                if(err) throw err;
+                                //ok
+                            });
+                        }
                         //send notification
                         mysqlConnection.beginTransaction(function(err) {
                             if(err) throw err;
@@ -587,10 +632,10 @@ module.exports = function(app, mysqlConnection, auth) {
                                 sendNotification(rows.insertId, suggestionData.author, function(err) {
                                     testTransactionError(err);
                                     mysqlConnection.commit();
+                                    handleMentions();
                                 });
                             });
                         });
-
                     });
                 }
                 if(req.body.parent) {
