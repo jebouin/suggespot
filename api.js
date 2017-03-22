@@ -1157,6 +1157,58 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.get("/api/notifications", function(req, res) {
+        try {
+            var userId = parseInt(checkParam(req.query, "userId"), 36);
+            if(userId == NaN) {
+                throw "incorrect userId";
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        function notificationToJSON(row, callback) {
+            var json = {};
+            json.action = row.action;
+            json.timeCreated = row.timeCreated;
+            if(row.thingType == 0) {
+
+            } else if(row.thingType == 1) {
+                json.authorName = row.authorName;
+                //another query to get comment and suggestion details, can't use a join because we didn't know the notification type
+                mysqlConnection.query("SELECT title FROM comments INNER JOIN suggestions ON comments.suggestion = suggestions.id WHERE comments.id = ?", [row.thingId], function(err, rows, fields) {
+                    if(err) callback(err);
+                    if(rows.length != 1) callback(new Error("Not found"));
+                    json.suggestionTitle = rows[0].title;
+                    callback(null, json);
+                });
+            } else {
+                callback(new Error("Unsupported notification thingType" + row.thingType));
+            }
+        }
+        mysqlConnection.query("SELECT thingType, thingId, author, action, timeCreated, seen, authors.name AS authorName FROM userNotifications INNER JOIN notifications ON userNotifications.notification = notifications.id INNER JOIN users AS authors ON notifications.author = authors.id WHERE user = ? ORDER BY timeCreated DESC LIMIT 20", [userId], function(err, rows, fields) {
+            if(err) throw err;
+            var convertFunctions = [];
+            for(var i = 0; i < rows.length; i++) {
+                (function(row) {
+                    convertFunctions.push(function(callback) {
+                        notificationToJSON(row, callback);
+                    });
+                })(rows[i]);
+
+            }
+            //series to keep the order
+            async.series(convertFunctions, function(err, results) {
+                if(err) {
+                    res.status(500).end();
+                    return;
+                }
+                res.status(200).json(results);
+            });
+
+        })
+    });
+
     return {
         makeLocalAPICall: function(method, path, params, callback) {
             function reqCallback(err, res, body) {

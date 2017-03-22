@@ -1,5 +1,5 @@
 include head
-include suggestionUI
+include notifications
 
 doctype html
 html
@@ -8,6 +8,7 @@ html
     #body
       include header
       if user
+        + notifications(notifications)
         a(href="/") Interests
         | &nbsp;
         a(href="/all") All
