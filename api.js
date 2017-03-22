@@ -27,6 +27,25 @@ var uploadPhoto = multer({
 }).single("photo");
 
 module.exports = function(app, mysqlConnection, auth) {
+    var inTransaction = false;
+    var originalBeginTransaction = mysqlConnection.beginTransaction;
+    var originalCommit = mysqlConnection.commit;
+    var originalRollback = mysqlConnection.rollback;
+
+    mysqlConnection.beginTransaction = function(options, callback) {
+        inTransaction = true;
+        originalBeginTransaction.call(mysqlConnection, options, callback);
+    }
+
+    mysqlConnection.commit = function(options, callback) {
+        inTransaction = false;
+        originalCommit.call(mysqlConnection, options, callback);
+    }
+
+    mysqlConnection.rollback = function(options, callback) {
+        inTransaction = false;
+        originalRollback.call(mysqlConnection, options, callback);
+    }
 
     function testTransactionError(err, beforeCallback) {
         if(err) {
@@ -54,7 +73,17 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             callback(true, rows[0]);
         });
-    };
+    }
+
+    function sendNotification(notificationId, userId, callback) {
+        if(!inTransaction) {
+            callback(new Error("not in transaction"));
+        }
+        mysqlConnection.query("INSERT INTO userNotifications (user, notification) VALUES (?, ?)", [userId, notificationId], function(err, rows, fields) {
+            testTransactionError(err);
+            callback(null);
+        });
+    }
 
     app.use("/api/*", function(req, res, next) {
         if(req.ip === "::ffff:127.0.0.1" || req.ip === "127.0.0.1" || req.ip === "::1") {
@@ -529,7 +558,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var id = parseInt(suggestionId, 36);
         checkUserExists(userId, res, function(ok, row) {
             var username = row.name;
-            mysqlConnection.query('SELECT id, title FROM suggestions WHERE id = ?', [id], function(err, rows, fields) {
+            mysqlConnection.query('SELECT id, title, author FROM suggestions WHERE id = ?', [id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
                     res.status(404).end("this suggestion doesn't exist");
@@ -550,6 +579,18 @@ module.exports = function(app, mysqlConnection, auth) {
                         var cid = parseInt(rows.insertId);
                         res.status(201).end(cid.toString(36));
                         logs.log("user " + colors.bold(username) + " commented on " + colors.bold(suggestionData.title));
+                        //send notification
+                        mysqlConnection.beginTransaction(function(err) {
+                            if(err) throw err;
+                            mysqlConnection.query("INSERT INTO notifications (thingType, thingId, author, action) VALUES (1, ?, ?, 'comment')", [cid, userId], function(err, rows, fields) {
+                                testTransactionError(err);
+                                sendNotification(rows.insertId, suggestionData.author, function(err) {
+                                    testTransactionError(err);
+                                    mysqlConnection.commit();
+                                });
+                            });
+                        });
+
                     });
                 }
                 if(req.body.parent) {
