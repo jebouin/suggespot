@@ -97,5 +97,11 @@ module.exports = {
 			return "upvotes";
 		}
 		return "cancels";
+	},
+	removeDuplicates: function(arr) {
+		var seen = {};
+		return arr.filter(function(e) {
+			return seen.hasOwnProperty(e) ? false : (seen[e] = true);
+		})
 	}
 };

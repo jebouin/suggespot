@@ -582,48 +582,63 @@ module.exports = function(app, mysqlConnection, auth) {
                         function handleMentions() {
                             var expr = /(^|\s)@([a-zA-Z0-9_]+)/g;
                             var match;
-                            var notificationFunctions = [];
+                            var checkUserFunctions = [];
+                            var mentionned = [];
                             do {
                                 match = expr.exec(content);
                                 if(match) {
-                                    var mentionned = match[2];
-                                    notificationFunctions.push(function(callback) {
-                                        mysqlConnection.query("SELECT id FROM users WHERE name = ?", [mentionned], function(err, rows, fields) {
-                                            if(err) {
-                                                callback(err);
-                                                return;
-                                            }
-                                            if(rows.length != 1) {
-                                                callback(new Error("mentionned user doesn't exist"));
-                                                return;
-                                            }
-                                            var mentionnedId = rows[0].id;
-                                            mysqlConnection.beginTransaction(function(err) {
-                                                if(err) {
-                                                    callback(err);
-                                                    return;
-                                                }
-                                                mysqlConnection.query("INSERT INTO notifications (thingType, thingId, author, action) VALUES (1, ?, ?, 'mention')", [cid, userId], function(err, rows, fields) {
-                                                    if(err) {
-                                                        callback(err);
+                                    if(mentionned.indexOf(match[2]) == -1) {
+                                        mentionned.push(match[2]);
+                                    }
+                                }
+                            } while(match);
+                            mentionned = utils.removeDuplicates(mentionned);
+                            mentionned.forEach(function(m) {
+                                if(!m) return;
+                                checkUserFunctions.push(function(callback) {
+                                    mysqlConnection.query("SELECT id FROM users WHERE name = ?", [m], function(err, rows, fields) {
+                                        if(err) {
+                                            callback(err);
+                                            return;
+                                        }
+                                        if(rows.length != 1) {
+                                            callback();
+                                            return;
+                                        }
+                                        callback(null, rows[0].id);
+                                    });
+                                });
+                            });
+                            async.series(checkUserFunctions, function(err, users) {
+                                if(err) throw err;
+                                users.filter(function(user) {
+                                    return user !== undefined && user !== null && user !== "";
+                                });
+                                if(users.length > 0) {
+                                    mysqlConnection.beginTransaction(function(err) {
+                                        if(err) {
+                                            throw err;
+                                            return;
+                                        }
+                                        mysqlConnection.query("INSERT INTO notifications (thingType, thingId, author, action) VALUES (1, ?, ?, 'mention')", [cid, userId], function(err, rows, fields) {
+                                            testTransactionError(err);
+                                            var toSend = users.length;
+                                            users.forEach(function(user) {
+                                                sendNotification(rows.insertId, user, function(err) {
+                                                    testTransactionError(err);
+                                                    toSend--;
+                                                    if(toSend == 0) {
+                                                        mysqlConnection.commit();
                                                         return;
                                                     }
-                                                    sendNotification(rows.insertId, mentionnedId, function(err) {
-                                                        testTransactionError(err);
-                                                        mysqlConnection.commit();
-                                                        callback();
-                                                    });
                                                 });
-                                            });
+                                            })
                                         });
                                     });
                                 }
-                            } while(match);
-                            async.series(notificationFunctions, function(err) {
-                                if(err) throw err;
-                                //ok
                             });
                         }
+
                         //send notification
                         mysqlConnection.beginTransaction(function(err) {
                             if(err) throw err;
@@ -1221,10 +1236,11 @@ module.exports = function(app, mysqlConnection, auth) {
             } else if(row.thingType == 1) {
                 json.authorName = row.authorName;
                 //another query to get comment and suggestion details, can't use a join because we didn't know the notification type
-                mysqlConnection.query("SELECT title FROM comments INNER JOIN suggestions ON comments.suggestion = suggestions.id WHERE comments.id = ?", [row.thingId], function(err, rows, fields) {
+                mysqlConnection.query("SELECT suggestions.id AS id, title FROM comments INNER JOIN suggestions ON comments.suggestion = suggestions.id WHERE comments.id = ?", [row.thingId], function(err, rows, fields) {
                     if(err) callback(err);
                     if(rows.length != 1) callback(new Error("Not found"));
                     json.suggestionTitle = rows[0].title;
+                    json.suggestionId = rows[0].id.toString(36);
                     callback(null, json);
                 });
             } else {

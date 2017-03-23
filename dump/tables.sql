@@ -38,7 +38,7 @@ CREATE TABLE `comments` (
   CONSTRAINT `comments_ibfk_4` FOREIGN KEY (`author`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `comments_ibfk_5` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `comments_ibfk_6` FOREIGN KEY (`parent`) REFERENCES `comments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=57 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -58,7 +58,7 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`id`),
   KEY `author` (`author`),
   CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`author`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -178,7 +178,7 @@ CREATE TABLE `userNotifications` (
   KEY `notification` (`notification`),
   CONSTRAINT `userNotifications_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `userNotifications_ibfk_2` FOREIGN KEY (`notification`) REFERENCES `notifications` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -235,7 +235,7 @@ CREATE TABLE `votes` (
   CONSTRAINT `votes_ibfk_4` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `votes_ibfk_5` FOREIGN KEY (`suggestion`) REFERENCES `suggestions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `votes_ibfk_6` FOREIGN KEY (`comment`) REFERENCES `comments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=137 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=150 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -247,4 +247,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-22  5:55:40
+-- Dump completed on 2017-03-22 19:05:05
