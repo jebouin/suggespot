@@ -36,8 +36,8 @@ mixin reportUI(options)
     br
     input(type="submit" value="submit" onclick="reportSubmit(event)")
 
-mixin comment(c)
-  div.comment
+mixin comment(c, hidden)
+  div.comment(style=hidden?"display: none":"")
     + voteUI("1_" + c.id, c.score, c.dir, user)
     div.commentContainer
       div.commentHeader
@@ -59,15 +59,13 @@ mixin comment(c)
         | &nbsp;
         a(href="javascript:void(0)" onclick="cancelCommentEdit(event)") Cancel
 
-mixin commentUI(sid)
-  div.commentUI(style="display:none")
-    form(action="/comment" method="POST")
-      input(type="hidden" name="suggestionId" value=sid)
-      input(type="hidden" name="parent")
-      textarea.big(name="content" placeholder="Reply here" required)
-      br
-      input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
-      input.big(type="button" value="Cancel" onclick="cancelComment(event)")
+mixin commentUI(isReply)
+  div.commentUI(style=isReply?"display:none":"")
+    div.textarea(contentEditable="true")
+    br
+    button(title="Send your comment (Ctrl+Enter)" onclick="sendComment(event)") Send comment
+    if isReply
+      button(title="Cancel (Esc)" onclick="cancelComment(event)") Cancel
 
 - var isAuthor = user && user.id == author
 
@@ -120,10 +118,7 @@ html
         div#publishedContainer
           h2.indented Comments
           br
-          form(action="/comment" method="POST")
-            input(type="hidden" name="suggestionId" value=sid)
-            textarea.big(name="content" placeholder="Comment this entry" required)
-            input.big(type="submit" value="Send" title="Send your comment (Ctrl+Enter)")
+          + commentUI()
           div#comments
             if comments && comments.length
               each c in comments
@@ -136,7 +131,8 @@ html
                       a(href="javascript:void(0)" onclick="reply(event)") reply
             else if user
               p Be the first to comment!
-          +commentUI(sid)
+          + commentUI(true)
+          + comment({}, true)
       else
         button.big#publishButton Publish
     script.

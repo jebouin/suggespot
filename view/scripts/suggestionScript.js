@@ -25,6 +25,10 @@ function getSid() {
 	return window.location.pathname.substr(3);
 }
 
+function editableContentToText(txt) {
+    return txt.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
+}
+
 function uploadPhoto() {
 	var files = $("#newPhoto input[type='file']")[0].files;
 	if(!files || files.length == 0) return;
@@ -186,7 +190,7 @@ function disableEditMode(b) {
     $("#publishedContainer").show();
     var newDescription = $("#description p").html();
     if(newDescription != prevDescription) {
-        editObject.descr = newDescription.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
+        editObject.descr = editableContentToText(newDescription);
         changes.push({type: "editDescr"});
         prevDescription = newDescription;
     }
@@ -549,12 +553,24 @@ $(document).ready(function() {
 function reply(event) {
     $(event.target).css("display", "none");
 	var replies = $(event.target).parent();
-	var commentUI = $(".commentUI");
+	var commentUI = $(".commentUI").last();
 	commentUI.css("display", "block");
     commentUI.detach().appendTo(replies);
-	var cid = replies.attr("cid");
-	$("input[name='parent']", commentUI).val(cid);
-    $(".commentUI textarea").focus();
+	$(".textarea", commentUI).focus();
+}
+
+function sendComment(event) {
+    var target = $(event.target);
+    var cid = target.parents(".replies").attr("cid");
+    var html = $(".textarea", target.parents(".commentUI")).html();
+    var content = editableContentToText(html);
+    var commentData = {suggestionId: getSid(), content: content};
+    if(cid) {
+        commentData.parent = cid;
+    }
+    $.post("/comment", commentData).done(function(data) {
+        console.log("OK");
+    });
 }
 
 function cancelComment(event) {

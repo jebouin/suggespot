@@ -368,6 +368,19 @@ p.commentBody {
 
 }
 
+.commentUI {
+	margin: 10px 10px 20px 10px;
+}
+
+.commentUI .textarea {
+	white-space: pre-wrap;
+	display: inline-block;
+	background: $berylGreen;
+	width: 400px;
+	min-height: 50px;
+	margin-bottom: 5px;
+}
+
 .replies {
 	margin-left: 100px;
 }
