@@ -579,41 +579,46 @@ module.exports = function(app, mysqlConnection, auth) {
                         var cid = parseInt(rows.insertId);
                         res.status(201).end(cid.toString(36));
                         logs.log("user " + colors.bold(username) + " commented on " + colors.bold(suggestionData.title));
-                        function handleMentions() {
-                            var expr = /(^|\s)@([a-zA-Z0-9_]+)/g;
-                            var match;
-                            var checkUserFunctions = [];
-                            var mentionned = [];
-                            do {
-                                match = expr.exec(content);
-                                if(match) {
-                                    if(mentionned.indexOf(match[2]) == -1) {
-                                        mentionned.push(match[2]);
-                                    }
+
+                        var expr = /(^|\s)@([a-zA-Z0-9_]+)/g;
+                        var match;
+                        var checkUserFunctions = [];
+                        var mentionned = [];
+                        var mentionnedAuthor = false;
+                        do {
+                            match = expr.exec(content);
+                            if(match) {
+                                if(mentionned.indexOf(match[2]) == -1) {
+                                    mentionned.push(match[2]);
                                 }
-                            } while(match);
-                            mentionned = utils.removeDuplicates(mentionned);
-                            mentionned.forEach(function(m) {
-                                if(!m) return;
-                                checkUserFunctions.push(function(callback) {
-                                    mysqlConnection.query("SELECT id FROM users WHERE name = ?", [m], function(err, rows, fields) {
-                                        if(err) {
-                                            callback(err);
-                                            return;
-                                        }
-                                        if(rows.length != 1) {
-                                            callback();
-                                            return;
-                                        }
-                                        callback(null, rows[0].id);
-                                    });
+                            }
+                        } while(match);
+                        mentionned = utils.removeDuplicates(mentionned);
+                        mentionned.forEach(function(m) {
+                            if(!m) return;
+                            checkUserFunctions.push(function(callback) {
+                                mysqlConnection.query("SELECT id FROM users WHERE name = ?", [m], function(err, rows, fields) {
+                                    if(err) {
+                                        callback(err);
+                                        return;
+                                    }
+                                    if(rows.length != 1) {
+                                        callback();
+                                        return;
+                                    }
+                                    if(rows[0].id == suggestionData.author) {
+                                        mentionnedAuthor = true;
+                                    }
+                                    callback(null, rows[0].id);
                                 });
                             });
-                            async.series(checkUserFunctions, function(err, users) {
-                                if(err) throw err;
-                                users.filter(function(user) {
-                                    return user !== undefined && user !== null && user !== "";
-                                });
+                        });
+                        async.series(checkUserFunctions, function(err, users) {
+                            if(err) throw err;
+                            users = users.filter(function(user) {
+                                return (user !== undefined && user !== null && user !== "" && user !== userId);
+                            });
+                            function sendMentionNotifications() {
                                 if(users.length > 0) {
                                     mysqlConnection.beginTransaction(function(err) {
                                         if(err) {
@@ -636,20 +641,26 @@ module.exports = function(app, mysqlConnection, auth) {
                                         });
                                     });
                                 }
-                            });
-                        }
-
-                        //send notification
-                        mysqlConnection.beginTransaction(function(err) {
-                            if(err) throw err;
-                            mysqlConnection.query("INSERT INTO notifications (thingType, thingId, author, action) VALUES (1, ?, ?, 'comment')", [cid, userId], function(err, rows, fields) {
-                                testTransactionError(err);
-                                sendNotification(rows.insertId, suggestionData.author, function(err) {
-                                    testTransactionError(err);
-                                    mysqlConnection.commit();
-                                    handleMentions();
+                            }
+                            if(mentionnedAuthor) {
+                                sendMentionNotifications();
+                            } else {
+                                mysqlConnection.beginTransaction(function(err) {
+                                    if(err) throw err;
+                                    if(mentionnedAuthor) {
+                                        sendMentionNotifications();
+                                    } else {
+                                        mysqlConnection.query("INSERT INTO notifications (thingType, thingId, author, action) VALUES (1, ?, ?, 'comment')", [cid, userId], function(err, rows, fields) {
+                                            testTransactionError(err);
+                                            sendNotification(rows.insertId, suggestionData.author, function(err) {
+                                                testTransactionError(err);
+                                                mysqlConnection.commit();
+                                                sendMentionNotifications();
+                                            });
+                                        });
+                                    }
                                 });
-                            });
+                            }
                         });
                     });
                 }
@@ -1217,7 +1228,7 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
-    app.get("/api/notifications", function(req, res) {
+    app.get("/api/users/notifications", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.query, "userId"), 36);
             if(userId == NaN) {
@@ -1229,8 +1240,10 @@ module.exports = function(app, mysqlConnection, auth) {
         }
         function notificationToJSON(row, callback) {
             var json = {};
+            json.nid = row.id.toString(36);
             json.action = row.action;
             json.timeCreated = row.timeCreated;
+            json.seen = row.seen;
             if(row.thingType == 0) {
 
             } else if(row.thingType == 1) {
@@ -1247,7 +1260,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 callback(new Error("Unsupported notification thingType" + row.thingType));
             }
         }
-        mysqlConnection.query("SELECT thingType, thingId, author, action, timeCreated, seen, authors.name AS authorName FROM userNotifications INNER JOIN notifications ON userNotifications.notification = notifications.id INNER JOIN users AS authors ON notifications.author = authors.id WHERE user = ? ORDER BY timeCreated DESC LIMIT 20", [userId], function(err, rows, fields) {
+        mysqlConnection.query("SELECT userNotifications.id AS id, thingType, thingId, author, action, timeCreated, seen, authors.name AS authorName FROM userNotifications INNER JOIN notifications ON userNotifications.notification = notifications.id INNER JOIN users AS authors ON notifications.author = authors.id WHERE user = ? ORDER BY timeCreated DESC LIMIT 20", [userId], function(err, rows, fields) {
             if(err) throw err;
             var convertFunctions = [];
             for(var i = 0; i < rows.length; i++) {
@@ -1268,6 +1281,26 @@ module.exports = function(app, mysqlConnection, auth) {
             });
 
         })
+    });
+
+    app.post("/api/users/notifications/mark/seen", function(req, res) {
+        try {
+            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            if(userId == NaN) {
+                throw "incorrect userId";
+            }
+            var notificationId = parseInt(checkParam(req.body, "notificationId"), 36);
+            if(notificationId == NaN) {
+                throw "incorrect notificationId";
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        mysqlConnection.query("UPDATE userNotifications SET seen = 1 WHERE id = ?", [notificationId], function(err, rows, fields) {
+            if(err) throw err;
+            res.status(200).end();
+        });
     });
 
     return {

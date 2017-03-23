@@ -14,7 +14,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             templateData.tag = req.query.tag;
         }
         if(loginData) {
-            api.makeLocalAPICall("GET", "/api/notifications/", {userId: loginData.id}, function(err, data) {
+            api.makeLocalAPICall("GET", "/api/users/notifications/", {userId: loginData.id}, function(err, data) {
                 if(err) {
                     res.status(err.code ? err.code : 500).end();
                     return;
@@ -33,6 +33,18 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                 discover(req, res, data);
             }, function() {
                 discover(req, res);
+            });
+        });
+
+        app.post("/users/notifications/mark/seen", function(req, res) {
+            auth.checkUserLoggedIn(req, res, function(loginData) {
+                api.makeLocalAPICall("POST", "/api/users/notifications/mark/seen", {userId: loginData.id, notificationId: req.body.nid}, function(err, data) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500).end();
+                        return;
+                    }
+                    res.status(200).end();
+                });
             });
         });
 	}

@@ -72,8 +72,11 @@ form {
 	vertical-align: middle;
 }
 
+#notificationsContainer {
 
-#notifications {
+}
+
+#notificationsBody {
 	display: inline-block;
 	background: $berylGreen;
 	padding: 10px;
@@ -83,6 +86,10 @@ form {
 .notification {
 	border: 1px solid $black;
 	margin: 10px;
+	background: $yellowGreen;
+}
+
+.notification.seen {
 	background: $white;
 }
 

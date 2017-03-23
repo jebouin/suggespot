@@ -1,0 +1,28 @@
+mixin notification(data)
+  div.notification(nid=data.nid class=data.seen?"seen":"")
+    a(href="/s/"+data.suggestionId onclick="onNotificationClick(event)")
+      if data.action == "comment"
+        | User&nbsp;
+        b #{data.authorName}&nbsp;
+        | commented on your suggestion&nbsp;
+        b #{data.suggestionTitle}&nbsp;
+        | at&nbsp;
+        b #{data.timeCreated}
+      else if data.action == "mention"
+        | User&nbsp;
+        b #{data.authorName}&nbsp;
+        | mentionned you on&nbsp;
+        b #{data.suggestionTitle}&nbsp;
+        | at&nbsp;
+        b #{data.timeCreated}
+
+mixin notifications(data)
+  if data
+    div#notificationsContainer
+      button #{data.length} notifications
+      br
+      div#notificationsBody(style="display: none")
+        if data.length
+          each d in data
+            + notification(d)
+      br
