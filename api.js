@@ -230,6 +230,74 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.get("/api/comments", function(req, res) {
+        var start = parseInt(req.query.start) || 0;
+        var limit = parseInt(req.query.limit) || 20;
+        if(limit > 50) limit = 50;
+        var userId = req.query.id;
+        if(userId) {
+            userId = parseInt(userId, 36);
+        }
+        var id = req.query.id;
+        if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
+            res.status(400).end("invalid suggestion url");
+            return;
+        }
+        id = parseInt(id, 36);
+        mysqlConnection.query("SELECT id FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length != 1) {
+                res.status(404).end("this suggestion doesn't exist");
+                return;
+            }
+            sendComments();
+        });
+        function sendComments() {
+            var query, params;
+            var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
+            var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC LIMIT ?, ?";
+            if(userId) {
+                query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? WHERE comments.suggestion = ? " + orderQuery;
+                params = [userId, id];
+            } else {
+                query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, parent FROM comments LEFT JOIN users ON comments.author = users.id WHERE suggestion = ? " + orderQuery;
+                params = [id];
+            }
+            params.push(start);
+            params.push(limit);
+            mysqlConnection.query(query, params, function(err, commentRows, fields) {
+                if(err) throw err;
+                var comments = {}, formattedComments = [];
+                for(var i = 0; i < commentRows.length; i++) {
+                    comments[commentRows[i].id] = commentRows[i];
+                }
+                for(var i = 0; i < commentRows.length; i++) {
+                    comments[commentRows[i].id].children = [];
+                    if(commentRows[i].parent) {
+                        if(comments[commentRows[i].parent].parent) {
+                            commentRows[i].parent = comments[commentRows[i].parent].parent;
+                        }
+                        comments[commentRows[i].parent].children.push(commentRows[i]);
+                    }
+                }
+                for(var i = 0; i < commentRows.length; i++) {
+                    if(!commentRows[i].parent) {
+                        var c = comments[commentRows[i].id];
+                        c.id = c.id.toString(36);
+                        if(c.authorId != null) {
+                            c.authorId = c.authorId.toString(36);
+                        }
+                        for(var j = 0; j < c.children.length; j++) {
+                            c.children[j].id = c.children[j].id.toString(36);
+                        }
+                        formattedComments.push(c);
+                    }
+                }
+                res.status(200).json(formattedComments);
+            });
+        }
+    });
+
     app.get("/api/suggestion/:id", function(req, res) {
         var userId = req.query.id;
         if(userId) {
@@ -267,65 +335,26 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(403).end("this suggestion is private and you are not the author");
                 return;
             }
-            function sendComments(photos, voteDir) {
-                var query, params;
-                var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
-                var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC";
-                if(userId) {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? WHERE comments.suggestion = ? " + orderQuery;
-                    params = [userId, suggestionData.id];
-                } else {
-                    query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, parent FROM comments LEFT JOIN users ON comments.author = users.id WHERE suggestion = ? " + orderQuery;
-                    params = [suggestionData.id];
+
+            function sendResponse(photos, voteDir) {
+                var author = suggestionData.author;
+                if(author) {
+                    author = author.toString(36);
                 }
-                mysqlConnection.query(query, params, function(err, commentRows, fields) {
+                //get tags and send response with everything
+                mysqlConnection.query("SELECT tags.id AS tid, tags.name AS name FROM suggestionTags LEFT JOIN tags ON tags.id = tag WHERE suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
                     if(err) throw err;
-                    var comments = {}, formattedComments = [];
-                    for(var i = 0; i < commentRows.length; i++) {
-                        comments[commentRows[i].id] = commentRows[i];
-                    }
-                    for(var i = 0; i < commentRows.length; i++) {
-                        comments[commentRows[i].id].children = [];
-                        if(commentRows[i].parent) {
-                            if(comments[commentRows[i].parent].parent) {
-                                commentRows[i].parent = comments[commentRows[i].parent].parent;
-                            }
-                            comments[commentRows[i].parent].children.push(commentRows[i]);
-                        }
-                    }
-                    for(var i = 0; i < commentRows.length; i++) {
-                        if(!commentRows[i].parent) {
-                            var c = comments[commentRows[i].id];
-                            c.id = c.id.toString(36);
-                            if(c.authorId != null) {
-                                c.authorId = c.authorId.toString(36);
-                            }
-                            for(var j = 0; j < c.children.length; j++) {
-                                c.children[j].id = c.children[j].id.toString(36);
-                            }
-                            formattedComments.push(c);
-                        }
-                    }
-                    var author = suggestionData.author;
-                    if(author) {
-                        author = author.toString(36);
-                    }
-                    //get tags and send response with everything
-                    mysqlConnection.query("SELECT tags.id AS tid, tags.name AS name FROM suggestionTags LEFT JOIN tags ON tags.id = tag WHERE suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
-                        if(err) throw err;
-                        res.json({title: suggestionData.title,
-                                  descr: suggestionData.descr,
-                                  author: author,
-                                  authorName: suggestionData.authorName,
-                                  sid: suggestionData.id.toString(36),
-                                  score: suggestionData.score,
-                                  comments: formattedComments,
-                                  tags: tagRows,
-                                  photos: photos,
-                                  voteDir: voteDir,
-                                  maximumPhotos: global.config.maximumPhotos,
-                                  published: suggestionData.published});
-                    });
+                    res.status(200).json({title: suggestionData.title,
+                              descr: suggestionData.descr,
+                              author: author,
+                              authorName: suggestionData.authorName,
+                              sid: suggestionData.id.toString(36),
+                              score: suggestionData.score,
+                              tags: tagRows,
+                              photos: photos,
+                              voteDir: voteDir,
+                              maximumPhotos: global.config.maximumPhotos,
+                              published: suggestionData.published});
                 });
             }
 
@@ -339,13 +368,13 @@ module.exports = function(app, mysqlConnection, auth) {
                     mysqlConnection.query("SELECT dir FROM votes WHERE suggestion = ? AND user = ?", [id, userId], function(err, voteRows, fields) {
                         if(err) throw err;
                         if(voteRows.length != 1) {
-                            sendComments(photoRows);
+                            sendResponse(photoRows);
                         } else {
-                            sendComments(photoRows, voteRows[0].dir);
+                            sendResponse(photoRows, voteRows[0].dir);
                         }
                     })
                 } else {
-                    sendComments(photoRows);
+                    sendResponse(photoRows);
                 }
             });
         });

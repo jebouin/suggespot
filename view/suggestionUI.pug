@@ -20,4 +20,4 @@ mixin suggestion(data, canVote)
 
 if suggestions && suggestions.length
   each s in suggestions
-    +suggestion(s, typeof(user) !== "undefined")
+    + suggestion(s, typeof(user) !== "undefined")

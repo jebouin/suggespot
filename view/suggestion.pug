@@ -2,6 +2,7 @@ include head
 include voteUI
 include editUI
 include tagUI
+include comment
 
 mixin photo(p, hidden)
   div.photo(draggable="false" pid=p.id style=hidden?"display: none":"")
@@ -35,29 +36,6 @@ mixin reportUI(options)
     input.reportOtherInput(type="text" name="message" placeholder="Reason" required autocomplete="off" style="display: none")
     br
     input(type="submit" value="submit" onclick="reportSubmit(event)")
-
-mixin comment(c, hidden)
-  div.comment(style=hidden?"display: none":"")
-    + voteUI("1_" + c.id, c.score, c.dir, user)
-    div.commentContainer
-      div.commentHeader
-        b
-          if(c.author)
-            a(href="/p/"+c.authorId) #{c.author}
-          else
-            | [deleted]
-          | &nbsp;at #{c.time}
-      p.commentBody
-        | #{c.content}
-      div.commentFooter
-        a(href="javascript:void(0)" onclick="report(event)" cid=""+c.id) Report
-        if c.authorId == user.id
-          | &nbsp;
-          a(href="javascript:void(0)" onclick="editComment(event)") Edit
-      div.commentFooter.editFooter(style="display: none")
-        a(href="javascript:void(0)" onclick="saveCommentEdit(event)" cid=""+c.id) Save
-        | &nbsp;
-        a(href="javascript:void(0)" onclick="cancelCommentEdit(event)") Cancel
 
 mixin commentUI(isReply)
   div.commentUI(style=isReply?"display:none":"")
@@ -120,17 +98,6 @@ html
           br
           + commentUI()
           div#comments
-            if comments && comments.length
-              each c in comments
-                div.commentThread
-                  + comment(c)
-                  div.replies(cid=c.id)
-                    each child in c.children
-                      + comment(child)
-                    if user
-                      a(href="javascript:void(0)" onclick="reply(event)") reply
-            else if user
-              p Be the first to comment!
           + commentUI(true)
           + comment({}, true)
       else

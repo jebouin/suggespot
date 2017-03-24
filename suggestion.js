@@ -59,7 +59,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                         suggestionData.user = loginData;
                         suggestionData.user.id = suggestionData.user.id.toString(36);
                     }
-                    res.end(view.getTemplate("suggestion")(suggestionData));
+                    res.status(200).end(view.getTemplate("suggestion")(suggestionData));
                 });
             }
             auth.checkUserLoggedIn(req, res, function(data) {
@@ -76,6 +76,27 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                     return;
                 }
                 res.status(200).json(data);
+            });
+        });
+
+        app.post("/comments", function(req, res) {
+            function apiCall(loginData) {
+                var params = req.body;
+                if(loginData) {
+                    params.userId = loginData.id;
+                }
+                api.makeLocalAPICall("GET", "/api/comments", params, function(err, commentData) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500).end();
+                        return;
+                    }
+                    res.status(200).end(view.getTemplate("comments")({comments: commentData, user: {id: loginData.id}}));
+                });
+            }
+            auth.checkUserLoggedIn(req, res, function(data) {
+                apiCall(data);
+            }, function() {
+                apiCall();
             });
         });
 

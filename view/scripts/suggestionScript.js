@@ -2,6 +2,7 @@ var editMode = false;
 var reportMode = false;
 var commentEditMode = false;
 var photosExpanded = false;
+var loadingMoreComments = false;
 var mh, txt;
 var changedPhotosOrder = false;
 var enlargedContainer, enlargedPhoto, enlarged;
@@ -548,6 +549,18 @@ $(document).ready(function() {
             $("h2").first().append(" (" + locationUtils.formatDistance(data.distance) + ")");
         });
     });
+
+    //comments
+    loadMoreComments();
+    $(window).scroll(function() {
+        if(!loadingMoreComments) {
+            var cont = $("#comments");
+            var windowBottom = $(window).scrollTop() + $(window).height();
+            if(windowBottom + 50 >= cont.position().top + cont.outerHeight()) {
+                loadMoreComments();
+            }
+        }
+    });
 });
 
 function reply(event) {
@@ -577,4 +590,15 @@ function cancelComment(event) {
 	var commentUI = $(".commentUI");
 	commentUI.css("display", "none");
 	$("a", commentUI.parent()).css("display", "block");
+}
+
+function loadMoreComments() {
+    if(loadingMoreComments) return;
+    loadingMoreComments = true;
+    var postData = {start: $(".comment").length, limit: 10, id: getSid()};
+    $.post("/comments", postData, function(data) {
+        var toAppend = $(data);
+        $("#comments").append(toAppend);
+        loadingMoreComments = false;
+    });
 }
