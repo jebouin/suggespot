@@ -595,7 +595,7 @@ function cancelComment(event) {
 function loadMoreComments() {
     if(loadingMoreComments) return;
     loadingMoreComments = true;
-    var postData = {start: $(".comment").length, limit: 10, id: getSid()};
+    var postData = {start: $(".commentThread").length, limit: 1, id: getSid()};
     $.post("/comments", postData, function(data) {
         var toAppend = $(data);
         $("#comments").append(toAppend);

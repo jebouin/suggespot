@@ -230,74 +230,6 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
-    app.get("/api/comments", function(req, res) {
-        var start = parseInt(req.query.start) || 0;
-        var limit = parseInt(req.query.limit) || 20;
-        if(limit > 50) limit = 50;
-        var userId = req.query.id;
-        if(userId) {
-            userId = parseInt(userId, 36);
-        }
-        var id = req.query.id;
-        if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
-            res.status(400).end("invalid suggestion url");
-            return;
-        }
-        id = parseInt(id, 36);
-        mysqlConnection.query("SELECT id FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
-            if(err) throw err;
-            if(rows.length != 1) {
-                res.status(404).end("this suggestion doesn't exist");
-                return;
-            }
-            sendComments();
-        });
-        function sendComments() {
-            var query, params;
-            var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
-            var orderQuery = "ORDER BY IF(parent IS NULL, 0, 1), IF(parent IS NULL, conf, -timeCreated) DESC LIMIT ?, ?";
-            if(userId) {
-                query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, votes.dir AS dir, parent FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON votes.comment = comments.id AND votes.user = ? WHERE comments.suggestion = ? " + orderQuery;
-                params = [userId, id];
-            } else {
-                query = "SELECT content, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + ", comments.id AS id, parent FROM comments LEFT JOIN users ON comments.author = users.id WHERE suggestion = ? " + orderQuery;
-                params = [id];
-            }
-            params.push(start);
-            params.push(limit);
-            mysqlConnection.query(query, params, function(err, commentRows, fields) {
-                if(err) throw err;
-                var comments = {}, formattedComments = [];
-                for(var i = 0; i < commentRows.length; i++) {
-                    comments[commentRows[i].id] = commentRows[i];
-                }
-                for(var i = 0; i < commentRows.length; i++) {
-                    comments[commentRows[i].id].children = [];
-                    if(commentRows[i].parent) {
-                        if(comments[commentRows[i].parent].parent) {
-                            commentRows[i].parent = comments[commentRows[i].parent].parent;
-                        }
-                        comments[commentRows[i].parent].children.push(commentRows[i]);
-                    }
-                }
-                for(var i = 0; i < commentRows.length; i++) {
-                    if(!commentRows[i].parent) {
-                        var c = comments[commentRows[i].id];
-                        c.id = c.id.toString(36);
-                        if(c.authorId != null) {
-                            c.authorId = c.authorId.toString(36);
-                        }
-                        for(var j = 0; j < c.children.length; j++) {
-                            c.children[j].id = c.children[j].id.toString(36);
-                        }
-                        formattedComments.push(c);
-                    }
-                }
-                res.status(200).json(formattedComments);
-            });
-        }
-    });
-
     app.get("/api/suggestion/:id", function(req, res) {
         var userId = req.query.id;
         if(userId) {
@@ -575,6 +507,95 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.get("/api/comments", function(req, res) {
+        var start = parseInt(req.query.start) || 0;
+        var limit = parseInt(req.query.limit) || 20;
+        if(limit > 50) limit = 50;
+        var userId = req.query.userId;
+        if(userId) {
+            userId = parseInt(userId, 36);
+        }
+        var id = req.query.id;
+        if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
+            res.status(400).end("invalid suggestion url");
+            return;
+        }
+        id = parseInt(id, 36);
+        mysqlConnection.query("SELECT id FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length != 1) {
+                res.status(404).end("this suggestion doesn't exist");
+                return;
+            }
+            sendComments();
+        });
+        function sendComments() {
+            var query, params;
+            var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
+            var orderQuery = "ORDER BY thread, timeCreated";
+            var subQuery = "(SELECT id, suggestion FROM commentThreads WHERE suggestion = ? LIMIT ?, ?) AS threads";
+            if(userId) {
+                query = "SELECT comments.id AS id, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, votes.dir AS dir, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON comments.id = votes.comment AND votes.user = ? " + orderQuery;
+                params = [id, start, limit, userId];
+            } else {
+                query = "SELECT comments.id AS id, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id " + orderQuery;
+                params = [id, start, limit];
+            }
+            mysqlConnection.query(query, params, function(err, commentRows, fields) {
+                if(err) throw err;
+                var formattedComments = [];
+                for(var i = 0; i < commentRows.length; i++) {
+                    var last = formattedComments
+                    if(formattedComments.length > 0 && commentRows[i].thread == formattedComments[formattedComments.length - 1].thread) {
+                        formattedComments[formattedComments.length - 1].children.push(commentRows[i]);
+                    } else {
+                        commentRows[i].children = [];
+                        formattedComments.push(commentRows[i]);
+                    }
+                }
+                function convertBase36(comment) {
+                    comment.id = comment.id.toString(36);
+                    comment.thread = comment.thread.toString(36);
+                    comment.authorId = comment.authorId.toString(36);
+                }
+                formattedComments.forEach(function(comment) {
+                    convertBase36(comment);
+                    comment.children.forEach(function(child) {
+                        convertBase36(child);
+                    });
+                });
+                console.log(formattedComments);
+                /*var comments = {}, formattedComments = [];
+                for(var i = 0; i < commentRows.length; i++) {
+                    comments[commentRows[i].id] = commentRows[i];
+                }
+                for(var i = 0; i < commentRows.length; i++) {
+                    comments[commentRows[i].id].children = [];
+                    if(commentRows[i].parent) {
+                        if(comments[commentRows[i].parent].parent) {
+                            commentRows[i].parent = comments[commentRows[i].parent].parent;
+                        }
+                        comments[commentRows[i].parent].children.push(commentRows[i]);
+                    }
+                }
+                for(var i = 0; i < commentRows.length; i++) {
+                    if(!commentRows[i].parent) {
+                        var c = comments[commentRows[i].id];
+                        c.id = c.id.toString(36);
+                        if(c.authorId != null) {
+                            c.authorId = c.authorId.toString(36);
+                        }
+                        for(var j = 0; j < c.children.length; j++) {
+                            c.children[j].id = c.children[j].id.toString(36);
+                        }
+                        formattedComments.push(c);
+                    }
+                }*/
+                res.status(200).json(formattedComments);
+            });
+        }
+    });
+
     app.post("/api/comment", function (req, res) {
         try {
             var suggestionId = checkParam(req.body, "suggestionId");
@@ -587,7 +608,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var id = parseInt(suggestionId, 36);
         checkUserExists(userId, res, function(ok, row) {
             var username = row.name;
-            mysqlConnection.query('SELECT id, title, author FROM suggestions WHERE id = ?', [id], function(err, rows, fields) {
+            mysqlConnection.query("SELECT id, title, author FROM suggestions WHERE id = ?", [id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
                     res.status(404).end("this suggestion doesn't exist");
@@ -595,20 +616,28 @@ module.exports = function(app, mysqlConnection, auth) {
                 }
                 var suggestionData = rows[0];
                 function sendComment(parent) {
-                    var query, params;
-                    if(parent) {
-                        query = 'INSERT INTO comments (author, content, suggestion, parent) VALUES (?, ?, ?, ?)';
-                        params = [userId, content, id, parent];
-                    } else {
-                        query = 'INSERT INTO comments (author, content, suggestion) VALUES (?, ?, ?)';
-                        params = [userId, content, id];
+                    function insertComment(thread) {
+                        mysqlConnection.query("INSERT INTO comments (author, content, thread) VALUES (?, ?, ?)", [userId, content, thread], function(err, rows, fields) {
+                            testTransactionError(err);
+                            mysqlConnection.commit();
+                            var cid = parseInt(rows.insertId);
+                            onInsertedComment(cid);
+                        });
                     }
-                    mysqlConnection.query(query, params, function(err, rows, fields) {
+                    mysqlConnection.beginTransaction(function(err) {
                         if(err) throw err;
-                        var cid = parseInt(rows.insertId);
+                        if(parent) {
+                            insertComment(parent);
+                        } else {
+                            mysqlConnection.query("INSERT INTO commentThreads (suggestion) VALUES (?)", [id], function(err, rows, fields) {
+                                testTransactionError(err);
+                                insertComment(rows.insertId);
+                            });
+                        }
+                    });
+                    function onInsertedComment(cid) {
                         res.status(201).end(cid.toString(36));
                         logs.log("user " + colors.bold(username) + " commented on " + colors.bold(suggestionData.title));
-
                         var expr = /(^|\s)@([a-zA-Z0-9_]+)/g;
                         var match;
                         var checkUserFunctions = [];
@@ -691,7 +720,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                 });
                             }
                         });
-                    });
+                    }
                 }
                 if(req.body.parent) {
                     var parent = parseInt(req.body.parent, 36);
