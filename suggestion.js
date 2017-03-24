@@ -100,6 +100,28 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             });
         });
 
+        app.post("/comments/:id", function(req, res) {
+            function apiCall(loginData) {
+                var params = req.body;
+                if(loginData) {
+                    params.userId = loginData.id;
+                }
+                api.makeLocalAPICall("GET", "/api/comments/" + req.params.id, params, function(err, commentData) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500).end();
+                        return;
+                    }
+                    var template = params.newThread == "true" ? "commentThreadTemplate" : "commentTemplate";
+                    res.status(200).end(view.getTemplate(template)({c: commentData, user: {id: loginData.id}}));
+                });
+            }
+            auth.checkUserLoggedIn(req, res, function(data) {
+                apiCall(data);
+            }, function() {
+                apiCall();
+            });
+        });
+
 		app.post("/vote", function(req, res) {
 			auth.checkUserLoggedIn(req, res, function(data) {
 				api.makeLocalAPICall("POST", "/api/vote", {thingId: req.body.thingId, userId: data.id, dir: req.body.dir}, function(err, data) {
@@ -197,12 +219,12 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 			auth.checkUserLoggedIn(req, res, function(data) {
 				var params = req.body;
 				params.userId = data.id;
-				api.makeLocalAPICall("POST", "/api/comment", params, function(err, data) {
+				api.makeLocalAPICall("POST", "/api/comment", params, function(err, cid) {
 					if(err) {
 						res.redirect("/s/" + req.body.suggestionId);
 					} else {
-						api.makeLocalAPICall("POST", "/api/vote", {thingId: "1_" + data, userId: params.userId, dir: 1}, function(err, data) {
-							res.redirect("/s/" + req.body.suggestionId);
+						api.makeLocalAPICall("POST", "/api/vote", {thingId: "1_" + cid, userId: params.userId, dir: 1}, function(err, data) {
+							res.status(201).json(cid);
 						});
 					}
 				});

@@ -507,6 +507,43 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.get("/api/comments/:id", function(req, res) {
+        var userId = req.query.userId;
+        if(userId) {
+            userId = parseInt(userId, 36);
+        }
+        try {
+            var commentId = checkParam(req.params, "id");
+            commentId = parseInt(commentId, 36);
+            if(commentId == NaN) {
+                throw new Error("invalid commentId");
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        var query, params;
+        if(userId) {
+            query = "SELECT comments.id AS id, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, votes.dir AS dir, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score FROM comments LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON comments.id = votes.comment AND votes.user = ? WHERE comments.id = ?";
+            params = [userId, commentId];
+        } else {
+            query = "SELECT comments.id AS id, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score FROM comments LEFT JOIN users ON comments.author = users.id WHERE comments.id = ?";
+            params = [commentId];
+        }
+        mysqlConnection.query(query, params, function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length == 1) {
+                var comment = rows[0];
+                comment.id = comment.id.toString(36);
+                comment.authorId = comment.authorId.toString(36);
+                comment.thread = comment.thread.toString(36);
+                res.status(200).json(comment);
+            } else {
+                res.status(404).end();
+            }
+        });
+    });
+
     app.get("/api/comments", function(req, res) {
         var start = parseInt(req.query.start) || 0;
         var limit = parseInt(req.query.limit) || 20;
@@ -564,33 +601,6 @@ module.exports = function(app, mysqlConnection, auth) {
                         convertBase36(child);
                     });
                 });
-                console.log(formattedComments);
-                /*var comments = {}, formattedComments = [];
-                for(var i = 0; i < commentRows.length; i++) {
-                    comments[commentRows[i].id] = commentRows[i];
-                }
-                for(var i = 0; i < commentRows.length; i++) {
-                    comments[commentRows[i].id].children = [];
-                    if(commentRows[i].parent) {
-                        if(comments[commentRows[i].parent].parent) {
-                            commentRows[i].parent = comments[commentRows[i].parent].parent;
-                        }
-                        comments[commentRows[i].parent].children.push(commentRows[i]);
-                    }
-                }
-                for(var i = 0; i < commentRows.length; i++) {
-                    if(!commentRows[i].parent) {
-                        var c = comments[commentRows[i].id];
-                        c.id = c.id.toString(36);
-                        if(c.authorId != null) {
-                            c.authorId = c.authorId.toString(36);
-                        }
-                        for(var j = 0; j < c.children.length; j++) {
-                            c.children[j].id = c.children[j].id.toString(36);
-                        }
-                        formattedComments.push(c);
-                    }
-                }*/
                 res.status(200).json(formattedComments);
             });
         }
@@ -615,8 +625,8 @@ module.exports = function(app, mysqlConnection, auth) {
                     return;
                 }
                 var suggestionData = rows[0];
-                function sendComment(parent) {
-                    function insertComment(thread) {
+                function sendComment(thread) {
+                    function insertComment() {
                         mysqlConnection.query("INSERT INTO comments (author, content, thread) VALUES (?, ?, ?)", [userId, content, thread], function(err, rows, fields) {
                             testTransactionError(err);
                             mysqlConnection.commit();
@@ -626,12 +636,13 @@ module.exports = function(app, mysqlConnection, auth) {
                     }
                     mysqlConnection.beginTransaction(function(err) {
                         if(err) throw err;
-                        if(parent) {
-                            insertComment(parent);
+                        if(thread) {
+                            insertComment();
                         } else {
                             mysqlConnection.query("INSERT INTO commentThreads (suggestion) VALUES (?)", [id], function(err, rows, fields) {
                                 testTransactionError(err);
-                                insertComment(rows.insertId);
+                                thread = rows.insertId;
+                                insertComment();
                             });
                         }
                     });
@@ -722,16 +733,8 @@ module.exports = function(app, mysqlConnection, auth) {
                         });
                     }
                 }
-                if(req.body.parent) {
-                    var parent = parseInt(req.body.parent, 36);
-                    mysqlConnection.query('SELECT id FROM comments WHERE id = ?', [parent], function(err, rows, fields) {
-                        if(err) throw err;
-                        if(rows.length != 1) {
-                            res.status(404).end("this parent comment doesn't exist");
-                            return;
-                        }
-                        sendComment(parent);
-                    });
+                if(req.body.thread) {
+                    sendComment(parseInt(req.body.thread, 36));
                 } else {
                     sendComment();
                 }

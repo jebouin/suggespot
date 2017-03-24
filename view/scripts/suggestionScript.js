@@ -574,28 +574,47 @@ function reply(event) {
 
 function sendComment(event) {
     var target = $(event.target);
-    var cid = target.parents(".replies").attr("cid");
+    var thread = target.parents(".replies").attr("thread");
     var html = $(".textarea", target.parents(".commentUI")).html();
     var content = editableContentToText(html);
     var commentData = {suggestionId: getSid(), content: content};
-    if(cid) {
-        commentData.parent = cid;
+    if(thread) {
+        commentData.thread = thread;
     }
     $.post("/comment", commentData).done(function(data) {
-        console.log("OK");
+        var buttons = $("button", target.parent());
+        buttons.hide();
+        $.post("/comments/" + data, {newThread: typeof(thread) === "undefined"}, function(html) {
+            buttons.show();
+            var newComment = $(html);
+            if(thread) {
+                newComment.insertBefore($(".replyButton", ".replies[thread=" + thread + "]"));
+                onCommentSent();
+            } else {
+                $("#comments").prepend(newComment);
+                $(".textarea").html("");
+            }
+        });
     });
+    function onCommentSent() {
+        var commentUI = $(event.target).parent();
+    	commentUI.css("display", "none");
+        $(".textarea").html("");
+    	$("a", commentUI.parent()).show();
+    }
 }
 
 function cancelComment(event) {
-	var commentUI = $(".commentUI");
-	commentUI.css("display", "none");
-	$("a", commentUI.parent()).css("display", "block");
+	var commentUI = $(event.target).parent();
+	commentUI.hide();
+    $(".textarea").html("");
+	$("a", commentUI.parent()).show();
 }
 
 function loadMoreComments() {
     if(loadingMoreComments) return;
     loadingMoreComments = true;
-    var postData = {start: $(".commentThread").length, limit: 1, id: getSid()};
+    var postData = {start: $(".commentThread").length, limit: 10, id: getSid()};
     $.post("/comments", postData, function(data) {
         var toAppend = $(data);
         $("#comments").append(toAppend);
