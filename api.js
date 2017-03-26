@@ -1336,7 +1336,7 @@ module.exports = function(app, mysqlConnection, auth) {
             } else if(row.action == "report" || row.action == "mention" || row.action == "comment") {
                 json.authorName = row.authorName;
                 //another query to get comment and suggestion details, can't use a join because we didn't know the notification type
-                mysqlConnection.query("SELECT suggestions.entityId AS id, title FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.entityId WHERE comments.entityId = ?", [row.thingId], function(err, rows, fields) {
+                mysqlConnection.query("SELECT suggestions.entityId AS id, title FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.entityId WHERE comments.entityId = ?", [row.entity], function(err, rows, fields) {
                     if(err) {
                         callback(err);
                         return;
@@ -1363,7 +1363,6 @@ module.exports = function(app, mysqlConnection, auth) {
                         notificationToJSON(row, callback);
                     });
                 })(rows[i]);
-
             }
             //series to keep the order
             async.series(convertFunctions, function(err, results) {

@@ -15,7 +15,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
         }
         if(loginData) {
             api.makeLocalAPICall("GET", "/api/users/notifications/", {userId: loginData.id}, function(err, data) {
-                if(err) {
+				if(err) {
                     res.status(err.code ? err.code : 500).end();
                     return;
                 }
