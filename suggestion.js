@@ -232,7 +232,9 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 						});
 					}
 				});
-			});
+			}, function() {
+                res.status(401).end();
+            });
 		});
 
         app.post("/report", function(req, res) {

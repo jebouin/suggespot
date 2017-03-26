@@ -96,9 +96,11 @@ html
         div#publishedContainer
           h2.indented Comments
           br
-          + commentUI()
+          if user
+            + commentUI()
           div#comments
-          + commentUI(true)
+          if user
+            + commentUI(true)
       else
         button.big#publishButton Publish
     script.

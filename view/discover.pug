@@ -38,6 +38,7 @@ html
     script.
       var tag = "#{tag}";
       var discoverMode = "#{mode}";
+      var userLoggedIn = #{typeof(user) !== 'undefined'};
     script(src="/libs/jquery.js")
     script(src="/view/scripts/location.js")
     script(src="/view/scripts/discoverScript.js")

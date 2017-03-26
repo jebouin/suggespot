@@ -19,10 +19,12 @@ mixin notification(data)
 mixin notifications(data)
   if data
     div#notificationsContainer
-      button notifications
+      button Notifications
       br
       div#notificationsBody(style="display: none")
         if data.length
           each d in data
             + notification(d)
+        else
+          | No notifications
       br

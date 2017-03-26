@@ -15,10 +15,12 @@ tagUI.removeTagCallback = function(tag) {
 
 tagUI.newTagClickCallback = function() {
     tagUI.editMode = true;
+    $(".tag:not(#newTag)").addClass("canBeRemoved");
 }
 
 tagUI.closeNewTagFormCallback = function(name, id) {
     tagUI.editMode = false;
+    $(".tag:not(#newTag)").removeClass("canBeRemoved");
 }
 
 function loadMore() {

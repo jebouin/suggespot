@@ -167,6 +167,7 @@ function enableEditMode(b) {
     $("#description p").attr("contentEditable", "true");
     $("#info").hide();
     $("#publishedContainer").hide();
+    $(".tag:not(#newTag)").addClass("canBeRemoved");
     if(reportMode) {
         disableReportMode();
     }
@@ -189,6 +190,7 @@ function disableEditMode(b) {
     $("#description p").attr("contentEditable", "false");
     $("#info").show();
     $("#publishedContainer").show();
+    $(".tag:not(#newTag)").removeClass("canBeRemoved");
     var newDescription = $("#description p").html();
     if(newDescription != prevDescription) {
         editObject.descr = editableContentToText(newDescription);
@@ -584,6 +586,7 @@ function sendComment(event) {
     $.post("/comment", commentData).done(function(data) {
         var buttons = $("button", target.parent());
         buttons.hide();
+        console.log(data);
         $.post("/comments/" + data, {newThread: typeof(thread) === "undefined"}, function(html) {
             buttons.show();
             var newComment = $(html);

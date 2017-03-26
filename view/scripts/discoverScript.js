@@ -28,15 +28,17 @@ function loadMore() {
 $(document).ready(function() {
     currentLocation.get(function(err) {
         loadMore();
-        $(window).scroll(function() {
-            if(!loadingMore) {
-                var cont = $("#suggestionsContainer");
-                var windowBottom = $(window).scrollTop() + $(window).height();
-                if(windowBottom + 50 >= cont.position().top + cont.outerHeight()) {
-                    loadMore();
+        if(userLoggedIn) {
+            $(window).scroll(function() {
+                if(!loadingMore) {
+                    var cont = $("#suggestionsContainer");
+                    var windowBottom = $(window).scrollTop() + $(window).height();
+                    if(windowBottom + 50 >= cont.position().top + cont.outerHeight()) {
+                        loadMore();
+                    }
                 }
-            }
-        });
+            });
+        }
     });
     $(".follow").on("click", onFollowClick);
     var notificationButton = $("#notificationsContainer button");
