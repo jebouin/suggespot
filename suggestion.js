@@ -90,7 +90,11 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                         res.status(err.code ? err.code : 500).end();
                         return;
                     }
-                    res.status(200).end(view.getTemplate("comments")({comments: commentData, user: {id: loginData.id}}));
+                    var user = {};
+                    if(loginData) {
+                        user.id = loginData.id;
+                    }
+                    res.status(200).end(view.getTemplate("comments")({comments: commentData, user: user}));
                 });
             }
             auth.checkUserLoggedIn(req, res, function(data) {
