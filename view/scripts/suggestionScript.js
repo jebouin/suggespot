@@ -532,7 +532,7 @@ $(document).ready(function() {
                     $("a", ".editFooter:visible").first().click();
                 } else {
                     //test focused...
-                    $("input[type='submit']:visible").last().click();
+                    $("button", focused.parent()).first().click();
                 }
             }
         } else if(k === 27) {

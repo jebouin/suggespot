@@ -569,25 +569,30 @@ module.exports = function(app, mysqlConnection, auth) {
         function sendComments() {
             var query, params;
             var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
-            var orderQuery = "ORDER BY thread, timeCreated";
+            var orderQuery = "ORDER BY isReply, IF(isReply, -timeCreated, conf) DESC;";
             var subQuery = "(SELECT id, suggestion FROM commentThreads WHERE suggestion = ? LIMIT ?, ?) AS threads";
             if(userId) {
-                query = "SELECT comments.id AS id, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, votes.dir AS dir, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON comments.id = votes.comment AND votes.user = ? " + orderQuery;
+                query = "SELECT comments.id AS id, isReply, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, votes.dir AS dir, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON comments.id = votes.comment AND votes.user = ? " + orderQuery;
                 params = [id, start, limit, userId];
             } else {
-                query = "SELECT comments.id AS id, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id " + orderQuery;
+                query = "SELECT comments.id AS id, isReply, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id " + orderQuery;
                 params = [id, start, limit];
             }
             mysqlConnection.query(query, params, function(err, commentRows, fields) {
                 if(err) throw err;
-                var formattedComments = [];
+                var formattedComments = {};
+                var result = [];
                 for(var i = 0; i < commentRows.length; i++) {
-                    var last = formattedComments
-                    if(formattedComments.length > 0 && commentRows[i].thread == formattedComments[formattedComments.length - 1].thread) {
-                        formattedComments[formattedComments.length - 1].children.push(commentRows[i]);
+                    if(commentRows[i].isReply && formattedComments[commentRows[i].thread]) {
+                        formattedComments[commentRows[i].thread].children.push(commentRows[i]);
                     } else {
                         commentRows[i].children = [];
-                        formattedComments.push(commentRows[i]);
+                        formattedComments[commentRows[i].thread] = commentRows[i];
+                    }
+                }
+                for(var i = 0; i < commentRows.length; i++) {
+                    if(!commentRows[i].isReply && formattedComments[commentRows[i].thread]) {
+                        result.push(formattedComments[commentRows[i].thread]);
                     }
                 }
                 function convertBase36(comment) {
@@ -595,13 +600,13 @@ module.exports = function(app, mysqlConnection, auth) {
                     comment.thread = comment.thread.toString(36);
                     comment.authorId = comment.authorId.toString(36);
                 }
-                formattedComments.forEach(function(comment) {
+                result.forEach(function(comment) {
                     convertBase36(comment);
                     comment.children.forEach(function(child) {
                         convertBase36(child);
                     });
                 });
-                res.status(200).json(formattedComments);
+                res.status(200).json(result);
             });
         }
     });
@@ -626,8 +631,9 @@ module.exports = function(app, mysqlConnection, auth) {
                 }
                 var suggestionData = rows[0];
                 function sendComment(thread) {
+                    var isReply = typeof(thread) !== "undefined";
                     function insertComment() {
-                        mysqlConnection.query("INSERT INTO comments (author, content, thread) VALUES (?, ?, ?)", [userId, content, thread], function(err, rows, fields) {
+                        mysqlConnection.query("INSERT INTO comments (author, content, thread, isReply) VALUES (?, ?, ?, ?)", [userId, content, thread, isReply], function(err, rows, fields) {
                             testTransactionError(err);
                             mysqlConnection.commit();
                             var cid = parseInt(rows.insertId);
@@ -1312,11 +1318,13 @@ module.exports = function(app, mysqlConnection, auth) {
                 //another query to get comment and suggestion details, can't use a join because we didn't know the notification type
                 mysqlConnection.query("SELECT suggestions.id AS id, title FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.id WHERE comments.id = ?", [row.thingId], function(err, rows, fields) {
                     if(err) {
-                        console.log(err.message);
                         callback(err);
                         return;
                     }
-                    if(rows.length != 1) callback(new Error("Not found"));
+                    if(rows.length != 1) {
+                        callback(new Error("Not found"));
+                        return;
+                    }
                     json.suggestionTitle = rows[0].title;
                     json.suggestionId = rows[0].id.toString(36);
                     callback(null, json);
