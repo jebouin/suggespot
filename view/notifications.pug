@@ -19,7 +19,7 @@ mixin notification(data)
 mixin notifications(data)
   if data
     div#notificationsContainer
-      button #{data.length} notifications
+      button notifications
       br
       div#notificationsBody(style="display: none")
         if data.length

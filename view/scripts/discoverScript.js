@@ -39,4 +39,9 @@ $(document).ready(function() {
         });
     });
     $(".follow").on("click", onFollowClick);
+    var notificationButton = $("#notificationsContainer button");
+    var nbNewNotifications = $(".notification").length - $(".notification.seen").length;
+    if(nbNewNotifications > 0) {
+        notificationButton.text(nbNewNotifications + " new " + notificationButton.text());
+    }
 });
