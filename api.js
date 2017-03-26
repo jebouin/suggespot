@@ -1310,8 +1310,12 @@ module.exports = function(app, mysqlConnection, auth) {
             } else if(row.thingType == 1) {
                 json.authorName = row.authorName;
                 //another query to get comment and suggestion details, can't use a join because we didn't know the notification type
-                mysqlConnection.query("SELECT suggestions.id AS id, title FROM comments INNER JOIN suggestions ON comments.suggestion = suggestions.id WHERE comments.id = ?", [row.thingId], function(err, rows, fields) {
-                    if(err) callback(err);
+                mysqlConnection.query("SELECT suggestions.id AS id, title FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.id WHERE comments.id = ?", [row.thingId], function(err, rows, fields) {
+                    if(err) {
+                        console.log(err.message);
+                        callback(err);
+                        return;
+                    }
                     if(rows.length != 1) callback(new Error("Not found"));
                     json.suggestionTitle = rows[0].title;
                     json.suggestionId = rows[0].id.toString(36);
