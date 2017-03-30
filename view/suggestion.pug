@@ -40,6 +40,7 @@ mixin reportUI(options)
 mixin commentUI(isReply)
   div.commentUI(style=isReply?"display:none":"")
     div.textarea(contentEditable="true")
+    div.dropdown(style="display: none")
     br
     button(title="Send your comment (Ctrl+Enter)" onclick="sendComment(event)") Send comment
     if isReply

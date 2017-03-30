@@ -14,6 +14,9 @@ var reportButtonPushed;
 var reportCid;
 var prevCommentText;
 var excludedThread;
+var mentionPos;
+
+var mentionExpr = /(^|\s)@([a-zA-Z0-9_]*)/;
 
 window.onbeforeunload = function() {
     if(changes.length > 0) {
@@ -451,6 +454,7 @@ function disableCommentEditMode(comment) {
     commentEditMode = false;
     $("p", comment).attr("contentEditable", "false");
     $(".commentFooter", comment).hide().first().show();
+    $(".dropdown").hide();
 }
 
 function saveCommentEdit(e) {
@@ -572,38 +576,87 @@ $(document).ready(function() {
     });
 
     //mention
-    $(document).on("input", $(".commentBody[contentEditable='true']"), function(e) {
-        if(!commentEditMode) return false;
-        var target = $(e.target);
-        var text = target.text();
-        var pos = text.indexOf("@");
-        if(pos < 0) return false;
-
-        //get caret pos
-        var caretPos = null;
+    function getCaretOffset(element) {
         if(window.getSelection) {
             var sel = window.getSelection();
             if(sel.rangeCount > 0) {
                 var range = sel.getRangeAt(0);
                 var preRange = range.cloneRange();
-                preRange.selectNodeContents(e.target);
+                preRange.selectNodeContents(element);
                 preRange.setEnd(range.endContainer, range.endOffset);
-                caretPos = preRange.toString().length;
+                return preRange.toString().length;;
             }
         }
+        return null;
+    }
+    $(document).on("input", "div[contentEditable='true']", function(e) {
+        var target = $(e.target);
+        var dropdown = target.parent().find(".dropdown");
+        var text = target.text();
+        mentionPos = text.indexOf("@");
+        if(mentionPos < 0) {
+            dropdown.hide();
+            return false;
+        }
+        //get caret pos
+        var caretPos = getCaretOffset(e.target);
         if(caretPos === null) return;
-        var lastPos = text.substr(0, caretPos).lastIndexOf("@");
-        text = text.substr(lastPos);
-        var expr = /(^|\s)@([a-zA-Z0-9_]*)/g;
-        var match = expr.exec(text);
+        mentionPos = text.substr(0, caretPos).lastIndexOf("@");
+        caretPos -= mentionPos;
+        text = text.substr(mentionPos);
+        console.log(text, caretPos);
+        var match = mentionExpr.exec(text);
         if(!match) return;
         var nameLike = match[2];
+        if(caretPos > match[0].length) {
+            dropdown.hide();
+            return;
+        }
         $.post("/users", {nameLike: nameLike}, function(data) {
+            dropdown.empty();
             data.forEach(function(user) {
-                //display name dropdown
+                var option = $("<div></div>").addClass("dropdownOption").text(user.name);
+                dropdown.append(option);
             });
+            if(data.length > 0) {
+                dropdown.show();
+            } else {
+                dropdown.hide();
+            }
         });
-    })
+    });
+    $(document).on("mousedown", ".dropdownOption", function(e) {
+        e.preventDefault();
+        return false;
+    });
+    $(document).on("click", ".dropdownOption", function(e) {
+        var target = $(e.target);
+        var optionText = target.text();
+        var commentBody = target.parent().parent().find("div[contentEditable='true']");
+        if(commentBody.length < 1) return false;
+        var commentText = commentBody.text();
+        var match = mentionExpr.exec(commentText.substr(mentionPos));
+        if(!match || match.length < 1) return false;
+        var nameLength = match[0].length;
+        var suffix = commentText.substr(mentionPos + nameLength);
+        var newCommentText = commentText.substr(0, mentionPos + 1) + optionText;
+        if(suffix.length == 0 || (suffix[0] != ' ' && suffix[0] != '\n')) {
+            newCommentText += " ";
+        }
+        newCommentText += suffix;
+        commentBody.text(newCommentText);
+        target.parent().empty().hide();
+        //restore selection
+        if(window.getSelection) {
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            var range = document.createRange();
+            var offset = 1;
+            range.setStart(commentBody[0], offset);
+            range.setEnd(commentBody[0], offset);
+            sel.addRange(range);
+        }
+    });
 });
 
 function reply(event) {

@@ -66,8 +66,8 @@ function createRoutes() {
 
     app.use("/style", express.static(__dirname + "/view/style"));
 
-    app.get("/libs/jquery.js", function(req, res) {
-    	utils.sendFile(res, "libs/jquery.js");
+    app.get("/libs/*.js", function(req, res) {
+    	utils.sendFile(res, req.url);
     });
 
     app.get(["/view/scripts/*", "/view/svg/*"], function(req, res) {

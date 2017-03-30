@@ -361,11 +361,31 @@ form {
 
 }
 
-p.commentBody {
+commentBody {
 	white-space: pre-wrap;
 	display: inline-block;
 	width: 100%;
 	background: $berylGreen;
+}
+
+commentBody p {
+
+}
+
+.dropdown {
+	display: inline-block;
+	background: $yellowGreen;
+	padding: 3px;
+}
+
+.dropdown .dropdownOption {
+	background: $berylGreen;
+	margin: 2px;
+}
+
+.dropdown .dropdownOption:hover {
+	cursor: pointer;
+	background: $laPalma;
 }
 
 .commentFooter {
