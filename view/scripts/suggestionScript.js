@@ -7,11 +7,12 @@ var mh, txt;
 var changedPhotosOrder = false;
 var enlargedContainer, enlargedPhoto, enlarged;
 var changes = [];
-var editObject = {thingId: "0_" + getSid()};
+var editObject = {thingId: "0_" + sid};
 var prevDescription;
 var reportButtonPushed;
 var reportCid;
 var prevCommentText;
+var excludedThread;
 
 window.onbeforeunload = function() {
     if(changes.length > 0) {
@@ -20,10 +21,6 @@ window.onbeforeunload = function() {
     if(prevDescription && prevDescription != $("#description p").html()) {
         return true;
     }
-}
-
-function getSid() {
-	return window.location.pathname.substr(3);
 }
 
 function editableContentToText(txt) {
@@ -35,7 +32,7 @@ function uploadPhoto() {
 	if(!files || files.length == 0) return;
     var formData = new FormData();
     formData.append("photo", files[0]);
-    formData.append("thingId", "0_" + getSid());
+    formData.append("thingId", "0_" + sid);
     formData.append("fromUrl", "false");
     $.ajax({
 		url: "/uploadPhoto",
@@ -320,7 +317,7 @@ function onPhotoURLChange(e) {
         if(!match[1]) {
             url = "http://" + url;
         }
-        $.post("/uploadPhoto", {"fromUrl": true, "thingId": "0_" + getSid(), "url": url}).done(function(data) {
+        $.post("/uploadPhoto", {"fromUrl": true, "thingId": "0_" + sid, "url": url}).done(function(data) {
             if(data.code == 400) {
                 $("#newPhoto .error").css("visibility", "visible").text("Invalid file");
             } else {
@@ -376,7 +373,7 @@ function reportSubmit(e) {
     if(reportCid) {
         thingId = "1_" + reportCid;
     } else {
-        thingId = "0_" + getSid();
+        thingId = "0_" + sid;
     }
     if(checkedRadio.length == 1) {
         var val = checkedRadio.val();
@@ -476,7 +473,7 @@ function cancelCommentEdit(e) {
 }
 
 $(document).ready(function() {
-	//photo grid
+    //photo grid
 	mh = $("#photosGrid").css("max-height");
 	txt = $("button#morePhotos").text();
 	$("button#morePhotos").on("click", function(e) {
@@ -516,7 +513,6 @@ $(document).ready(function() {
 
 	//publish
 	$("#publishButton").click(function(e) {
-		var sid = getSid();
 		$.post("/publish", {sid: sid}, function(data) {
 			window.location.reload(true);
 		});
@@ -547,13 +543,23 @@ $(document).ready(function() {
     //location
     currentLocation.get(function(err) {
         if(err) return;
-        $.post("/s/" + getSid() + "/d", {lat: currentLocation.lat, lon: currentLocation.lon}, function(data) {
+        $.post("/s/" + sid + "/d", {lat: currentLocation.lat, lon: currentLocation.lon}, function(data) {
             $("h2").first().append(" (" + locationUtils.formatDistance(data.distance) + ")");
         });
     });
 
     //comments
-    loadMoreComments();
+    if(cid) {
+        loadMoreComments(cid, function() {
+            var commentElement = $("#comment_" + cid);
+            commentElement.css("background", "red");
+            var y = commentElement.offset().top - 150;
+            $("html, body").animate({scrollTop: y}, "fast");
+            loadMoreComments();
+        });
+    } else {
+        loadMoreComments();
+    }
     $(window).scroll(function() {
         if(!loadingMoreComments) {
             var cont = $("#comments");
@@ -579,14 +585,13 @@ function sendComment(event) {
     var thread = target.parents(".replies").attr("thread");
     var html = $(".textarea", target.parents(".commentUI")).html();
     var content = editableContentToText(html);
-    var commentData = {suggestionId: getSid(), content: content};
+    var commentData = {suggestionId: sid, content: content};
     if(thread) {
         commentData.thread = thread;
     }
     $.post("/comment", commentData).done(function(data) {
         var buttons = $("button", target.parent());
         buttons.hide();
-        console.log(data);
         $.post("/comments/" + data, {newThread: typeof(thread) === "undefined"}, function(html) {
             buttons.show();
             var newComment = $(html);
@@ -614,13 +619,24 @@ function cancelComment(event) {
 	$("a", commentUI.parent()).show();
 }
 
-function loadMoreComments() {
+function loadMoreComments(toLoad, callback) {
     if(loadingMoreComments) return;
     loadingMoreComments = true;
-    var postData = {start: $(".commentThread").length, limit: 10, id: getSid()};
-    $.post("/comments", postData, function(data) {
+    var postData = {start: $(".commentThread").length, limit: 10, sid: sid};
+    if(cid) {
+        if(toLoad) {
+            postData.cid = cid;
+        } else {
+            postData.excludedThread = excludedThread;
+        }
+    }
+    $.post("/threads", postData, function(data) {
         var toAppend = $(data);
         $("#comments").append(toAppend);
+        if(toLoad) {
+            excludedThread = toAppend.find(".replies").attr("thread");
+        }
         loadingMoreComments = false;
+        if(callback) callback();
     });
 }

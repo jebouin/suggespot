@@ -46,11 +46,12 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             });
         });
 
-        app.get("/s/:id", function(req, res) {
-            var url = req.originalUrl;
+        app.get(["/s/:id", "/s/:id/comment/:cid"], function(req, res) {
             var id = req.params.id;
+            var cid = req.params.cid;
             function apiCall(loginData) {
-                api.makeLocalAPICall("GET", "/api/suggestion/" + id, loginData ? loginData : {}, function(err, suggestionData) {
+                var params = loginData ? loginData : {};
+                api.makeLocalAPICall("GET", "/api/suggestion/" + id, params, function(err, suggestionData) {
                     if(err) {
                         res.redirect("/");
                         return;
@@ -58,6 +59,9 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                     if(loginData) {
                         suggestionData.user = loginData;
                         suggestionData.user.id = suggestionData.user.id.toString(36);
+                    }
+                    if(cid) {
+                        suggestionData.cid = cid;
                     }
                     res.status(200).end(view.getTemplate("suggestion")(suggestionData));
                 });
@@ -79,13 +83,13 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             });
         });
 
-        app.post("/comments", function(req, res) {
+        app.post("/threads", function(req, res) {
             function apiCall(loginData) {
                 var params = req.body;
                 if(loginData) {
                     params.userId = loginData.id;
                 }
-                api.makeLocalAPICall("GET", "/api/comments", params, function(err, commentData) {
+                api.makeLocalAPICall("GET", "/api/threads", params, function(err, commentData) {
                     if(err) {
                         res.status(err.code ? err.code : 500).end();
                         return;

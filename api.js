@@ -518,6 +518,135 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.get(["/api/threads", "/api/threads/:id"], function(req, res) {
+        var start = parseInt(req.query.start) || 0;
+        var limit = parseInt(req.query.limit) || 20;
+        if(limit > 50) limit = 50;
+        try {
+            var userId = req.query.userId;
+            if(userId) {
+                userId = parseInt(userId, 36);
+                if(userId == NaN) {
+                    throw new Error("invalid userId");
+                }
+            }
+            var sid = req.query.sid;
+            var cid = req.query.cid;
+            var id = req.query.id;
+            if(!sid && !cid && !id) {
+                throw new Error("please specify at least a sid, cid or id");
+            }
+            var excludedThread = req.query.excludedThread;
+            if(excludedThread) {
+                excludedThread = parseInt(excludedThread, 36);
+                if(excludedThread == NaN) {
+                    throw new Error("invalid excludedThread");
+                }
+            }
+            if(sid) {
+                sid = parseInt(sid, 36);
+                if(sid == NaN) {
+                    throw new Error("invalid sid");
+                }
+            }
+            if(cid) {
+                if(excludedThread) {
+                    throw new Error("can't have excludedThread and cid parameters");
+                }
+                cid = parseInt(cid, 36);
+                if(cid == NaN) {
+                    throw new Error("invalid cid");
+                    return;
+                }
+            } else if(id) {
+                if(excludedThread) {
+                    throw new Error("can't have excludedThread and id parameters");
+                }
+                id = parseInt(id, 36);
+                if(id == NaN) {
+                    throw new Error("invalid id");
+                    return;
+                }
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        mysqlConnection.query("SELECT entityId AS id FROM suggestions WHERE entityId = ?", [sid], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length < 1) {
+                res.status(404).end("this suggestion doesn't exist");
+                return;
+            }
+            if(cid) {
+                mysqlConnection.query("SELECT thread FROM comments WHERE entityId = ?", [cid], function(err, rows, fields) {
+                    if(err) throw err;
+                    if(rows.length < 1) {
+                        res.status(404).end("this comment doesn't exist");
+                        return;
+                    }
+                    id = rows[0].thread;
+                    sendComments();
+                });
+            } else {
+                sendComments();
+            }
+        });
+        function sendComments() {
+            var query, params;
+            var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
+            var orderQuery = "ORDER BY isReply, IF(isReply, -timeCreated, conf) DESC;";
+            var subQuery;
+            var params;
+            if(id) {
+                subQuery = "(SELECT id, suggestion FROM commentThreads WHERE id = ?) AS threads";
+                params = [id];
+            } else if(excludedThread) {
+                subQuery = "(SELECT id, suggestion FROM commentThreads WHERE suggestion = ? AND id != ? LIMIT ?, ?) AS threads";
+                params = [sid, excludedThread, start, limit];
+            } else {
+                subQuery = "(SELECT id, suggestion FROM commentThreads WHERE suggestion = ? LIMIT ?, ?) AS threads";
+                params = [sid, start, limit];
+            }
+            if(userId) {
+                query = "SELECT comments.entityId AS id, isReply, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, votes.dir AS dir, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON comments.entityId = votes.entity AND votes.user = ? " + orderQuery;
+                params.push(userId);
+            } else {
+                query = "SELECT comments.entityId AS id, isReply, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id " + orderQuery;
+            }
+            mysqlConnection.query(query, params, function(err, commentRows, fields) {
+                if(err) throw err;
+                var formattedComments = {};
+                var result = [];
+                for(var i = 0; i < commentRows.length; i++) {
+                    if(commentRows[i].isReply && formattedComments[commentRows[i].thread]) {
+                        formattedComments[commentRows[i].thread].children.push(commentRows[i]);
+                    } else {
+                        commentRows[i].children = [];
+                        formattedComments[commentRows[i].thread] = commentRows[i];
+                    }
+                }
+                for(var i = 0; i < commentRows.length; i++) {
+                    if(!commentRows[i].isReply && formattedComments[commentRows[i].thread]) {
+                        result.push(formattedComments[commentRows[i].thread]);
+                    }
+                }
+                function convertBase36(comment) {
+                    comment.id = comment.id.toString(36);
+                    comment.thread = comment.thread.toString(36);
+                    comment.authorId = comment.authorId.toString(36);
+                }
+                result.forEach(function(comment) {
+                    convertBase36(comment);
+                    comment.children.forEach(function(child) {
+                        convertBase36(child);
+                    });
+                });
+                res.status(200).json(result);
+            });
+        }
+    });
+
     app.get("/api/comments/:id", function(req, res) {
         var userId = req.query.userId;
         if(userId) {
@@ -553,73 +682,6 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(404).end();
             }
         });
-    });
-
-    app.get("/api/comments", function(req, res) {
-        var start = parseInt(req.query.start) || 0;
-        var limit = parseInt(req.query.limit) || 20;
-        if(limit > 50) limit = 50;
-        var userId = req.query.userId;
-        if(userId) {
-            userId = parseInt(userId, 36);
-        }
-        var id = req.query.id;
-        if(!(/^[a-zA-Z0-9/=]+$/.test(id))) {
-            res.status(400).end("invalid suggestion url");
-            return;
-        }
-        id = parseInt(id, 36);
-        mysqlConnection.query("SELECT entityId AS id FROM suggestions WHERE entityId = ?", [id], function(err, rows, fields) {
-            if(err) throw err;
-            if(rows.length != 1) {
-                res.status(404).end("this suggestion doesn't exist");
-                return;
-            }
-            sendComments();
-        });
-        function sendComments() {
-            var query, params;
-            var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
-            var orderQuery = "ORDER BY isReply, IF(isReply, -timeCreated, conf) DESC;";
-            var subQuery = "(SELECT id, suggestion FROM commentThreads WHERE suggestion = ? LIMIT ?, ?) AS threads";
-            if(userId) {
-                query = "SELECT comments.entityId AS id, isReply, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, votes.dir AS dir, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id LEFT JOIN votes ON comments.entityId = votes.entity AND votes.user = ? " + orderQuery;
-                params = [id, start, limit, userId];
-            } else {
-                query = "SELECT comments.entityId AS id, isReply, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id " + orderQuery;
-                params = [id, start, limit];
-            }
-            mysqlConnection.query(query, params, function(err, commentRows, fields) {
-                if(err) throw err;
-                var formattedComments = {};
-                var result = [];
-                for(var i = 0; i < commentRows.length; i++) {
-                    if(commentRows[i].isReply && formattedComments[commentRows[i].thread]) {
-                        formattedComments[commentRows[i].thread].children.push(commentRows[i]);
-                    } else {
-                        commentRows[i].children = [];
-                        formattedComments[commentRows[i].thread] = commentRows[i];
-                    }
-                }
-                for(var i = 0; i < commentRows.length; i++) {
-                    if(!commentRows[i].isReply && formattedComments[commentRows[i].thread]) {
-                        result.push(formattedComments[commentRows[i].thread]);
-                    }
-                }
-                function convertBase36(comment) {
-                    comment.id = comment.id.toString(36);
-                    comment.thread = comment.thread.toString(36);
-                    comment.authorId = comment.authorId.toString(36);
-                }
-                result.forEach(function(comment) {
-                    convertBase36(comment);
-                    comment.children.forEach(function(child) {
-                        convertBase36(child);
-                    });
-                });
-                res.status(200).json(result);
-            });
-        }
     });
 
     app.post("/api/comment", function (req, res) {
@@ -1333,10 +1395,10 @@ module.exports = function(app, mysqlConnection, auth) {
             json.seen = row.seen;
             if(row.action == "report") {
 
-            } else if(row.action == "report" || row.action == "mention" || row.action == "comment") {
+            } else if(row.action == "mention" || row.action == "comment") {
                 json.authorName = row.authorName;
                 //another query to get comment and suggestion details, can't use a join because we didn't know the notification type
-                mysqlConnection.query("SELECT suggestions.entityId AS id, title FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.entityId WHERE comments.entityId = ?", [row.entity], function(err, rows, fields) {
+                mysqlConnection.query("SELECT suggestions.entityId AS id, title, thread FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.entityId WHERE comments.entityId = ?", [row.entity], function(err, rows, fields) {
                     if(err) {
                         callback(err);
                         return;
@@ -1348,6 +1410,8 @@ module.exports = function(app, mysqlConnection, auth) {
                     }
                     json.suggestionTitle = rows[0].title;
                     json.suggestionId = rows[0].id.toString(36);
+                    json.threadId = rows[0].thread.toString(36);
+                    json.commentId = row.entity.toString(36);
                     callback(null, json);
                 });
             } else {
