@@ -1344,6 +1344,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 return;
             }
             var profileData = rows[0];
+            profileData.id = profileData.id.toString(36);
             profileData.timeSinceRegistered = utils.formatProfileTime(profileData.timeSinceRegistered);
             res.json(profileData);
         });

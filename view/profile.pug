@@ -12,7 +12,10 @@ html
 			if tags
 				h2 Followed Tags
 				br
-				+ tagsUI(tags, false, "Edit")
+				if id == user.id
+					+ tagsUI(tags, false, "Edit")
+				else
+					+ tagsUI(tags, true)
 			h2 #{name}'s suggestions
 			br
 			#suggestionsContainer

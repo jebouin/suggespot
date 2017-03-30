@@ -7,13 +7,15 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             var url = req.originalUrl;
 			var id = req.params.id;
             function getProfile(loginData) {
-                var loggedIn = typeof loginData !== "undefined";
                 api.makeLocalAPICall("GET", "/api/user", {userId: id}, function(err, profileData) {
     				if(err) {
                         throw err;
     					res.redirect("/");
     					return;
     				}
+                    if(loginData && Object.keys(loginData).length > 0) {
+                        profileData.user = loginData;
+                    }
                     api.makeLocalAPICall("GET", "/api/userTags", {userId: id}, function(err, tagData) {
                         if(err) {
                             throw err;
