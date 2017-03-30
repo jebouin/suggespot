@@ -5,6 +5,7 @@ var photosExpanded = false;
 var loadingMoreComments = false;
 var mh, txt;
 var changedPhotosOrder = false;
+var typingMention = false;
 var enlargedContainer, enlargedPhoto, enlarged;
 var changes = [];
 var editObject = {thingId: "0_" + sid};
@@ -569,6 +570,40 @@ $(document).ready(function() {
             }
         }
     });
+
+    //mention
+    $(document).on("input", $(".commentBody[contentEditable='true']"), function(e) {
+        if(!commentEditMode) return false;
+        var target = $(e.target);
+        var text = target.text();
+        var pos = text.indexOf("@");
+        if(pos < 0) return false;
+
+        //get caret pos
+        var caretPos = null;
+        if(window.getSelection) {
+            var sel = window.getSelection();
+            if(sel.rangeCount > 0) {
+                var range = sel.getRangeAt(0);
+                var preRange = range.cloneRange();
+                preRange.selectNodeContents(e.target);
+                preRange.setEnd(range.endContainer, range.endOffset);
+                caretPos = preRange.toString().length;
+            }
+        }
+        if(caretPos === null) return;
+        var lastPos = text.substr(0, caretPos).lastIndexOf("@");
+        text = text.substr(lastPos);
+        var expr = /(^|\s)@([a-zA-Z0-9_]*)/g;
+        var match = expr.exec(text);
+        if(!match) return;
+        var nameLike = match[2];
+        $.post("/users", {nameLike: nameLike}, function(data) {
+            data.forEach(function(user) {
+                //display name dropdown
+            });
+        });
+    })
 });
 
 function reply(event) {

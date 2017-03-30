@@ -41,6 +41,8 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                 api.makeLocalAPICall("POST", "/api/follow", {userId: loginData.id, tagName: req.body.tagName}, function(err, followData) {
                     res.status(200).end();
                 });
+            }, function() {
+                res.status(402).end();
             });
         });
 
@@ -48,7 +50,21 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
             auth.checkUserLoggedIn(req, res, function(loginData) {
                 api.makeLocalAPICall("POST", "/api/unfollow", {userId: loginData.id, tagName: req.body.tagName}, function(err, followData) {
                     res.status(200).end();
+                }, function() {
+                    res.status(402).end();
                 });
+            });
+        });
+
+        app.post("/users", function(req, res) {
+            var body = req.body;
+            auth.checkUserLoggedIn(req, res, function(loginData) {
+                body.userId = loginData.id;
+                api.makeLocalAPICall("GET", "/api/users", body, function(err, userData) {
+                    res.status(200).json(userData);
+                });
+            }, function() {
+                res.status(401).end();
             });
         });
 	}

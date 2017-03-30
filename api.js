@@ -1377,6 +1377,26 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.get("/api/users", function(req, res) {
+        var start = parseInt(req.query.start) || 0;
+        var limit = parseInt(req.query.limit) || 20;
+        if(limit > 50) limit = 50;
+        var nameLike = req.query.nameLike;
+        var query = "SELECT name, timeRegistered FROM users";
+        var params = [];
+        if(nameLike) {
+            query += " WHERE name LIKE ?";
+            params.push(nameLike + "%");
+        }
+        query += " LIMIT ?, ?";
+        params.push(start);
+        params.push(limit);
+        mysqlConnection.query(query, params, function(err, rows, fields) {
+            if(err) throw err;
+            res.status(200).json(rows);
+        })
+    });
+
     app.get("/api/users/notifications", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.query, "userId"), 36);
