@@ -443,8 +443,9 @@ function editComment(e) {
 function enableCommentEditMode(e) {
     if(commentEditMode) return;
     commentEditMode = true;
+    disableReportMode(e);
     var comment = $(e.target).parent().parent();
-    $("p", comment).attr("contentEditable", "true");
+    prevCommentText = $("p", comment).attr("contentEditable", "true").text();
     $(".commentFooter", comment).hide();
     $(".commentFooter.editFooter", comment).show();
 }
@@ -589,7 +590,7 @@ $(document).ready(function() {
         }
         return null;
     }
-    $(document).on("input", "div[contentEditable='true']", function(e) {
+    $(document).on("input", "div[contentEditable='true'], p[contentEditable='true']", function(e) {
         var target = $(e.target);
         var dropdown = target.parent().find(".dropdown");
         var text = target.text();
@@ -604,7 +605,6 @@ $(document).ready(function() {
         mentionPos = text.substr(0, caretPos).lastIndexOf("@");
         caretPos -= mentionPos;
         text = text.substr(mentionPos);
-        console.log(text, caretPos);
         var match = mentionExpr.exec(text);
         if(!match) return;
         var nameLike = match[2];
@@ -632,7 +632,7 @@ $(document).ready(function() {
     $(document).on("click", ".dropdownOption", function(e) {
         var target = $(e.target);
         var optionText = target.text();
-        var commentBody = target.parent().parent().find("div[contentEditable='true']");
+        var commentBody = target.parent().parent().find("div[contentEditable='true'], p[contentEditable='true']");
         if(commentBody.length < 1) return false;
         var commentText = commentBody.text();
         var match = mentionExpr.exec(commentText.substr(mentionPos));
@@ -640,7 +640,9 @@ $(document).ready(function() {
         var nameLength = match[0].length;
         var suffix = commentText.substr(mentionPos + nameLength);
         var newCommentText = commentText.substr(0, mentionPos + 1) + optionText;
-        if(suffix.length == 0 || (suffix[0] != ' ' && suffix[0] != '\n')) {
+
+        console.log(suffix, suffix.length);
+        if(suffix.length == 0 || suffix.length == 1 || (suffix[0] != ' ' && suffix[0] != '\n')) {
             newCommentText += " ";
         }
         newCommentText += suffix;
