@@ -373,14 +373,14 @@ commentBody p {
 }
 
 .dropdown {
+	position: absolute;
 	display: inline-block;
-	background: $yellowGreen;
-	padding: 3px;
+	background: $mallard;
 }
 
 .dropdown .dropdownOption {
 	background: $berylGreen;
-	margin: 2px;
+	margin-bottom: 2px;
 }
 
 .dropdown .dropdownOption:hover {

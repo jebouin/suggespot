@@ -577,22 +577,9 @@ $(document).ready(function() {
     });
 
     //mention
-    function getCaretOffset(element) {
-        if(window.getSelection) {
-            var sel = window.getSelection();
-            if(sel.rangeCount > 0) {
-                var range = sel.getRangeAt(0);
-                var preRange = range.cloneRange();
-                preRange.selectNodeContents(element);
-                preRange.setEnd(range.endContainer, range.endOffset);
-                return preRange.toString().length;;
-            }
-        }
-        return null;
-    }
     $(document).on("input", "div[contentEditable='true'], p[contentEditable='true']", function(e) {
         var target = $(e.target);
-        var dropdown = target.parent().find(".dropdown");
+        var dropdown = $(".dropdown");
         var text = target.text();
         mentionPos = text.indexOf("@");
         if(mentionPos < 0) {
@@ -611,6 +598,15 @@ $(document).ready(function() {
         if(caretPos > match[0].length) {
             dropdown.hide();
             return;
+        }
+        var characterRect = getCharacterRect(e.target.firstChild, mentionPos + 1);
+        if(characterRect) {
+            var x = characterRect.left;
+            var y = characterRect.bottom + $(window).scrollTop();
+            dropdown.css("left", x + "px");
+            dropdown.css("top", y + "px");
+        } else {
+
         }
         $.post("/users", {nameLike: nameLike}, function(data) {
             dropdown.empty();
@@ -637,11 +633,10 @@ $(document).ready(function() {
         var commentText = commentBody.text();
         var match = mentionExpr.exec(commentText.substr(mentionPos));
         if(!match || match.length < 1) return false;
-        var nameLength = match[0].length;
+        var nameLength = optionText.length + 1;
         var suffix = commentText.substr(mentionPos + nameLength);
         var newCommentText = commentText.substr(0, mentionPos + 1) + optionText;
 
-        console.log(suffix, suffix.length);
         if(suffix.length == 0 || suffix.length == 1 || (suffix[0] != ' ' && suffix[0] != '\n')) {
             newCommentText += " ";
         }
@@ -653,13 +648,60 @@ $(document).ready(function() {
             var sel = window.getSelection();
             sel.removeAllRanges();
             var range = document.createRange();
-            var offset = 1;
-            range.setStart(commentBody[0], offset);
-            range.setEnd(commentBody[0], offset);
+            var offset = mentionPos + nameLength + 1;
+            range.setStart(commentBody[0].firstChild, offset);
+            range.setEnd(commentBody[0].firstChild, offset);
             sel.addRange(range);
         }
     });
 });
+
+function getCaretOffset(element) {
+    if(window.getSelection) {
+        var sel = window.getSelection();
+        if(sel.rangeCount > 0) {
+            var range = sel.getRangeAt(0);
+            var preRange = range.cloneRange();
+            preRange.selectNodeContents(element);
+            preRange.setEnd(range.endContainer, range.endOffset);
+            return preRange.toString().length;
+        }
+    }
+    return null;
+}
+
+
+function getCaretRect() {
+    if(window.getSelection) {
+        var sel = window.getSelection();
+        if(sel.rangeCount > 0) {
+            var range = sel.getRangeAt(0).cloneRange();
+            if(range.getClientRects) {
+                range.collapse(true);
+                var rects = range.getClientRects();
+                if(rects.length > 0) {
+                    var rect = rects[0];
+                    return rect;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function getCharacterRect(element, offset) {
+    var range = document.createRange();
+    range.setStart(element, offset);
+    range.setEnd(element, offset);
+    if(range.getClientRects) {
+        var rects = range.getClientRects();
+        if(rects.length > 0) {
+            var rect = rects[0];
+            return rect;
+        }
+    }
+    return null;
+}
 
 function reply(event) {
     $(event.target).css("display", "none");
