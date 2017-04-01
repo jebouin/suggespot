@@ -122,14 +122,14 @@ module.exports = function(app, mysqlConnection, auth) {
             var userId = req.query.userId;
             if(userId) {
                 userId = parseInt(userId, 36);
-                if(userId == NaN) {
+                if(isNaN(userId)) {
                     throw new Error("invalid userId");
                 }
             }
             var authorId = req.query.authorId;
             if(authorId) {
                 authorId = parseInt(authorId, 36);
-                if(authorId == NaN) {
+                if(isNaN(authorId)) {
                     throw new Error("invalid authorId");
                 }
             }
@@ -138,7 +138,7 @@ module.exports = function(app, mysqlConnection, auth) {
             if(location) {
                 lat = parseFloat(req.query.lat);
                 lon = parseFloat(req.query.lon);
-                if(lat == NaN || lon == NaN) {
+                if(isNaN(lat) || isNaN(lon)) {
                     throw new Error("invalid coordinates");
                 }
             }
@@ -258,7 +258,7 @@ module.exports = function(app, mysqlConnection, auth) {
         if(location) {
             lat = parseFloat(req.query.lat);
             lon = parseFloat(req.query.lon);
-            if(lat == NaN || lon == NaN) {
+            if(isNaN(lat) || isNaN(lon)) {
                 res.status(400).end("invalid coordinates");
                 return;
             }
@@ -274,7 +274,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 return;
             }
             var suggestionData = rows[0];
-            if(suggestionData.published == 0 && (!userId || userId != suggestionData.author)) {
+            if(suggestionData.published === 0 && (!userId || userId != suggestionData.author)) {
                 res.status(403).end("this suggestion is private and you are not the author");
                 return;
             }
@@ -315,7 +315,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         } else {
                             sendResponse(photoRows, voteRows[0].dir);
                         }
-                    })
+                    });
                 } else {
                     sendResponse(photoRows);
                 }
@@ -330,7 +330,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 throw new Error("invalid suggestion url");
             }
             id = parseInt(id, 36);
-            if(id == NaN) {
+            if(isNaN(id)) {
                 throw new Error("invalid suggestion url");
             }
             var location = req.body.lat && req.body.lon;
@@ -339,7 +339,7 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             var lat = parseFloat(req.body.lat);
             var lon = parseFloat(req.body.lon);
-            if(lat == NaN || lon == NaN) {
+            if(isNaN(lat) || isNaN(lon)) {
                 throw new Error("invalid coordinates");
             }
         } catch(e) {
@@ -363,7 +363,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var dir = checkParam(req.body, "dir");
             var thing = utils.getThingFromId(req.body.thingId);
         } catch(e) {
-            res.status(400).end(e.message)
+            res.status(400).end(e.message);
             return;
         }
         checkUserExists(userId, res, function(ok, row) {
@@ -377,7 +377,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         return;
                     }
                     var suggestionTitle = rows[0].title;
-                    if(dir == 0) {
+                    if(dir === 0) {
                         mysqlConnection.query("SELECT id, dir FROM votes WHERE entity = ? AND user = ?", [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
@@ -416,7 +416,7 @@ module.exports = function(app, mysqlConnection, auth) {
                             }
                             mysqlConnection.beginTransaction(function(err) {
                                 if(err) throw err;
-                                if(rows.length == 0) {
+                                if(rows.length === 0) {
                                     mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
                                         testTransactionError(err);
                                         registerVote();
@@ -449,7 +449,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         return;
                     }
                     var commentAuthor = rows[0].author;
-                    if(dir == 0) {
+                    if(dir === 0) {
                         mysqlConnection.query('SELECT id, dir FROM votes WHERE entity = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
@@ -466,7 +466,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                             testTransactionError(err);
                                             mysqlConnection.commit(function(err) {
                                                 testTransactionError(err);
-                                            })
+                                            });
                                         });
                                     });
                                 });
@@ -481,12 +481,12 @@ module.exports = function(app, mysqlConnection, auth) {
                                     testTransactionError(err);
                                     mysqlConnection.commit(function(err) {
                                         testTransactionError(err);
-                                    })
+                                    });
                                 });
                             }
                             mysqlConnection.beginTransaction(function(err) {
                                 if(err) throw err;
-                                if(rows.length == 0) {
+                                if(rows.length === 0) {
                                     mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
                                         testTransactionError(err);
                                         registerVote();
@@ -505,7 +505,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                         });
                                     }
                                 }
-                            })
+                            });
                         });
                     }
                     res.status(200).end();
@@ -526,7 +526,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var userId = req.query.userId;
             if(userId) {
                 userId = parseInt(userId, 36);
-                if(userId == NaN) {
+                if(isNaN(userId)) {
                     throw new Error("invalid userId");
                 }
             }
@@ -539,13 +539,13 @@ module.exports = function(app, mysqlConnection, auth) {
             var excludedThread = req.query.excludedThread;
             if(excludedThread) {
                 excludedThread = parseInt(excludedThread, 36);
-                if(excludedThread == NaN) {
+                if(isNaN(excludedThread)) {
                     throw new Error("invalid excludedThread");
                 }
             }
             if(sid) {
                 sid = parseInt(sid, 36);
-                if(sid == NaN) {
+                if(isNaN(sid)) {
                     throw new Error("invalid sid");
                 }
             }
@@ -554,18 +554,16 @@ module.exports = function(app, mysqlConnection, auth) {
                     throw new Error("can't have excludedThread and cid parameters");
                 }
                 cid = parseInt(cid, 36);
-                if(cid == NaN) {
+                if(isNaN(cid)) {
                     throw new Error("invalid cid");
-                    return;
                 }
             } else if(id) {
                 if(excludedThread) {
                     throw new Error("can't have excludedThread and id parameters");
                 }
                 id = parseInt(id, 36);
-                if(id == NaN) {
+                if(isNaNi(id)) {
                     throw new Error("invalid id");
-                    return;
                 }
             }
         } catch(e) {
@@ -597,7 +595,6 @@ module.exports = function(app, mysqlConnection, auth) {
             var confQuery = "(upvotes + 1) / (upvotes + downvotes + 1) - 1 / SQRT(upvotes + downvotes + 1) + (UNIX_TIMESTAMP(timeCreated) - 1465549200) / 1209600 AS conf";
             var orderQuery = "ORDER BY isReply, IF(isReply, -timeCreated, conf) DESC;";
             var subQuery;
-            var params;
             if(id) {
                 subQuery = "(SELECT id, suggestion FROM commentThreads WHERE id = ?) AS threads";
                 params = [id];
@@ -626,7 +623,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         formattedComments[commentRows[i].thread] = commentRows[i];
                     }
                 }
-                for(var i = 0; i < commentRows.length; i++) {
+                for(i = 0; i < commentRows.length; i++) {
                     if(!commentRows[i].isReply && formattedComments[commentRows[i].thread]) {
                         result.push(formattedComments[commentRows[i].thread]);
                     }
@@ -655,7 +652,7 @@ module.exports = function(app, mysqlConnection, auth) {
         try {
             var commentId = checkParam(req.params, "id");
             commentId = parseInt(commentId, 36);
-            if(commentId == NaN) {
+            if(isNaN(commentId)) {
                 throw new Error("invalid commentId");
             }
         } catch(e) {
@@ -775,7 +772,6 @@ module.exports = function(app, mysqlConnection, auth) {
                                     mysqlConnection.beginTransaction(function(err) {
                                         if(err) {
                                             throw err;
-                                            return;
                                         }
                                         mysqlConnection.query("INSERT INTO notifications (entity, author, action) VALUES (?, ?, 'mention')", [cid, userId], function(err, rows, fields) {
                                             testTransactionError(err);
@@ -784,14 +780,14 @@ module.exports = function(app, mysqlConnection, auth) {
                                                 sendNotification(rows.insertId, user, function(err) {
                                                     testTransactionError(err);
                                                     toSend--;
-                                                    if(toSend == 0) {
+                                                    if(toSend === 0) {
                                                         mysqlConnection.commit(function(err) {
                                                             testTransactionError(err);
                                                         });
                                                         return;
                                                     }
                                                 });
-                                            })
+                                            });
                                         });
                                     });
                                 }
@@ -849,7 +845,7 @@ module.exports = function(app, mysqlConnection, auth) {
             removeSpecialChars(title);
             removeSpecialChars(descr);
             var query, params;
-            if(lat != null && lon != null) {
+            if(lat !== null && lon !== null) {
                 lat *= 10000000;
                 lon *= 10000000;
                 query = 'INSERT INTO suggestions (title, descr, lat, lon, author, entityId) VALUES (?, ?, ?, ?, ?, ?)';
@@ -980,7 +976,7 @@ module.exports = function(app, mysqlConnection, auth) {
                             testTransactionError(err);
                             callback();
                         });
-                    })
+                    });
                 });
             }
             function editTagsRemoved(callback) {
@@ -1007,7 +1003,7 @@ module.exports = function(app, mysqlConnection, auth) {
                             testTransactionError(err);
                             callback();
                         });
-                    })
+                    });
                 });
             }
             var fa = [];
@@ -1038,12 +1034,12 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(200).end();
             });
         }
-        if(thing.type == 0 || thing.type == 1) {
+        if(thing.type === 0 || thing.type === 1) {
             var thingName = utils.thingTypeToString(thing.type);
             var tableName = thingName + "s";
             var selectQuery = "SELECT entityId, author";
-            var onCanEdit = thing.type == 0 ? editSuggestion : editComment;
-            if(thing.type == 0) {
+            var onCanEdit = thing.type === 0 ? editSuggestion : editComment;
+            if(thing.type === 0) {
                 selectQuery += ", title";
             }
             mysqlConnection.query(selectQuery + " FROM " + tableName + " WHERE entityId = ?", [thing.id], function(err, rows, fields) {
@@ -1156,7 +1152,7 @@ module.exports = function(app, mysqlConnection, auth) {
                             if(err) {
                                 try {
                                     fs.unlinkSync(oldPath);
-                                } catch(e) {};
+                                } catch(e) {}
                                 res.status(200).json(err);
                                 return;
                             }
@@ -1258,9 +1254,9 @@ module.exports = function(app, mysqlConnection, auth) {
         try {
             var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);
             var userId = parseInt(checkParam(req.body, "userId"), 36);
-            if(suggestionId == NaN) {
+            if(isNaN(suggestionId)) {
                 throw "incorrect suggestionId";
-            } else if(userId == NaN) {
+            } else if(isNaN(userId)) {
                 throw "incorrect userId";
             }
         } catch(e) {
@@ -1305,7 +1301,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
 
-        if(thing.type != 0 && thing.type != 1) {
+        if(thing.type !== 0 && thing.type !== 1) {
             res.status(400).end("you can't report this");
             return;
         }
@@ -1330,7 +1326,7 @@ module.exports = function(app, mysqlConnection, auth) {
     app.get("/api/user", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.query, "userId"), 36);
-            if(userId == NaN) {
+            if(isNaN(userId)) {
                 throw "incorrect userId";
             }
         } catch(e) {
@@ -1365,7 +1361,7 @@ module.exports = function(app, mysqlConnection, auth) {
     app.get("/api/userTags", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.query, "userId"), 36);
-            if(userId == NaN) {
+            if(isNaN(userId)) {
                 throw "incorrect userId";
             }
         } catch(e) {
@@ -1395,13 +1391,13 @@ module.exports = function(app, mysqlConnection, auth) {
         mysqlConnection.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             res.status(200).json(rows);
-        })
+        });
     });
 
     app.get("/api/users/notifications", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.query, "userId"), 36);
-            if(userId == NaN) {
+            if(isNaN(userId)) {
                 throw "incorrect userId";
             }
         } catch(e) {
@@ -1442,12 +1438,13 @@ module.exports = function(app, mysqlConnection, auth) {
         mysqlConnection.query("SELECT userNotifications.id AS id, entity, author, action, timeCreated, seen, authors.name AS authorName FROM userNotifications INNER JOIN notifications ON userNotifications.notification = notifications.id INNER JOIN users AS authors ON notifications.author = authors.id WHERE user = ? ORDER BY timeCreated DESC LIMIT 20", [userId], function(err, rows, fields) {
             if(err) throw err;
             var convertFunctions = [];
+            function addConvertFunction(i) {
+                convertFunctions.push(function(callback) {
+                    notificationToJSON(rows[i], callback);
+                });
+            }
             for(var i = 0; i < rows.length; i++) {
-                (function(row) {
-                    convertFunctions.push(function(callback) {
-                        notificationToJSON(row, callback);
-                    });
-                })(rows[i]);
+                addConvertFunction(i);
             }
             //series to keep the order
             async.series(convertFunctions, function(err, results) {
@@ -1458,17 +1455,17 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(200).json(results);
             });
 
-        })
+        });
     });
 
     app.post("/api/users/notifications/mark/seen", function(req, res) {
         try {
             var userId = parseInt(checkParam(req.body, "userId"), 36);
-            if(userId == NaN) {
+            if(isNaN(userId)) {
                 throw "incorrect userId";
             }
             var notificationId = parseInt(checkParam(req.body, "notificationId"), 36);
-            if(notificationId == NaN) {
+            if(isNaN(notificationId)) {
                 throw "incorrect notificationId";
             }
         } catch(e) {
@@ -1510,5 +1507,5 @@ module.exports = function(app, mysqlConnection, auth) {
                 }, reqCallback);
             }
         }
-    }
+    };
 };
