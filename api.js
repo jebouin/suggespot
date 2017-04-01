@@ -1420,9 +1420,14 @@ module.exports = function(app, mysqlConnection, auth) {
                         callback(err);
                         return;
                     }
-                    if(rows.length != 1) {
-                        //not found, delete notification
-                        callback(new Error("Not found"));
+                    if(rows.length === 0) {
+                        mysqlConnection.query("DELETE FROM userNotifications WHERE id = ?", [row.id], function(err, rows, fields) {
+                            if(err) {
+                                callback(err);
+                                return;
+                            }
+                            callback();
+                        });
                         return;
                     }
                     json.suggestionTitle = rows[0].title;
@@ -1452,6 +1457,9 @@ module.exports = function(app, mysqlConnection, auth) {
                     res.status(500).end();
                     return;
                 }
+                results.filter(function(value) {
+                    return value !== undefined;
+                });
                 res.status(200).json(results);
             });
 
