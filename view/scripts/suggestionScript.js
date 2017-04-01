@@ -1,6 +1,7 @@
 var editMode = false;
 var reportMode = false;
 var commentEditMode = false;
+var commentEdited;
 var photosExpanded = false;
 var loadingMoreComments = false;
 var mh, txt;
@@ -25,7 +26,7 @@ window.onbeforeunload = function() {
     if(prevDescription && prevDescription != $("#description p").html()) {
         return true;
     }
-}
+};
 
 function editableContentToText(txt) {
     return txt.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
@@ -33,7 +34,7 @@ function editableContentToText(txt) {
 
 function uploadPhoto() {
 	var files = $("#newPhoto input[type='file']")[0].files;
-	if(!files || files.length == 0) return;
+	if(!files || files.length === 0) return;
     var formData = new FormData();
     formData.append("photo", files[0]);
     formData.append("thingId", "0_" + sid);
@@ -212,13 +213,13 @@ function disableEditMode(b) {
         }
         editObject.photosOrder = order;
     }
-    if(editObject.photosOrder.length == 0) {
+    if(editObject.photosOrder.length === 0) {
         delete editObject.photosOrder;
     }
-    if(editObject.tagsAdded.length == 0) {
+    if(editObject.tagsAdded.length === 0) {
         delete editObject.tagsAdded;
     }
-    if(editObject.tagsRemoved.length == 0) {
+    if(editObject.tagsRemoved.length === 0) {
         delete editObject.tagsRemoved;
     }
     if((editObject.photosOrder && editObject.photosOrder.length > 0) ||
@@ -348,7 +349,7 @@ tagUI.removeTagCallback = function(tag) {
         editObject.tagsRemoved.push({tid: tid});
     }
     changes.push({type: "removeTag", name: name, tid: tid});
-}
+};
 
 tagUI.addTagCallback = function(name, id) {
     changes.push({type: "addTag", tid: id, name: name});
@@ -360,12 +361,12 @@ tagUI.addTagCallback = function(name, id) {
     } else {
         editObject.tagsAdded.push({tid: id, name : name});
     }
-}
+};
 
 tagUI.addCategoryCallback = function(name) {
     changes.push({type: "addCat", name: name});
     editObject.tagsAdded.push({name : name});
-}
+};
 
 //report
 function reportSubmit(e) {
@@ -384,7 +385,7 @@ function reportSubmit(e) {
         var reportJSON = {thingId: thingId, type: val};
         if(val == "other") {
             var message = $(".reportOtherInput", container).val();
-            if(message.length == 0) {
+            if(message.length === 0) {
                 return false;
             }
             reportJSON.message = message;
@@ -436,46 +437,56 @@ function disableReportMode(e) {
 
 //edit comment
 function editComment(e) {
-    if(commentEditMode) disableCommentEditMode($(e.target).parent().parent());
-    else enableCommentEditMode(e);
+    var comment = $(e.target).parent().parent();
+    if(commentEditMode) {
+        cancelCommentEdit();
+        if(!comment.is(commentEdited)) {
+            enableCommentEditMode(e);
+        }
+    } else {
+        enableCommentEditMode(e);
+    }
 }
 
 function enableCommentEditMode(e) {
     if(commentEditMode) return;
     commentEditMode = true;
+    commentEdited = $(e.target).parent().parent();
     disableReportMode(e);
-    var comment = $(e.target).parent().parent();
-    prevCommentText = $("p", comment).attr("contentEditable", "true").text();
-    $(".commentFooter", comment).hide();
-    $(".commentFooter.editFooter", comment).show();
+    prevCommentText = $("p", commentEdited).attr("contentEditable", "true").text();
+    $(".commentFooter", commentEdited).hide();
+    $(".commentFooter.editFooter", commentEdited).show();
+    var textarea = $(".textarea, p", commentEdited).focus();
+    setCaretToEnd(textarea[0]);
 }
 
-function disableCommentEditMode(comment) {
-    if(!commentEditMode) return;
+function disableCommentEditMode() {
+    if(!commentEditMode || !commentEdited) return;
     commentEditMode = false;
-    $("p", comment).attr("contentEditable", "false");
-    $(".commentFooter", comment).hide().first().show();
+    $("p", commentEdited).attr("contentEditable", "false");
+    $(".commentFooter", commentEdited).hide().first().show();
     $(".dropdown").hide();
 }
 
 function saveCommentEdit(e) {
-    var comment = $(e.target).parent().parent();
-    var newCommentText = $("p", comment).html();
+    if(!commentEdited) return;
+    var newCommentText = $("p", commentEdited).html();
     if(newCommentText != prevCommentText) {
         var text = newCommentText.replace(/<br\s*[\/]?>/gi, "\n").replace(/&nbsp/gi, "");
         var thingId = "1_" + $(e.target).attr("cid");
-        $.post("/edit", {thingId: thingId, content: text}, function(data) {
+        $.post("/edit", {thingId: thingId, content: text}).done(function(data) {
             //edit succesful
             prevCommentText = newCommentText;
+        }).fail(function(data) {
+            console.log(data);
         });
     }
-    disableCommentEditMode(comment);
+    disableCommentEditMode();
 }
 
-function cancelCommentEdit(e) {
-    var comment = $(e.target).parent().parent();
-    $("p", comment).text(prevCommentText);
-    disableCommentEditMode(comment);
+function cancelCommentEdit() {
+    $("p", commentEdited).text(prevCommentText);
+    disableCommentEditMode();
 }
 
 $(document).ready(function() {
@@ -590,6 +601,7 @@ $(document).ready(function() {
         var caretPos = getCaretOffset(e.target);
         if(caretPos === null) return;
         mentionPos = text.substr(0, caretPos).lastIndexOf("@");
+        if(mentionPos > 0 && text[mentionPos-1] != " " && text[mentionPos-1] != "\n") return;
         caretPos -= mentionPos;
         text = text.substr(mentionPos);
         var match = mentionExpr.exec(text);
@@ -628,16 +640,19 @@ $(document).ready(function() {
     $(document).on("click", ".dropdownOption", function(e) {
         var target = $(e.target);
         var optionText = target.text();
-        var commentBody = target.parent().parent().find("div[contentEditable='true'], p[contentEditable='true']");
+        var commentBody = $(":focus");
+        if(!commentBody.attr("contentEditable")) {
+            return;
+        }
         if(commentBody.length < 1) return false;
         var commentText = commentBody.text();
         var match = mentionExpr.exec(commentText.substr(mentionPos));
         if(!match || match.length < 1) return false;
         var nameLength = optionText.length + 1;
-        var suffix = commentText.substr(mentionPos + nameLength);
+        console.log(match);
+        var suffix = commentText.substr(mentionPos + match[0].length);
         var newCommentText = commentText.substr(0, mentionPos + 1) + optionText;
-
-        if(suffix.length == 0 || suffix.length == 1 || (suffix[0] != ' ' && suffix[0] != '\n')) {
+        if(suffix.length === 0 || suffix.length == 1 || (suffix[0] != ' ' && suffix[0] != '\n')) {
             newCommentText += " ";
         }
         newCommentText += suffix;
@@ -670,6 +685,17 @@ function getCaretOffset(element) {
     return null;
 }
 
+function setCaretToEnd(element) {
+    if(window.getSelection) {
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        var range = document.createRange();
+        var offset = 1;
+        range.setStart(element, offset);
+        range.setEnd(element, offset);
+        sel.addRange(range);
+    }
+}
 
 function getCaretRect() {
     if(window.getSelection) {
@@ -732,14 +758,14 @@ function sendComment(event) {
                 onCommentSent();
             } else {
                 $("#comments").prepend(newComment);
-                $(".textarea").html("");
+                $(".textarea", target.parent()).html("");
             }
         });
     });
     function onCommentSent() {
         var commentUI = $(event.target).parent();
     	commentUI.css("display", "none");
-        $(".textarea").html("");
+        $(".textarea", target.parent()).html("");
     	$("a", commentUI.parent()).show();
     }
 }
@@ -747,7 +773,7 @@ function sendComment(event) {
 function cancelComment(event) {
 	var commentUI = $(event.target).parent();
 	commentUI.hide();
-    $(".textarea").html("");
+    $(".textarea", commentUI).html("");
 	$("a", commentUI.parent()).show();
 }
 

@@ -35,17 +35,17 @@ module.exports = function(app, mysqlConnection, auth) {
     mysqlConnection.beginTransaction = function(options, callback) {
         inTransaction = true;
         originalBeginTransaction.call(mysqlConnection, options, callback);
-    }
+    };
 
     mysqlConnection.commit = function(options, callback) {
         inTransaction = false;
         originalCommit.call(mysqlConnection, options, callback);
-    }
+    };
 
     mysqlConnection.rollback = function(options, callback) {
         inTransaction = false;
         originalRollback.call(mysqlConnection, options, callback);
-    }
+    };
 
     function testTransactionError(err, beforeCallback) {
         if(err) {
@@ -108,7 +108,7 @@ module.exports = function(app, mysqlConnection, auth) {
     var queries = {
         score: "CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score",
         distance: "12742000 * ASIN(SQRT(POW(SIN(RADIANS(lat / 10000000 - ?) / 2), 2) + COS(RADIANS(lat / 10000000)) * COS(RADIANS(?)) * POW(SIN(RADIANS(lon / 10000000 - ?) / 2), 2))) AS dist"
-    }
+    };
 
     app.get(["/api/suggestions/:mode", "/api/suggestions/"], function(req, res) {
         var mode = req.params.mode;
@@ -1033,7 +1033,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(400).end("no comment content provided");
                 return;
             }
-            mysqlConnection.query("UPDATE comments SET content = ? WHERE entityId = ?", [commentContent, comment.id], function(err, rows, fields) {
+            mysqlConnection.query("UPDATE comments SET content = ? WHERE entityId = ?", [commentContent, comment.entityId], function(err, rows, fields) {
                 if(err) throw err;
                 res.status(200).end();
             });

@@ -179,7 +179,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 					res.status(200);
 					res.end();
 				});
-			})
+			});
 		});
 
 		app.post("/uploadPhoto", function(req, res) {
@@ -206,7 +206,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                         res.status(err.code ? err.code : 500).end();
                     }
                     res.status(200).json(tagData);
-                })
+                });
             });
         });
 
@@ -251,7 +251,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                         return;
                     }
                     res.status(200).end();
-                })
+                });
             }, function() {
                 res.status(401).end();
             });
