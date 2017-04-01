@@ -792,7 +792,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                     });
                                 }
                             }
-                            if(mentionnedAuthor) {
+                            if(mentionnedAuthor || suggestionData.author == userId) {
                                 sendMentionNotifications();
                             } else {
                                 mysqlConnection.beginTransaction(function(err) {

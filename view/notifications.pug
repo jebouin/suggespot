@@ -25,7 +25,8 @@ mixin notifications(data)
       div#notificationsBody(style="display: none")
         if data.length
           each d in data
-            + notification(d)
+            if d
+              + notification(d)
         else
           | No notifications
       br
