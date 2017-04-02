@@ -17,16 +17,22 @@ html {
 body {
 	position: relative;
 	background: $berylGreen;
-	margin: 0px;
-	padding: 0px;
 	font: $fontSize sans-serif;
+    padding: 30px;
 }
 
 #body {
-	background: $white;
-	padding: 10px 20px 20px 20px;
-	margin: 0px 30px 20px 30px;
+    margin-bottom: 20px;
 	height: 100%;
+}
+
+#footer {
+    
+}
+
+#body, #footer {
+    background: $white;
+    padding: 18px;
 }
 
 input, button {

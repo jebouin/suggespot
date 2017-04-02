@@ -1,15 +1,5 @@
 @import "common";
 
-a {
-	color: $logCabin;
-}
-
-h1 {
-	font-size: 80px;
-	margin: 0px 0px 50px 0px;
-	text-align: center;
-}
-
 h2 {
 	display: inline-block;
 	font-size: 50px;
@@ -70,10 +60,6 @@ form {
 	margin: auto;
 	text-align: center;
 	vertical-align: middle;
-}
-
-#footer {
-    background: $white;
 }
 
 #notificationsContainer {

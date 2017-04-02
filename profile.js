@@ -1,4 +1,4 @@
-const async = require("async")
+const async = require("async");
 
 module.exports = function(app, mysqlConnection, auth, view, api) {
 
@@ -6,21 +6,20 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 		app.get("/p/:id", function(req, res) {
             var url = req.originalUrl;
 			var id = req.params.id;
+            console.log(url, req.params);
             function getProfile(loginData) {
                 api.makeLocalAPICall("GET", "/api/user", {userId: id}, function(err, profileData) {
     				if(err) {
-                        throw err;
     					res.redirect("/");
-    					return;
+                        throw err;
     				}
                     if(loginData && Object.keys(loginData).length > 0) {
                         profileData.user = loginData;
                     }
                     api.makeLocalAPICall("GET", "/api/userTags", {userId: id}, function(err, tagData) {
                         if(err) {
-                            throw err;
                             res.redirect("/");
-                            return;
+                            throw err;
                         }
                         profileData.tags = tagData;
                         profileData.authorId = id;

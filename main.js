@@ -60,9 +60,14 @@ function createRoutes() {
     	});
     });
 
-    app.get("/indexDivs.html", function(req, res) {
-    	utils.sendFile(res, "view/indexDivs.html");
+    app.get("/terms", function(req, res) {
+        res.end(view.getTemplate("terms")());
     });
+
+    app.get("/privacy", function(req, res) {
+        res.end(view.getTemplate("privacy")());
+    });
+
 
     app.use("/style", express.static(__dirname + "/view/style"));
 
@@ -92,7 +97,7 @@ function createRoutes() {
 
     /*app._router.stack.forEach(function(r) {
         if(r.route && r.route.path){
-            console.log(r.route.path)
+            console.log(r.route.path);
         }
     });*/
 }
