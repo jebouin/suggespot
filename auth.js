@@ -7,6 +7,7 @@ module.exports = function(app, mysqlConnection, view) {
 
 	function createRoutes() {
 		app.post("/register", function(req, res) {
+            console.log(req.body);
 			var username = req.body.username;
 			try {
 				if(username.length < 3 || username.length > 20) {

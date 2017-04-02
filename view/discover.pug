@@ -29,8 +29,11 @@ block content
     h2 Do you want custom suggestions?
     br
     form(name="register" action="/register" method="POST")
-      input.big(type="text" name="username" placeholder="Username" required)
-      input.big(type="submit" value="Register")
+      input(type="text" name="username" placeholder="Username" required)
+      input(type="password" name="password" placeholder="Password" required)
+      input(type="password" name="password2" placeholder="Verify Password" required)
+      input(type="email" name="email" placeholder="Email" required)
+      input(type="submit" value="Register")
 
 block scripts
   script.
