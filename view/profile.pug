@@ -1,27 +1,25 @@
-include head
+extends layout.pug
+
 include tagUI
 
-doctype html
-html
-	+head()
-	body
-		div#body
-			include header
-			h2 #{name}'s profile
-			p user for #{timeSinceRegistered}
-			if tags
-				h2 Followed Tags
-				br
-				if id == user.id
-					+ tagsUI(tags, false, "Edit")
-				else
-					+ tagsUI(tags, true)
-			h2 #{name}'s suggestions
-			br
-			#suggestionsContainer
-		script.
-			var authorId = "#{authorId}";
-		script(src="/libs/jquery.js")
-		script(src="/view/scripts/voteUI.js")
-		script(src="/view/scripts/tagScript.js")
-		script(src="/view/scripts/profileScript.js")
+block content
+  h2 #{name}'s profile
+  p user for #{timeSinceRegistered}
+  if tags
+    h2 Followed Tags
+    br
+    if id == user.id
+      + tagsUI(tags, false, "Edit")
+    else
+      + tagsUI(tags, true)
+  h2 #{name}'s suggestions
+  br
+  #suggestionsContainer
+
+block scripts
+  script.
+    var authorId = "#{authorId}";
+  script(src="/libs/jquery.js")
+  script(src="/view/scripts/voteUI.js")
+  script(src="/view/scripts/tagScript.js")
+  script(src="/view/scripts/profileScript.js")

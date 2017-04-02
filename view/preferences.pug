@@ -1,10 +1,5 @@
-include head
+extends layout.pug
 
-doctype html
-html
-	+head()
-	body
-		div#body
-			include header
-			h2 Preferences
-			p blablabla
+block content
+  h2 Preferences
+  p blablabla

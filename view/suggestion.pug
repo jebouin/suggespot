@@ -1,4 +1,5 @@
-include head
+extends layout.pug
+
 include voteUI
 include editUI
 include tagUI
@@ -45,71 +46,66 @@ mixin commentUI(isReply)
     if isReply
       button(title="Cancel (Esc)" onclick="cancelComment(event)") Cancel
 
-- var isAuthor = user && user.id == author
+block content
+  - var isAuthor = user && user.id == author
+  div.indented
+    + voteUI("0_" + sid, score, voteDir, user)
+    h2 #{title}
+  div#suggestionBody
+    | Tags:&nbsp;
+    + tagsUI(tags, true, "+New")
+    div#photos
+      div#photosGrid
+        + photo({}, true)
+        if photos && photos.length
+          each p in photos
+            + photo(p)
+        if isAuthor
+          + newPhoto()
+      button#morePhotos(style="display: none") More
+    div#description
+      p(contentEditable="false") #{descr}
+    div#suggestionBar
+      span#info
+        span#author
+          | By&nbsp;
+          if author != null
+            a(href="/p/"+author) #{authorName}
+          else
+            | [deleted]
+        | &nbsp;
+        a(href="javascript:void(0)" onclick="report(event)") Report
+        | &nbsp;
+      if isAuthor
+        button#editButton Edit
+      br
+    + reportUI([{value: "spam", text: "This suggestion is spam"},
+                {value: "inappropriate", text: "This suggestion is inappropriate"},
+                {value: "private info", text: "This suggestion contains personal/private information"},
+                {value: "not an experience", text: "This suggestion doesn't describe an experience"}])(class="reportSuggestion")
+    + reportUI([{value: "spam", text: "This comment is spam"},
+                {value: "inappropriate", text: "This comment is inappropriate"},
+                {value: "private info", text: "This comment contains personal/private information"}])(class="reportComment")
+  if published
+    div#publishedContainer
+      h2.indented Comments
+      br
+      div.dropdown(style="display: none")
+      if user
+        + commentUI()
+      div#comments
+      if user
+        + commentUI(true)
+  else
+    button.big#publishButton Publish
 
-doctype html
-html
-  +head()
-  body
-    div#dark
-    #body
-      include header
-      div.indented
-        + voteUI("0_" + sid, score, voteDir, user)
-        h2 #{title}
-      div#suggestionBody
-        | Tags:&nbsp;
-        + tagsUI(tags, true, "+New")
-        div#photos
-          div#photosGrid
-            + photo({}, true)
-            if photos && photos.length
-              each p in photos
-                + photo(p)
-            if isAuthor
-              + newPhoto()
-          button#morePhotos(style="display: none") More
-        div#description
-          p(contentEditable="false") #{descr}
-        div#suggestionBar
-          span#info
-            span#author
-              | By&nbsp;
-              if author != null
-                a(href="/p/"+author) #{authorName}
-              else
-                | [deleted]
-            | &nbsp;
-            a(href="javascript:void(0)" onclick="report(event)") Report
-            | &nbsp;
-          if isAuthor
-            button#editButton Edit
-          br
-        + reportUI([{value: "spam", text: "This suggestion is spam"},
-                    {value: "inappropriate", text: "This suggestion is inappropriate"},
-                    {value: "private info", text: "This suggestion contains personal/private information"},
-                    {value: "not an experience", text: "This suggestion doesn't describe an experience"}])(class="reportSuggestion")
-        + reportUI([{value: "spam", text: "This comment is spam"},
-                    {value: "inappropriate", text: "This comment is inappropriate"},
-                    {value: "private info", text: "This comment contains personal/private information"}])(class="reportComment")
-      if published
-        div#publishedContainer
-          h2.indented Comments
-          br
-          div.dropdown(style="display: none")
-          if user
-            + commentUI()
-          div#comments
-          if user
-            + commentUI(true)
-      else
-        button.big#publishButton Publish
-    script.
-      var maximumPhotos = "#{maximumPhotos}";
-      var cid = "#{cid}";
-      var sid = "#{sid}";
-    script(src="/libs/jquery.js")
-    script(src="/view/scripts/location.js")
-    script(src="/view/scripts/tagScript.js")
-    script(src="/view/scripts/suggestionScript.js")
-    script(src="/view/scripts/voteUI.js")
+block scripts
+  script.
+    var maximumPhotos = "#{maximumPhotos}";
+    var cid = "#{cid}";
+    var sid = "#{sid}";
+  script(src="/libs/jquery.js")
+  script(src="/view/scripts/location.js")
+  script(src="/view/scripts/tagScript.js")
+  script(src="/view/scripts/suggestionScript.js")
+  script(src="/view/scripts/voteUI.js")

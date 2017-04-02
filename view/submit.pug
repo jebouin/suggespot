@@ -1,23 +1,27 @@
-include head
+extends layout.pug
 
-doctype html
-html
-  +head("/style/submit.css")
-  body
-    div#map
-    input#searchBox.controls(type="text" placeholder="Search")
-    button#mapNext.hidden Next
-    div#mapForm
-      button#mapBack Back
+block header
+
+block stylesheet
+  link(rel="stylesheet" type="text/css" href="/style/submit.css")
+
+block content
+  div#map
+  input#searchBox.controls(type="text" placeholder="Search")
+  button#mapNext.hidden Next
+  div#mapForm
+    button#mapBack Back
+    br
+    form(name="submit" action="/submit" method="POST")
+      input.big(type="hidden" name="lat" placeholder="Latitude")
+      input.big(type="hidden" name="lon" placeholder="Longitude")
+      input.big(type="text" name="title" placeholder="Title" autocomplete="off" required)
       br
-      form(name="submit" action="/submit" method="POST")
-        input.big(type="hidden" name="lat" placeholder="Latitude")
-        input.big(type="hidden" name="lon" placeholder="Longitude")
-        input.big(type="text" name="title" placeholder="Title" autocomplete="off" required)
-        br
-        textarea.big(name="descr" placeholder="Describe your experience here" autocomplete="off" required)
-        br
-        input.big(type="submit" value="Submit")
+      textarea.big(name="descr" placeholder="Describe your experience here" autocomplete="off" required)
+      br
+      input.big(type="submit" value="Submit")
+
+block scripts
     script(src="/libs/jquery.js")
     script(src="/view/scripts/pickLocation.js")
     script(src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBeP2jWF6ypAr5e7WlgqGgEGibTX1Hb_No&libraries=places&callback=googleMapsLoaded" async defer)
