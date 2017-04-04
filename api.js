@@ -68,13 +68,6 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     }
 
-    function checkParam(params, toCheck) {
-        if(!params[toCheck]) {
-            throw new Error("parameter " + toCheck + " is missing");
-        }
-        return params[toCheck];
-    }
-
     function checkUserExists(id, res, callback) {
         mysqlConnection.query("SELECT name FROM users WHERE id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
@@ -358,9 +351,9 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/vote", function(req, res) {
         try {
-            var thingId = checkParam(req.body, "thingId");
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var dir = checkParam(req.body, "dir");
+            var thingId = utils.checkParam(req.body, "thingId");
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            var dir = utils.checkParam(req.body, "dir");
             var thing = utils.getThingFromId(req.body.thingId);
         } catch(e) {
             res.status(400).end(e.message);
@@ -650,7 +643,7 @@ module.exports = function(app, mysqlConnection, auth) {
             userId = parseInt(userId, 36);
         }
         try {
-            var commentId = checkParam(req.params, "id");
+            var commentId = utils.checkParam(req.params, "id");
             commentId = parseInt(commentId, 36);
             if(isNaN(commentId)) {
                 throw new Error("invalid commentId");
@@ -683,9 +676,9 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/comment", function (req, res) {
         try {
-            var suggestionId = checkParam(req.body, "suggestionId");
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var content = checkParam(req.body, "content");
+            var suggestionId = utils.checkParam(req.body, "suggestionId");
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            var content = utils.checkParam(req.body, "content");
         } catch(e) {
             res.status(400).end(e.message);
             return;
@@ -827,9 +820,9 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/submit", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var title = checkParam(req.body, "title");
-            var descr = checkParam(req.body, "descr");
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            var title = utils.checkParam(req.body, "title");
+            var descr = utils.checkParam(req.body, "descr");
         } catch(e) {
             res.status(400).end(e.message);
             return;
@@ -875,10 +868,10 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/edit", function(req, res) {
         try {
-            var user = checkParam(req.body, "user");
+            var user = utils.checkParam(req.body, "user");
             user.id = parseInt(user.id, 36);
-            var edit = checkParam(req.body, "edit");
-            var thingId = checkParam(edit, "thingId");
+            var edit = utils.checkParam(req.body, "edit");
+            var thingId = utils.checkParam(edit, "thingId");
             var thing = utils.getThingFromId(thingId);
         } catch(e) {
             res.status(400).end(e.message);
@@ -1024,7 +1017,7 @@ module.exports = function(app, mysqlConnection, auth) {
         }
         function editComment(comment) {
             try {
-                var commentContent = checkParam(edit, "content");
+                var commentContent = utils.checkParam(edit, "content");
             } catch(e) {
                 res.status(400).end("no comment content provided");
                 return;
@@ -1067,9 +1060,9 @@ module.exports = function(app, mysqlConnection, auth) {
             auth.checkUserLoggedIn(req, res, function(data) {
                 req.body.userId = data.id;
                 try {
-                    var userId = parseInt(checkParam(req.body, "userId"), 36);
-                    var thingId = checkParam(req.body, "thingId");
-                    var fromUrl = checkParam(req.body, "fromUrl");
+                    var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+                    var thingId = utils.checkParam(req.body, "thingId");
+                    var fromUrl = utils.checkParam(req.body, "fromUrl");
                     var thing = utils.getThingFromId(thingId);
                     if(thing.type == 1) {
                         throw "you can't upload a photo for a comment";
@@ -1093,7 +1086,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 }
                 function getPhotoFromUrl(newPath, cb) {
                     try {
-                        var url = checkParam(req.body, "url");
+                        var url = utils.checkParam(req.body, "url");
                     } catch(e) {
                         res.status(400).end(e.message);
                         return;
@@ -1123,7 +1116,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 }
                 function getPhotoFromForm(newPath, cb) {
                     try {
-                        checkParam(req, "file");
+                        utils.checkParam(req, "file");
                     } catch(e) {
                         res.status(400).end(e.message);
                         return;
@@ -1189,8 +1182,8 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/delete", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var thingId = checkParam(req.body, "thingId");
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            var thingId = utils.checkParam(req.body, "thingId");
             var thing = utils.getThingFromId(thingId);
             if(thing.type != 3) {
                 throw "you can't delete this";
@@ -1222,8 +1215,8 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/follow", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var tagName = checkParam(req.body, "tagName");
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            var tagName = utils.checkParam(req.body, "tagName");
         } catch(e) {
             res.status(400).end(e.message);
             return;
@@ -1237,8 +1230,8 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/unfollow", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var tagName = checkParam(req.body, "tagName");
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            var tagName = utils.checkParam(req.body, "tagName");
         } catch(e) {
             res.status(400).end(e.message);
             return;
@@ -1252,8 +1245,8 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/publish", function(req, res) {
         try {
-            var suggestionId = parseInt(checkParam(req.body, "suggestionId"), 36);
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            var suggestionId = parseInt(utils.checkParam(req.body, "suggestionId"), 36);
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
             if(isNaN(suggestionId)) {
                 throw "incorrect suggestionId";
             } else if(isNaN(userId)) {
@@ -1284,10 +1277,10 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/report", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
-            var thingId = checkParam(req.body, "thingId");
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            var thingId = utils.checkParam(req.body, "thingId");
             var thing = utils.getThingFromId(thingId);
-            var type = checkParam(req.body, "type");
+            var type = utils.checkParam(req.body, "type");
             var message = req.body.message;
             if(type == "other") {
                     if(!message) {
@@ -1325,7 +1318,7 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.get("/api/user", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.query, "userId"), 36);
+            var userId = parseInt(utils.checkParam(req.query, "userId"), 36);
             if(isNaN(userId)) {
                 throw "incorrect userId";
             }
@@ -1360,7 +1353,7 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.get("/api/userTags", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.query, "userId"), 36);
+            var userId = parseInt(utils.checkParam(req.query, "userId"), 36);
             if(isNaN(userId)) {
                 throw "incorrect userId";
             }
@@ -1396,9 +1389,9 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.get("/api/users/notifications", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.query, "userId"), 36);
+            var userId = parseInt(utils.checkParam(req.query, "userId"), 36);
             if(isNaN(userId)) {
-                throw "incorrect userId";
+                throw new Error("incorrect userId");
             }
         } catch(e) {
             res.status(400).end(e.message);
@@ -1468,11 +1461,11 @@ module.exports = function(app, mysqlConnection, auth) {
 
     app.post("/api/users/notifications/mark/seen", function(req, res) {
         try {
-            var userId = parseInt(checkParam(req.body, "userId"), 36);
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
             if(isNaN(userId)) {
                 throw "incorrect userId";
             }
-            var notificationId = parseInt(checkParam(req.body, "notificationId"), 36);
+            var notificationId = parseInt(utils.checkParam(req.body, "notificationId"), 36);
             if(isNaN(notificationId)) {
                 throw "incorrect notificationId";
             }

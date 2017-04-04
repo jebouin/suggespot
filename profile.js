@@ -6,7 +6,6 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
 		app.get("/p/:id", function(req, res) {
             var url = req.originalUrl;
 			var id = req.params.id;
-            console.log(url, req.params);
             function getProfile(loginData) {
                 api.makeLocalAPICall("GET", "/api/user", {userId: id}, function(err, profileData) {
     				if(err) {

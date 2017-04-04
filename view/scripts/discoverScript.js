@@ -25,6 +25,30 @@ function loadMore() {
     });
 }
 
+function onRegister(e) {
+    e.preventDefault();
+    //convert form data
+    var data = $(e.target).serializeArray().reduce(function(data, item) {
+        data[item.name] = item.value;
+        return data;
+    }, {});
+    //check details
+    //send
+    function onFail(err) {
+        console.log(err);
+    }
+    $.post("/register", data).done(function(res) {
+        if(res.errors && res.errors.length > 0) {
+            onFail(res.errors);
+            return;
+        }
+        window.location = res;
+    }).fail(function(xhr, status, err) {
+        onFail(err);
+    });
+    return false;
+}
+
 $(document).ready(function() {
     currentLocation.get(function(err) {
         loadMore();

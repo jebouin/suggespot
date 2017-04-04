@@ -4,9 +4,13 @@ block content
   div#contentLeft
     input(type="submit" value="Discover Anonymously" onclick="location.href='/all'")
   div#contentRight
-    form(name="login" action="/login" method="POST")
+    form(name="login" method="POST" action="" onsubmit="onLogin(event)")
       input(type="text" name="username" placeholder="Username" required)
       br
       input(type="password" name="password" required)
       br
       input(type="submit" value="Log In")
+
+block scripts
+  script(src="/libs/jquery.js")
+  script(src="/view/scripts/indexScript.js")

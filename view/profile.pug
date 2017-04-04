@@ -4,7 +4,12 @@ include tagUI
 
 block content
   h2 #{name}'s profile
-  p user for #{timeSinceRegistered}
+  p user&nbsp;
+    if timeSinceRegistered.length > 0
+      | for #{timeSinceRegistered}
+    else
+      | since now
+  br
   if tags
     h2 Followed Tags
     br

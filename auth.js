@@ -4,36 +4,165 @@ const utils = require("./utils");
 const crypto = require("crypto");
 
 module.exports = function(app, mysqlConnection, view) {
+    
+    function testTransactionError(err, beforeCallback) {
+        if(err) {
+            mysqlConnection.rollback();
+            if(beforeCallback) {
+                beforeCallback();
+            }
+            throw err;
+        }
+    }
+    
+    function getNewPasswordHash(correctPassword) {
+        var salt = utils.getSalt();
+        var hash = crypto.createHash("sha256").update("" + correctPassword + salt).digest("hex");
+        return {salt: salt, hash: hash};
+    }
+
+    function getNewSessionHash(userId) {
+        var salt = utils.getSalt();
+        var hash = crypto.createHash("sha256").update("" + userId + salt).digest("base64");
+        return {salt: salt, hash: hash};
+    }
+
+    function changePasswordSalt(userId, correctPassword, callback) {
+        var hash = getNewPasswordHash(correctPassword);
+        mysqlConnection.query("UPDATE users SET (salt2 = ?, hash = ?) WHERE id = ?", [hash.salt, hash.hash, userId], function(err, rows, fields) {
+            if(err) {
+                callback(err);
+                return;
+            }
+            callback();
+        });
+    }
+
+    function changeSessionSalt(userId, callback) {
+        var hash = getNewSessionHash(userId);
+        mysqlConnection.query("UPDATE users SET salt = ? WHERE id = ?", [hash.salt, hash.hash], function(err, rows, fields) {
+            if(err) {
+                callback(err);
+                return;
+            }
+            callback(null, hash);
+        });
+    }
+    
+    function checkUser(name, email, password, password2, callback) {
+        var errors = [];
+        var emailLocal, emailDomain;
+        function checkUsername(callback) {
+            if(name.length < 3) {
+                errors.push("U_TS");
+            } else if(name.length > 20) {
+                errors.push("U_TL");
+            } else if(!name.match(/^[a-zA-Z0-9_]+$/)) {
+                errors.push("U_INV");
+            }
+            mysqlConnection.query("SELECT id FROM users WHERE name = ?", [name], function(err, rows, fields) {
+                if(err) {
+                    callback(err);
+                    return;
+                }
+                if(rows.length > 0) {
+                    errors.push("U_EX");
+                }
+                callback();
+            });
+        }
+        function checkEmail() {
+            if(email.length > 320) {
+                errors.push("E_TL");
+                return;
+            }
+            var emailExpr = /^(?=[A-Z0-9][A-Z0-9@._%+-]{5,253}$)[A-Z0-9._%+-]{1,64}@(?:(?=[A-Z0-9-]{1,63}\.)[A-Z0-9]+(?:-[A-Z0-9]+)*\.){1,8}[A-Z]{2,63}$/i;
+            var match = emailExpr.exec(email);
+            if(match === null) {
+                errors.push("E_INV");
+            } else {
+                var atPos = email.indexOf("@");
+                emailLocal = email.substr(0, atPos);
+                emailDomain = email.substr(atPos + 1);
+                if(emailLocal.length > 64 || emailDomain.length > 255) {
+                    errors.push("E_TL");
+                    return;
+                }
+            }
+        }
+        function checkPassword() {
+            if(password != password2) {
+                errors.push("P_DM");
+            }
+            if(password.length < 10) {
+                errors.push("P_TS");
+            } else if(password.length > 255) {
+                errors.push("P_TL");
+            } else if(!password.match(/^[A-Z0-9 !"#\$%&'()*+,-\.\/:;<=>?@[\\\]^_`{|}~]+$/i)) {
+                errors.push("P_INV");
+            }
+        }
+        try {
+            checkUsername(function(err) {
+                if(err) throw err;
+                checkEmail();
+                checkPassword();
+                callback(null, errors, emailLocal, emailDomain);
+            });
+        } catch(e) {
+            console.log(e);
+            callback(e);
+            return;
+        }
+    }
+
+    function createUser(name, emailLocal, emailDomain, password, callback) {
+        mysqlConnection.beginTransaction(function(err) {
+            testTransactionError(err);
+            mysqlConnection.query("INSERT INTO users (name) VALUES (?)", [name], function(err, rows, fields) {
+                testTransactionError(err);
+                var userId = rows.insertId;
+                mysqlConnection.query("INSERT INTO emails (local, domain, user) VALUES (?, ?, ?)", [emailLocal, emailDomain, userId], function(err, rows, fields) {
+                    testTransactionError(err);
+                    mysqlConnection.commit(function(err) {
+                        testTransactionError(err);
+                        callback(userId);
+                    });
+                });
+            });
+        });
+    }
 
 	function createRoutes() {
 		app.post("/register", function(req, res) {
-            console.log(req.body);
-			var username = req.body.username;
-			try {
-				if(username.length < 3 || username.length > 20) {
-					throw "username should be between 3 and 20 characters";
-				} else if(!username.match(/^[a-zA-Z0-9_]+$/)) {
-					throw "username contains invalid characters";
-				}
-				mysqlConnection.query('SELECT id FROM users WHERE name = ?', [username], function(err, rows, fields) {
-					if(err) throw err;
-					if(rows.length) {
-						throw "user exists";
-					} else {
-						mysqlConnection.query('INSERT INTO users (name) VALUES (?)', [username], function(err, rows, fields) {
-							if(err) throw err;
-							mysqlConnection.query('SELECT id FROM users WHERE name = ?', [username], function(err, rows, fields) {
-								if(err) throw err;
-								logs.log("new user " + colors.bold(username));
-								logUserIn(req, res, rows[0].id, username);
-							});
-						});
-					}
-				});
-			} catch(e) {
-				console.log(e);
-				res.redirect("/discover");
-			}
+            try {
+                var username = utils.checkParam(req.body, "username");
+                var email = utils.checkParam(req.body, "email");
+                var password = utils.checkParam(req.body, "password");
+                var password2 = utils.checkParam(req.body, "password2");
+            } catch(e) {
+                res.status(400).end(e.message);
+                return;
+            }
+            checkUser(username, email, password, password2, function(err, errors, emailLocal, emailDomain) {
+                if(err) {
+                    res.status(500).end();
+                    return;
+                }
+                if(errors && errors.length > 0) {
+                    res.status(200).json({errors: errors});
+                    return;
+                } else {
+                    try {
+                        createUser(username, emailLocal, emailDomain, password, function(userId) {              
+							logs.log("new user " + colors.bold(username));
+                            logUserIn(req, res, userId, username, password);
+                        });
+                    } catch(e) {
+                        res.status(500).end();
+                    }
+                }
+            });
 		});
 
 		app.get("/register", function(req, res) {
@@ -41,13 +170,14 @@ module.exports = function(app, mysqlConnection, view) {
 		});
 
 		app.post("/login", function(req, res) {
+            console.log(req.body);
 			var username = req.body.username;
 			mysqlConnection.query('SELECT * FROM users WHERE name = ?', [username], function(err, rows, fields) {
 				if(err) throw err;
 				if(rows.length === 0) {
-					res.redirect("/");
+					res.status(403).end();
 				} else {
-					logUserIn(req, res, rows[0].id, username);
+					logUserIn(req, res, rows[0].id, username); //todo
 				}
 			});
 		});
@@ -62,16 +192,22 @@ module.exports = function(app, mysqlConnection, view) {
 		});
 	}
 
-	function logUserIn(req, res, id, name) {
-		var salt = utils.getSalt();
-        mysqlConnection.query('UPDATE users SET salt = ? WHERE id = ?', [salt, id], function(err, rows, fields) {
+	function logUserIn(req, res, id, name, password) {
+        var sessionHash = getNewSessionHash(id);
+        var passwordHash = getNewPasswordHash(password);
+        var params = [sessionHash.salt, passwordHash.salt, passwordHash.hash, id];
+        var uid = id.toString(36);
+        mysqlConnection.query('UPDATE users SET salt = ?, salt2 = ?, hash = ? WHERE id = ?', params, function(err, rows, fields) {
 			if(err) throw err;
-            id = id.toString(36);
-            var hash = crypto.createHash("sha256").update("" + id + salt).digest("base64");
-			res.cookie("uid", id, {expires: utils.getMonthsFromNow(1)});
-			res.cookie("uid2", hash, {expires: utils.getMonthsFromNow(1)});
-			res.redirect("/");
+			res.cookie("uid", uid, {expires: utils.getMonthsFromNow(1)});
+			res.cookie("uid2", sessionHash.hash, {expires: utils.getMonthsFromNow(1)});
 			logs.log("user " + colors.bold(name) + " logged in");
+            res.status(200).end("/p/" + uid);
+            if(req.method === "GET") {
+                res.redirect("/");
+            } else if(req.method == "POST") {
+                res.status(200).end("/p/" + uid);
+            }
 		});
 	}
 
@@ -87,10 +223,9 @@ module.exports = function(app, mysqlConnection, view) {
 					res.end(view.getTemplate("index")());
 				}
                 if(rows.length == 1) {
-                    rows[0].id = rows[0].id.toString(36);
-					var hash = crypto.createHash("sha256").update("" + req.cookies.uid + rows[0].salt).digest("base64");
+					var hash = crypto.createHash("sha256").update("" + uid + rows[0].salt).digest("base64");
                     if(hash === req.cookies.uid2) {
-						yesCallback(rows[0]);
+						yesCallback({id: uid.toString(36), name: rows[0].name});
 					} else {
 						wrongHash();
 					}

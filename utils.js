@@ -20,6 +20,7 @@ module.exports = {
 		return year + "/" + month + "/" + day + " " + hour + ":" + minutes + ":" + seconds;
 	},
     formatProfileTime: function(seconds) {
+        if(seconds < 3) return "";
         var timesInSecond = [31556926, 2628288, 604800, 86400, 3600, 60, 1];
         var timeStrings = ["year", "month", "week", "day", "hour", "minute", "second"];
         var i = 0, a = 0, b = 0;
@@ -28,12 +29,12 @@ module.exports = {
             seconds -= n * timesInSecond[i];
             if(n > 0) {
                 var str = n.toString() + " " + timeStrings[i] + (n == 1 ? "" : "s");
-                if(a == 0) a = str;
-                else if(b == 0) b = str;
+                if(a === 0) a = str;
+                else if(b === 0) b = str;
             }
             i++;
         }
-        return (b == 0 ? a : a + " and " + b);
+        return (b === 0 ? a : a + " and " + b);
     },
 	getSalt: function() {
 		return crypto.randomBytes(16).toString('base64');
@@ -46,7 +47,7 @@ module.exports = {
 	},
 	getUrlWithParameters: function(url, params) {
 		var f = true;
-		for(p in params) {
+		for(var p in params) {
 			url += (f ? "?" : "&") + p + "=" + params[p];
 			f = false;
 		}
@@ -79,6 +80,13 @@ module.exports = {
     thingTypeToTableName: function(type) {
         return thingTypeToString(type) + "s";
     },
+    checkParam: function(params, toCheck) {
+        var param = params[toCheck];
+        if(typeof param === "undefined" || param === null) {
+            throw new Error("parameter " + toCheck + " is missing");
+        }
+        return param; 
+    },
 	fileExtension: function(fileName) {
 		return ("." + fileName.split('.').pop()).toLowerCase();
 	},
@@ -102,6 +110,6 @@ module.exports = {
 		var seen = {};
 		return arr.filter(function(e) {
 			return seen.hasOwnProperty(e) ? false : (seen[e] = true);
-		})
+		});
 	}
 };
