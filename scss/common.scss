@@ -18,16 +18,16 @@ body {
 	position: relative;
 	background: $berylGreen;
 	font: $fontSize sans-serif;
-    padding: 30px;
+    margin: 0px;
 }
 
 #body {
-    margin-bottom: 20px;
+    margin: 30px;
 	height: 100%;
 }
 
 #footer {
-    
+   margin: 30px; 
 }
 
 #body, #footer {

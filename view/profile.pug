@@ -13,7 +13,7 @@ block content
   if tags
     h2 Followed Tags
     br
-    if id == user.id
+    if user && id == user.id
       + tagsUI(tags, false, "Edit")
     else
       + tagsUI(tags, true)
@@ -23,7 +23,7 @@ block content
 
 block scripts
   script.
-    var authorId = "#{authorId}";
+    var authorId = "#{id}";
   script(src="/libs/jquery.js")
   script(src="/view/scripts/voteUI.js")
   script(src="/view/scripts/tagScript.js")

@@ -21,7 +21,6 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                             throw err;
                         }
                         profileData.tags = tagData;
-                        profileData.authorId = id;
                         sendProfile(profileData);
                     });
     			});

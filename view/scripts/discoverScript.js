@@ -27,13 +27,10 @@ function loadMore() {
 
 function onRegister(e) {
     e.preventDefault();
-    //convert form data
     var data = $(e.target).serializeArray().reduce(function(data, item) {
         data[item.name] = item.value;
         return data;
     }, {});
-    //check details
-    //send
     function onFail(err) {
         console.log(err);
     }
