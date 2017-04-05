@@ -1498,6 +1498,41 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.post("/api/users/preferences/edit", function(req, res) {
+        try {
+            var userId = parseInt(utils.checkParam(req.body, "userId"), 36);
+            if(isNaN(userId)) {
+                throw "incorrect userId";
+            }
+            var changes = utils.checkParam(req.body, "editObject");
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        var query = "UPDATE preferences SET ";
+        var params = [];
+        for(var preference in changes) {
+            if(changes.hasOwnProperty(preference)) {
+                query += mysqlConnection.escapeId(preference) + "= ?, ";
+                params.push(changes[preference]);
+            }
+        }
+        if(params.length === 0) {
+            res.status(400).end("no changes provided");
+            return;
+        }
+        query = query.substr(0, query.length - 2) + " WHERE user = ?";
+        params.push(userId);
+        mysqlConnection.query(query, params, function(err, rows, fields) {
+            console.log(err);
+            if(err) {
+                res.status(500).end();
+                return;
+            }
+            res.status(200).end();
+        });
+    });
+
     return {
         makeLocalAPICall: function(method, path, params, callback) {
             function reqCallback(err, res, body) {

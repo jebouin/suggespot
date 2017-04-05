@@ -12,6 +12,18 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                 });
 			});
 		});
+
+        app.post("/editPreferences", function(req, res) {
+            auth.checkUserLoggedIn(req, res, function(loginData) {
+                api.makeLocalAPICall("POST", "/api/users/preferences/edit", {userId: loginData.id, editObject: req.body}, function(err, data) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500).end();
+                        return;
+                    }
+                    res.status(200).end();
+                });
+            });
+        });
 	}
 
 	return {
