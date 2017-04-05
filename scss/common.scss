@@ -49,6 +49,10 @@ button, input[type="button"], input[type="submit"] {
 	font-size: 16px;
 }
 
+input:disabled, input:disabled {
+    cursor: default;
+}
+
 textarea {
 	font-size: $fontSize;
 }

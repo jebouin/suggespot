@@ -33,6 +33,17 @@ block content
         input(type="radio" name="theme" value="dark")
         | Dark
       br
+    h3 Privacy
+    br
+    div.preference
+      label
+        input(type="checkbox" name="privateTags")
+        | Make my followed tags private
+      br
+      label
+        input(type="checkbox" name="privateSuggestions")
+        | Make my suggestions private
+      br
     input#savePreferences(type="submit" name="save" value="Save")
 
 block scripts

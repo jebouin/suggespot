@@ -1489,7 +1489,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT digestFrequency, theme FROM preferences WHERE user = ?", [userId], function(err, rows, fields) {
+        mysqlConnection.query("SELECT digestFrequency, theme, privateTags, privateSuggestions FROM preferences WHERE user = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length === 0) {
                 res.status(404).end("user preferences not found");
@@ -1524,7 +1524,6 @@ module.exports = function(app, mysqlConnection, auth) {
         query = query.substr(0, query.length - 2) + " WHERE user = ?";
         params.push(userId);
         mysqlConnection.query(query, params, function(err, rows, fields) {
-            console.log(err);
             if(err) {
                 res.status(500).end();
                 return;

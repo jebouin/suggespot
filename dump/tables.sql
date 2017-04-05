@@ -138,6 +138,8 @@ CREATE TABLE `preferences` (
   `user` int(10) unsigned NOT NULL,
   `digestFrequency` enum('never','monthly','weekly','daily') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'weekly',
   `theme` enum('default','dark') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'default',
+  `publicTags` tinyint(1) NOT NULL DEFAULT '1',
+  `publicSuggestions` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`user`),
   CONSTRAINT `preferences_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -305,4 +307,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-04-05 16:21:00
+-- Dump completed on 2017-04-05 18:27:37
