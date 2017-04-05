@@ -170,15 +170,25 @@ module.exports = function(app, mysqlConnection, view) {
 		});
 
 		app.post("/login", function(req, res) {
-            console.log(req.body);
-			var username = req.body.username;
-			mysqlConnection.query('SELECT * FROM users WHERE name = ?', [username], function(err, rows, fields) {
+            try {
+                var username = utils.checkParam(req.body, "username");
+                var password = utils.checkParam(req.body, "password");
+            } catch(e) {
+                res.status(400).end(e.message);
+            }
+			mysqlConnection.query('SELECT id, salt2, hash FROM users WHERE name = ?', [username], function(err, rows, fields) {
 				if(err) throw err;
 				if(rows.length === 0) {
-					res.status(403).end();
-				} else {
-					logUserIn(req, res, rows[0].id, username); //todo
+					res.status(200).json({errors: ["U_NF"]});
+                    return;
 				}
+                var userData = rows[0];
+                var hash = crypto.createHash("sha256").update("" + password + userData.salt2).digest("hex");
+                if(hash !== userData.hash && userData.hash !== null) {
+                    res.status(200).json({errors: ["P_IN"]});
+                    return;
+                }
+                logUserIn(req, res, userData.id, username, password);
 			});
 		});
 
@@ -202,10 +212,9 @@ module.exports = function(app, mysqlConnection, view) {
 			res.cookie("uid", uid, {expires: utils.getMonthsFromNow(1)});
 			res.cookie("uid2", sessionHash.hash, {expires: utils.getMonthsFromNow(1)});
 			logs.log("user " + colors.bold(name) + " logged in");
-            res.status(200).end("/p/" + uid);
             if(req.method === "GET") {
                 res.redirect("/");
-            } else if(req.method == "POST") {
+            } else if(req.method === "POST") {
                 res.status(200).end("/p/" + uid);
             }
 		});
