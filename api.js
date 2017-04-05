@@ -1479,6 +1479,25 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     });
 
+    app.get("/api/users/preferences", function(req, res) {
+        try {
+            var userId = parseInt(utils.checkParam(req.query, "userId"), 36);
+            if(isNaN(userId)) {
+                throw "incorrect userId";
+            }
+        } catch(e) {
+            res.status(400).end(e.message);
+            return;
+        }
+        mysqlConnection.query("SELECT digestFrequency, theme FROM preferences WHERE user = ?", [userId], function(err, rows, fields) {
+            if(err) throw err;
+            if(rows.length === 0) {
+                res.status(404).end("user preferences not found");
+            }
+            res.status(200).json(rows[0]);
+        });
+    });
+
     return {
         makeLocalAPICall: function(method, path, params, callback) {
             function reqCallback(err, res, body) {

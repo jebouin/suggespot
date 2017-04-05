@@ -1,0 +1,5 @@
+include commentThread
+
+if comments && comments.length
+  each c in comments
+    + commentThread(c)

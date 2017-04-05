@@ -1,0 +1,11 @@
+include comment
+
+mixin commentThread(c)
+  div.commentThread
+    + comment(c)
+    div.replies(thread=c.thread)
+      if c.children
+        each child in c.children
+          + comment(child)
+      if user
+        a.replyButton(href="javascript:void(0)" onclick="reply(event)") reply

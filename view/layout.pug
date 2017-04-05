@@ -1,0 +1,21 @@
+doctype html
+html
+  head
+    title Suggespot &middot; Discover new places and experiences
+    meta(charset="utf-8")
+    block stylesheet
+      link(rel="stylesheet" type="text/css" href="/style/style.css")
+  body
+    div#dark
+    div#header
+      block header
+        h1: a(href="/") Suggespot
+    div#body
+      block content
+    div#footer
+      h2 Footer
+      br
+      a(href="/terms") Terms of Use
+      | &nbsp;
+      a(href="/privacy") Privacy Policy
+    block scripts

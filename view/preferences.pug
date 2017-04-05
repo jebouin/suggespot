@@ -2,4 +2,41 @@ extends layout.pug
 
 block content
   h2 Preferences
-  p blablabla
+  br
+  form(name="save" method="POST" action="" onsubmit="onSave(event)")
+    h3 Email
+    br
+    div.preference
+      | Digest frequency
+      br
+      label
+        input(type="radio" name="digestFrequency" value="daily")
+        | Daily
+      br
+      label
+        input(type="radio" name="digestFrequency" value="weekly")
+        | Weekly
+      br
+      label
+        input(type="radio" name="digestFrequency" value="never")
+        | Never
+    h3 View
+    br
+    div.preference
+      | Theme
+      br
+      label
+        input(type="radio" name="theme" value="default")
+        | Default
+      br
+      label
+        input(type="radio" name="theme" value="dark")
+        | Dark
+      br
+    input(type="submit" name="save" value="Save")
+
+block scripts
+  script.
+    var preferences = !{JSON.stringify(preferences)};
+  script(src="/libs/jquery.js")
+  script(src="/view/scripts/preferencesScript.js")
