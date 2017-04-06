@@ -30,10 +30,11 @@ const discover = require("./discover")(app, connection, auth, view, api);
 const profile = require("./profile")(app, connection, auth, view, api);
 const preferences = require("./preferences")(app, connection, auth, view, api);
 const cleaner = require("./cleaner")(app, connection);
+const digest = require("./digest")(connection);
 
 connection.connect();
+digest.init(createRoutes);
 //cleaner.clean(createRoutes);
-createRoutes();
 
 function createRoutes() {
     auth.createRoutes();

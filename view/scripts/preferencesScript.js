@@ -1,5 +1,4 @@
-function onSave(e) {
-    e.preventDefault();
+function getChangesObject(updatePrev) {
     var radios = $(".preference input[type='radio']:checked");
     var checkboxes = $(".preference input[type='checkbox']");
     var changed = false;
@@ -8,7 +7,9 @@ function onSave(e) {
         if(preferences[name] !== value) {
             changed = true;
             changesObject[name] = value;
-            preferences[name] = value;
+            if(updatePrev) {
+                preferences[name] = value;
+            }
         }
     }
     for(var i = 0; i < radios.length; i++) {
@@ -19,7 +20,13 @@ function onSave(e) {
         var checkbox = checkboxes.eq(i);
         addChange(checkbox.attr("name"), checkbox.prop("checked") ? 1 : 0);
     }
-    if(changed) {
+    return changed ? changesObject : null;
+}
+
+function onSave(e) {
+    e.preventDefault();
+    var changesObject = getChangesObject(true);
+    if(changesObject !== null) {
         $("input#savePreferences").val("Saving...").prop("disabled", true);
         $.post("/editPreferences", changesObject).done(function(data) {
             $("input#savePreferences").val("Saved");
@@ -50,4 +57,9 @@ function onFormChange() {
 $(document).ready(function() {
     setDefaultOptions();
     $(".preference input").on("change", onFormChange);
+});
+
+$(window).on("beforeunload", function(e) {
+    var changesObject = getChangesObject();
+    if(changesObject !== null) return true;
 });

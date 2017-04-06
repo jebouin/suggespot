@@ -41,7 +41,7 @@ module.exports = function(app, mysqlConnection) {
         logs.log("cleaning database");
         mysqlConnection.query("SELECT id, path FROM photos", [], function(err, rows, fields) {
             if(err) throw err;
-            if(rows.length == 0) onDone();
+            if(rows.length === 0) onDone();
             var toProcess = rows.length;
             var processed = 0, deleted = 0;
             for(var i = 0; i < rows.length; i++) {
