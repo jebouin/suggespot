@@ -33,5 +33,5 @@ module.exports = function(app) {
     return {
         templates: templates,
         getTemplate: getTemplate,
-    }
+    };
 };

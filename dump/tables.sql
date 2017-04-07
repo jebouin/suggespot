@@ -138,8 +138,8 @@ CREATE TABLE `preferences` (
   `user` int(10) unsigned NOT NULL,
   `digestFrequency` enum('never','monthly','weekly','daily') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'weekly',
   `theme` enum('default','dark') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'default',
-  `publicTags` tinyint(1) NOT NULL DEFAULT '1',
-  `publicSuggestions` tinyint(1) NOT NULL DEFAULT '1',
+  `privateTags` tinyint(1) NOT NULL DEFAULT '0',
+  `privateSuggestions` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`user`),
   CONSTRAINT `preferences_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -273,6 +273,7 @@ CREATE TABLE `users` (
   `salt2` char(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `hash` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `timeRegistered` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `nextDigest` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -307,4 +308,4 @@ CREATE TABLE `votes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-04-05 18:27:37
+-- Dump completed on 2017-04-06  7:56:40
