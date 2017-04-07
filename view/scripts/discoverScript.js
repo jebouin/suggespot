@@ -19,7 +19,10 @@ function loadMore() {
     $.post("/suggestions", postData, function(data) {
         var toAppend = $(data);
         var distanceSpan = $(".distance", toAppend);
-        distanceSpan.text(locationUtils.formatDistance(parseFloat(distanceSpan.text())));
+        for(var i = 0; i < distanceSpan.length; i++) {
+            var span = $(distanceSpan[i]);
+            span.text(locationUtils.formatDistance(parseFloat(span.text())));
+        }
         $("#suggestionsContainer").append(toAppend);
         loadingMore = false;
     });

@@ -23,7 +23,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                 sendResponse(templateData);
             });
         } else {
-            sendResponse(templateData);
+            sendResponse();
         }
 	}
 

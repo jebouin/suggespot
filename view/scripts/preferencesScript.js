@@ -51,7 +51,15 @@ function setDefaultOptions() {
 }
 
 function onFormChange() {
-    $("input#savePreferences").val("Save").prop("disabled", false);
+    var button = $("input#savePreferences");
+    if(button.prop("disabled")) {
+        button.val("Save").prop("disabled", false);
+    } else {
+        var changesObject = getChangesObject();
+        if(changesObject === null) {
+            button.val("Save").prop("disabled", true);
+        }
+    }
 }
 
 $(document).ready(function() {
