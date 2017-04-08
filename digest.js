@@ -22,7 +22,7 @@ module.exports = function(mysqlConnection) {
                 throw new Error("user not found");
             }
             var user = rows[0];
-            //logs.log("Digest sent to " + colors.bold(user.name));
+            logs.log("Digest sent to " + colors.bold(user.name));
             setNextDigestTime(userId);
         });
     } 

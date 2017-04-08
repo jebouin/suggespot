@@ -29,7 +29,7 @@ module.exports = function(app, mysqlConnection, view) {
 
     function changePasswordSalt(userId, correctPassword, callback) {
         var hash = getNewPasswordHash(correctPassword);
-        mysqlConnection.query("UPDATE users SET (salt2 = ?, hash = ?) WHERE id = ?", [hash.salt, hash.hash, userId], function(err, rows, fields) {
+        mysqlConnection.query("UPDATE users SET salt2 = ?, hash = ?, resetExpires = ? WHERE id = ?", [hash.salt, hash.hash, new Date(), userId], function(err, rows, fields) {
             if(err) {
                 callback(err);
                 return;
@@ -47,6 +47,21 @@ module.exports = function(app, mysqlConnection, view) {
             }
             callback(null, hash);
         });
+    }
+
+    function validatePassword(password, password2) {
+        var errors = [];
+        if(password != password2) {
+            errors.push("P_DM");
+        }
+        if(password.length < 10) {
+            errors.push("P_TS");
+        } else if(password.length > 255) {
+            errors.push("P_TL");
+        } else if(!password.match(/^[A-Z0-9 !"#\$%&'()*+,-\.\/:;<=>?@[\\\]^_`{|}~]+$/i)) {
+            errors.push("P_INV");
+        }
+        return errors;
     }
     
     function checkUser(name, email, password, password2, callback) {
@@ -89,16 +104,7 @@ module.exports = function(app, mysqlConnection, view) {
             }
         }
         function checkPassword() {
-            if(password != password2) {
-                errors.push("P_DM");
-            }
-            if(password.length < 10) {
-                errors.push("P_TS");
-            } else if(password.length > 255) {
-                errors.push("P_TL");
-            } else if(!password.match(/^[A-Z0-9 !"#\$%&'()*+,-\.\/:;<=>?@[\\\]^_`{|}~]+$/i)) {
-                errors.push("P_INV");
-            }
+            errors = errors.concat(validatePassword(password, password2));
         }
         try {
             checkUsername(function(err) {
@@ -200,7 +206,110 @@ module.exports = function(app, mysqlConnection, view) {
 				res.clearCookie("uid2");
 				res.redirect("/");
 			});
-		});
+        });
+	
+        app.get("/recover/password", function(req, res) {
+           res.status(200).end(view.getTemplate("recoverPassword")()); 
+        });
+
+        app.post("/recover/password", function(req, res) {
+            checkUserLoggedIn(req, res, function(loginData) {
+                res.status(403).end("already logged in");
+            }, function() {
+                var email = req.body.email;
+                if(typeof(email) === "undefined") {
+                    res.status(400).end();
+                    return;
+                }
+                var emailObject = utils.separateEmail(email);
+                if(emailObject === null) {
+                    res.status(200).end("E_INV");
+                    return;
+                }
+                mysqlConnection.query("SELECT user FROM emails WHERE (local, domain) = (?, ?)", [emailObject.local, emailObject.domain], function(err, rows, fields) {
+                    if(err) throw err;
+                    if(rows.length === 0) {
+                        res.status(200).end("U_NF");
+                        return;
+                    }
+                    var userId = rows[0].user;
+                    var resetToken = crypto.randomBytes(32).toString("hex");
+                    var resetExpires = new Date();
+                    var resetHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+                    resetExpires.setMinutes(resetExpires.getMinutes() + 20);
+                    mysqlConnection.query("UPDATE users SET resetHash = ?, resetExpires = ? WHERE id = ?", [resetHash, resetExpires, userId], function(err, rows, fields) {
+                        if(err) throw err;
+                        //send hash
+                        var resetLink = "http://" + req.headers.host + "/reset/" + resetToken;
+                        console.log("Here is your reset link: " + resetLink);
+                        console.log("You have 20 minutes to change your password. If you did not request blablabla");
+                        res.status(200).end();
+                    });
+                });
+            });
+        });
+
+        app.get("/reset/:token", function(req, res) {
+            checkUserLoggedIn(req, res, function(data) {
+                res.redirect("/");
+            }, function() {
+                var token = req.params.token;
+                if(!token) {
+                    res.redirect("/");
+                    return;
+                }
+                var hash = crypto.createHash("sha256").update(token).digest("hex");
+                mysqlConnection.query("SELECT id, resetExpires FROM users WHERE resetHash = ?", [hash], function(err, rows, fields) {
+                    if(err) throw err;
+                    if(rows.length !== 1) {
+                        res.redirect("/");
+                        return;
+                    }
+                    var expirationTime = rows[0].resetExpires;
+                    if(expirationTime < new Date()) {
+                        res.redirect("/");
+                    } else {
+                        sendPage({user: rows[0].id});
+                    }
+                });
+                function sendPage(userId) {
+                    res.status(200).end(view.getTemplate("resetPassword")(userId));
+                }
+            });
+        });
+
+        app.post("/reset/password", function(req, res) {
+            try {
+                var password = utils.checkParam(req.body, "password");
+                var password2 = utils.checkParam(req.body, "password2");
+                var token = utils.checkParam(req.body, "token");
+            } catch(e) {
+                res.status(200).end();
+                return;
+            }
+            var tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+            mysqlConnection.query("SELECT id, resetExpires FROM users WHERE resetHash = ?", [tokenHash], function(err, rows, fields) {
+                if(err) throw err;
+                if(rows.length !== 1) {
+                    res.status(200).json({errors: "T_INV"});
+                    return;
+                }
+                var expirationTime = rows[0].resetExpires;
+                if(expirationTime < new Date()) {
+                    res.status(200).json({errors: "T_EX"});
+                } else {
+                    var errors = validatePassword(password, password2);
+                    if(errors.length > 0) {
+                        res.status(200).json({errors: errors});
+                        return;
+                    }
+                    changePasswordSalt(rows[0].id, password, function(err) {
+                        if(err) throw err;
+                        res.status(200).end();
+                    });
+                }
+            });
+        });
 	}
 
 	function logUserIn(req, res, id, name, password) {
@@ -256,6 +365,7 @@ module.exports = function(app, mysqlConnection, view) {
 		}
 	}
 
+    
 	return {
 		createRoutes: createRoutes,
 		logUserIn: logUserIn,
