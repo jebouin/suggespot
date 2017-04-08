@@ -231,6 +231,11 @@ module.exports = function(app, mysqlConnection, auth) {
             } else {
                 res.status(200).json({suggestions: rows});
             }
+            if(userId && location) {
+                mysqlConnection.query("UPDATE users SET lastLat = ?, lastLon = ? WHERE id = ?", [lat * 10000000, lon * 10000000, userId], function(err, rows, fields) {
+                    if(err) throw err;
+                });
+            }
         });
     });
 
