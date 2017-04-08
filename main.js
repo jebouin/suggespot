@@ -27,7 +27,7 @@ const auth = require("./auth")(app, connection, view);
 const api = require("./api")(app, connection, auth);
 const suggestion = require("./suggestion")(app, connection, auth, view, api);
 const discover = require("./discover")(app, connection, auth, view, api);
-const profile = require("./profile")(app, connection, auth, view, api);
+const user = require("./user")(app, connection, auth, view, api);
 const preferences = require("./preferences")(app, connection, auth, view, api);
 const cleaner = require("./cleaner")(app, connection);
 const digest = require("./digest")(connection);
@@ -40,7 +40,7 @@ function createRoutes() {
     auth.createRoutes();
     discover.createRoutes();
     suggestion.createRoutes();
-    profile.createRoutes();
+    user.createRoutes();
     preferences.createRoutes();
 
     app.use(function(req, res, next) {

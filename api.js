@@ -1498,6 +1498,7 @@ module.exports = function(app, mysqlConnection, auth) {
             if(err) throw err;
             if(rows.length === 0) {
                 res.status(404).end("user preferences not found");
+                return;
             }
             res.status(200).json(rows[0]);
         });
@@ -1536,7 +1537,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(200).end();
         });
     });
-
+    
     return {
         makeLocalAPICall: function(method, path, params, callback) {
             function reqCallback(err, res, body) {

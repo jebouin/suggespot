@@ -10,6 +10,10 @@ block content
       input(type="password" name="password" placeholder="Password" required)
       br
       input(type="submit" value="Log In")
+    div#error
+      span#errorText
+      br
+      a(href="/recover/password" style="display: none") Forgot your password?
 
 block scripts
   script(src="/libs/jquery.js")

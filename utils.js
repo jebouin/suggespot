@@ -111,5 +111,13 @@ module.exports = {
 		return arr.filter(function(e) {
 			return seen.hasOwnProperty(e) ? false : (seen[e] = true);
 		});
-	}
+	},
+    separateEmail: function(email) {
+        var match = /^(?=[A-Z0-9][A-Z0-9@._%+-]{5,253}$)[A-Z0-9._%+-]{1,64}@(?:(?=[A-Z0-9-]{1,63}\.)[A-Z0-9]+(?:-[A-Z0-9]+)*\.){1,8}[A-Z]{2,63}$/i.exec(email);
+        if(match === null) {
+            return null;
+        }
+        var atPos = email.indexOf("@");
+        return {local: email.substr(0, atPos), domain: email.substr(atPos + 1)};
+    }
 };

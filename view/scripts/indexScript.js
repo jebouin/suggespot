@@ -6,12 +6,15 @@ function onLogin(e) {
     }, {});
     function onFail(errors) {
         if(errors.length > 0) {
-            var err = errors[0];
-            if(err === "U_NF") {
-                console.log("user not found");
-            } else if(err === "P_IN") {
-                console.log("invalid password");
-            }
+            var errorText = $("#error #errorText");
+            errors.forEach(function(err) {
+                if(err === "U_NF") {
+                    errorText.text("User not found");
+                } else if(err === "P_IN") {
+                    errorText.text("Invalid password");
+                    $("#error a").show();
+                }
+            });
         }
     }
     $.post("/login", data).done(function(res) {

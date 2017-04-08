@@ -76,14 +76,12 @@ module.exports = function(app, mysqlConnection, view) {
                 errors.push("E_TL");
                 return;
             }
-            var emailExpr = /^(?=[A-Z0-9][A-Z0-9@._%+-]{5,253}$)[A-Z0-9._%+-]{1,64}@(?:(?=[A-Z0-9-]{1,63}\.)[A-Z0-9]+(?:-[A-Z0-9]+)*\.){1,8}[A-Z]{2,63}$/i;
-            var match = emailExpr.exec(email);
-            if(match === null) {
+            var emailObject = utils.separateEmail(email);
+            if(emailObject === null) {
                 errors.push("E_INV");
             } else {
-                var atPos = email.indexOf("@");
-                emailLocal = email.substr(0, atPos);
-                emailDomain = email.substr(atPos + 1);
+                emailLocal = emailObject.local;
+                emailDomain = emailObject.domain;
                 if(emailLocal.length > 64 || emailDomain.length > 255) {
                     errors.push("E_TL");
                     return;
