@@ -86,9 +86,9 @@ module.exports = function(app, mysqlConnection, view) {
                 callback();
             });
         }
-        function checkEmail() {
+        function checkEmail(callback) {
             if(email.length > 320) {
-                errors.push("E_TL");
+                errors.push("E_INV");
                 return;
             }
             var emailObject = utils.separateEmail(email);
@@ -98,10 +98,20 @@ module.exports = function(app, mysqlConnection, view) {
                 emailLocal = emailObject.local;
                 emailDomain = emailObject.domain;
                 if(emailLocal.length > 64 || emailDomain.length > 255) {
-                    errors.push("E_TL");
+                    errors.push("E_INV");
                     return;
                 }
             }
+            mysqlConnection.query("SELECT local, domain FROM emails WHERE (local, domain) = (?, ?)", [emailLocal, emailDomain], function(err, rows, fields) {
+                if(err) {
+                    callback(err);
+                    return;
+                }
+                if(rows.length > 0) {
+                    errors.push("E_EX");
+                }
+                callback();
+            });
         }
         function checkPassword() {
             errors = errors.concat(validatePassword(password, password2));
@@ -109,9 +119,11 @@ module.exports = function(app, mysqlConnection, view) {
         try {
             checkUsername(function(err) {
                 if(err) throw err;
-                checkEmail();
-                checkPassword();
-                callback(null, errors, emailLocal, emailDomain);
+                checkEmail(function(err) {
+                    if(err) throw err;
+                    checkPassword();
+                    callback(null, errors, emailLocal, emailDomain);
+                });
             });
         } catch(e) {
             console.log(e);

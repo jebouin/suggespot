@@ -35,6 +35,23 @@ function onRegister(e) {
         return data;
     }, {});
     function onFail(err) {
+        var errorDiv = $("#error");
+        var errorText = $("#errorText").html("");
+        err.forEach(function(e) {
+            var messages = {"U_EX": "Username taken",
+                            "U_INV": "Username should contain only alphanumeric characters and underscores",
+                            "U_TL": "Username should be between 3 and 20 characters long",
+                            "U_TS": "Username should be between 3 and 20 characters long",
+                            "P_TS": "Password should be at least 12 characters long",
+                            "P_TL": "Password is too long",
+                            "P_DM": "Passwords don't match",
+                            "P_INV": "Password contains invalid characters",
+                            "E_INV": "Invalid email address",
+                            "E_EX": "Email is already used"};
+            var msg = messages[e];
+            if(!msg) return;
+            errorText.html(errorText.html() + msg + "<br>");
+        });
         console.log(err);
     }
     $.post("/register", data).done(function(res) {
