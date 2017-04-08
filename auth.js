@@ -122,9 +122,12 @@ module.exports = function(app, mysqlConnection, view) {
                 var userId = rows.insertId;
                 mysqlConnection.query("INSERT INTO emails (local, domain, user) VALUES (?, ?, ?)", [emailLocal, emailDomain, userId], function(err, rows, fields) {
                     testTransactionError(err);
-                    mysqlConnection.commit(function(err) {
+                    mysqlConnection.query("INSERT INTO preferences (user) VALUES (?)", [userId], function(err, rows, fields) {
                         testTransactionError(err);
-                        callback(userId);
+                        mysqlConnection.commit(function(err) {
+                            testTransactionError(err);
+                            callback(userId);
+                        });
                     });
                 });
             });
