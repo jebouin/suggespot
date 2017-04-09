@@ -66,9 +66,18 @@ function onRegister(e) {
     return false;
 }
 
+function loadPopularTags() {
+    $.post("/tags/popular", {lat: currentLocation.lat, lon: currentLocation.lon}).done(function(html) {
+        var element = $(html).appendTo("#popularTags");
+    }).fail(function(xhr, status, err) {
+        console.log(err);
+    });
+}
+
 $(document).ready(function() {
     currentLocation.get(function(err) {
         loadMore();
+        loadPopularTags();
         if(userLoggedIn) {
             $(window).scroll(function() {
                 if(!loadingMore) {

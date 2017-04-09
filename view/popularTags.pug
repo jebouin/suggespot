@@ -1,0 +1,5 @@
+if popularTags && popularTags.length > 0
+  each tag in popularTags
+    span.popularTag
+      a(href="/all?tag=" + tag.name) #{tag.name} (#{tag.count})
+    br

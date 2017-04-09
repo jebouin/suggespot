@@ -13,18 +13,34 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
         if(req.query.tag) {
             templateData.tag = req.query.tag;
         }
-        if(loginData) {
-            api.makeLocalAPICall("GET", "/api/users/notifications/", {userId: loginData.id}, function(err, data) {
+        function getPopularTags(callback) {
+            api.makeLocalAPICall("GET", "/api/tags/popular", {lat: req.query.lat, lon: req.query.lon}, function(err, data) {
                 if(err) {
-                    res.status(err.code ? err.code : 500).end();
+                    callback(err);
                     return;
                 }
-                templateData.notifications = data;
-                sendResponse(templateData);
+                callback(null, data);
             });
-        } else {
-            sendResponse();
         }
+        function getDiscoverData() {
+            if(loginData) {
+                api.makeLocalAPICall("GET", "/api/users/notifications/", {userId: loginData.id}, function(err, data) {
+                    if(err) {
+                        res.status(err.code ? err.code : 500).end();
+                        return;
+                    }
+                    templateData.notifications = data;
+                    sendResponse(templateData);
+                });
+            } else {
+                sendResponse();
+            }
+        }
+        /*getPopularTags(function(err, tagData) {
+            templateData.popularTags = tagData;
+            getDiscoverData();
+        });*/
+        getDiscoverData();
 	}
 
 	function createRoutes() {
@@ -45,6 +61,16 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                     }
                     res.status(200).end();
                 });
+            });
+        });
+
+        app.post("/tags/popular", function(req, res) {
+            api.makeLocalAPICall("GET", "/api/tags/popular", {lat: req.body.lat, lon: req.body.lon}, function(err, tagData) {
+                if(err) {
+                    res.status(err.code ? err.code : 500).end();
+                    return;
+                }
+                res.status(200).end(view.getTemplate("popularTags")({popularTags: tagData}));
             });
         });
 	}
