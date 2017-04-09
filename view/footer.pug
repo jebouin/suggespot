@@ -1,2 +1,8 @@
-div#footer
-  h2 Footer
+mixin footer()
+  div#footer
+    span#links
+      a(href="/terms") Terms of Use
+      | &nbsp;
+      a(href="/privacy") Privacy Policy
+    span#copyright
+      | &nbsp;&copy; #{(new Date).getFullYear()} Suggespot &ndash; All Rights Reserved

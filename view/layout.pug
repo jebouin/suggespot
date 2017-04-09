@@ -1,3 +1,5 @@
+include footer
+
 doctype html
 html
   head
@@ -14,11 +16,6 @@ html
             img(src="/view/svg/logo.svg")
     div#body
       block content
-    div#footer
-      span#links
-        a(href="/terms") Terms of Use
-        | &nbsp;
-        a(href="/privacy") Privacy Policy
-      span#copyright
-        | &nbsp;&copy; #{(new Date).getFullYear()} Suggespot &ndash; All Rights Reserved
+    block footer
+      + footer()
     block scripts

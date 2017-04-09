@@ -1,41 +1,59 @@
 extends layout.pug
 
 include notifications
+include footer
 
 block content
   if user
-    + notifications(notifications)
     a(href="/") Interests
     | &nbsp;
     a(href="/all") All
     br
-    h2 Logged as #{user.name}&nbsp;
-    button.big(onclick="location.href='/submit'") Submit
-    button.big(onclick="location.href='/p/"+user.id+"'") Profile
-    button.big(onclick="location.href='/preferences'") Preferences
-    button.big(onclick="location.href='/logout'") Log Out
   br
   if user && tag
     button.follow
       | Follow&nbsp;
       span.tagText #{tag}
     br
-  h2
-    | Suggestions&nbsp;
-    if tag
-      | tagged as #{tag}&nbsp;
-  div#suggestionsContainer
+  div#mainContainer
+    div#leftBar
+      div#suggestionsContainer
+        h2
+          | Suggestions&nbsp;
+          if tag
+            | tagged as #{tag}&nbsp;
+    div#rightBar
+      div#rightBarFixed
+        if user
+          div#accountDetails
+            h2 Logged as #{user.name}&nbsp;
+            br
+            + notifications(notifications)
+            br
+            button.big(onclick="location.href='/submit'") Submit
+            button.big(onclick="location.href='/p/"+user.id+"'") Profile
+            button.big(onclick="location.href='/preferences'") Preferences
+            button.big(onclick="location.href='/logout'") Log Out
+        div#popularTags
+          h2 Popular Tags
+        if !user
+          div#registerFormContainer
+            h2 Do you want custom suggestions?
+            br
+            form(name="register" action="" method="POST" onsubmit="onRegister(event)")
+              input(type="text" name="username" placeholder="Username" required)
+              br
+              input(type="password" name="password" placeholder="Password" required)
+              input(type="password" name="password2" placeholder="Verify Password" required)
+              br
+              input(type="email" name="email" placeholder="Email" required)
+              input(type="submit" value="Register")
+            div#error
+              span#errorText
+        + footer()
   if !user
-    h2 Do you want custom suggestions?
-    br
-    form(name="register" action="" method="POST" onsubmit="onRegister(event)")
-      input(type="text" name="username" placeholder="Username" required)
-      input(type="password" name="password" placeholder="Password" required)
-      input(type="password" name="password2" placeholder="Verify Password" required)
-      input(type="email" name="email" placeholder="Email" required)
-      input(type="submit" value="Register")
-    div#error
-      span#errorText
+    
+block footer
 
 block scripts
   script.

@@ -1,7 +1,7 @@
 @import "common";
 
 h2 {
-display: inline-block;
+    display: inline-block;
 	font-size: 50px;
 	text-indent: 0;
 	margin: 0px;
@@ -63,7 +63,7 @@ form {
 }
 
 #notificationsContainer {
-
+    
 }
 
 #notificationsBody {
@@ -83,9 +83,42 @@ form {
 	background: $white;
 }
 
+#mainContainer {
+    overflow: hidden;
+}
+
+#leftBar {
+    float: left;
+    width: 70%;
+}
+
+#rightBar {
+    float: right;
+    width: 30%;
+}
+
 #suggestionsContainer {
-	background: $berylGreen;
-	padding: 10px;
+    margin-right: 10px;
+	background: $white;
+}
+
+#rightBarFixed {
+    position: fixed;
+    margin-right: 20px;
+}
+
+#accountDetails {
+    background: $white;
+    margin-bottom: 10px;
+}
+
+#popularTags {
+    background: $white;
+    margin-bottom: 10px;
+}
+
+#registerFormContainer {
+    background: $white;
 }
 
 .suggestion {
