@@ -63,6 +63,7 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                     if(cid) {
                         suggestionData.cid = cid;
                     }
+                    suggestionData.moment = require("moment");
                     res.status(200).end(view.getTemplate("suggestion")(suggestionData));
                 });
             }

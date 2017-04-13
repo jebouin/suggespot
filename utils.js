@@ -119,5 +119,8 @@ module.exports = {
         }
         var atPos = email.indexOf("@");
         return {local: email.substr(0, atPos), domain: email.substr(atPos + 1)};
+    },
+    randInt: function(min, max) {
+        return Math.floor(Math.random() * (max - min)) + min;
     }
 };

@@ -17,6 +17,7 @@
 		"mime-types": "2.1.14",
 		"mmmagic": "0.4.5",
 		"async": "2.1.5",
-        "node-schedule":  "1.2.1"
+        "node-schedule":  "1.2.1",
+        "moment": "2.18.1"
 	}
 }

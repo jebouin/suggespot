@@ -2,8 +2,12 @@
 !.gitignore
 !.editorconfig
 config.json
-dump/dump.sh
-dump/*.png
+
+dump/*
+!dump/clearVotes.sql
+!dump/db.sql
+!dump/tables.sql
+
 libs
 node_modules
 features.txt

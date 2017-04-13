@@ -132,7 +132,7 @@ module.exports = function(app, mysqlConnection, view) {
         }
     }
 
-    function createUser(name, emailLocal, emailDomain, password, callback) {
+    function createUser(name, emailLocal, emailDomain, callback) {
         mysqlConnection.beginTransaction(function(err) {
             testTransactionError(err);
             mysqlConnection.query("INSERT INTO users (name) VALUES (?)", [name], function(err, rows, fields) {
@@ -144,6 +144,7 @@ module.exports = function(app, mysqlConnection, view) {
                         testTransactionError(err);
                         mysqlConnection.commit(function(err) {
                             testTransactionError(err);
+							logs.log("new user " + colors.bold(name));
                             callback(userId);
                         });
                     });
@@ -173,8 +174,7 @@ module.exports = function(app, mysqlConnection, view) {
                     return;
                 } else {
                     try {
-                        createUser(username, emailLocal, emailDomain, password, function(userId) {              
-							logs.log("new user " + colors.bold(username));
+                        createUser(username, emailLocal, emailDomain, function(userId) {              
                             logUserIn(req, res, userId, username, password);
                         });
                     } catch(e) {
@@ -381,6 +381,7 @@ module.exports = function(app, mysqlConnection, view) {
 	return {
 		createRoutes: createRoutes,
 		logUserIn: logUserIn,
-		checkUserLoggedIn: checkUserLoggedIn
+		checkUserLoggedIn: checkUserLoggedIn,
+        createUser: createUser
 	};
 };

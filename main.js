@@ -1,3 +1,4 @@
+var args = process.argv.slice(2);
 const logs = require("./logs");
 logs.log("starting server...");
 const fs = require("fs");
@@ -16,6 +17,7 @@ var connection = mysql.createConnection({
 	charset : "utf8mb4"
 });
 
+app.set("x-powered-by", false);
 app.use(express.static(global.config.uploadDir));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -31,10 +33,13 @@ const user = require("./user")(app, connection, auth, view, api);
 const preferences = require("./preferences")(app, connection, auth, view, api);
 const cleaner = require("./cleaner")(app, connection);
 const digest = require("./digest")(connection);
+const simulator = require("./simulator")(connection, api);
 
 connection.connect();
 digest.init(createRoutes);
 //cleaner.clean(createRoutes);
+
+
 
 function createRoutes() {
     auth.createRoutes();
@@ -101,6 +106,7 @@ function createRoutes() {
             console.log(r.route.path);
         }
     });*/
+    simulator.simulate();
 }
 
 process.on("SIGINT", function() {

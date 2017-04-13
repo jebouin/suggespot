@@ -59,7 +59,7 @@ module.exports = function(app, mysqlConnection, auth) {
 
     function createNewEntity(callback) {
         if(!inTransaction) {
-            callback(true, null);
+            callback(new Error("Not in transaction"), null);
             return;
         }
         mysqlConnection.query("INSERT INTO entities () VALUES ()", function(err, rows, fields) {
@@ -80,8 +80,13 @@ module.exports = function(app, mysqlConnection, auth) {
     }
 
     function sendNotification(notificationId, userId, callback) {
+        if(userId === null || userId === "null") {
+            callback(new Error("userId is null"));
+            return;
+        }
         if(!inTransaction) {
             callback(new Error("not in transaction"));
+            return;
         }
         mysqlConnection.query("INSERT INTO userNotifications (user, notification) VALUES (?, ?)", [userId, notificationId], function(err, rows, fields) {
             testTransactionError(err);
@@ -162,7 +167,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var orderByQuery = "ORDER BY conf DESC";
         try {
             if(mode == "all") {
-                selectQuery += " suggestions.entityId AS id, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
+                selectQuery += " suggestions.entityId AS id, title, published, timeCreated, timeUpdated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
                 if(userId) {
                     selectQuery += ", dir";
                     fromQuery += " " + voteJoin;
@@ -174,8 +179,8 @@ module.exports = function(app, mysqlConnection, auth) {
                     if(location) {
                         interestSubquery += " lat, lon, ";
                     }
-                    interestSubquery += " suggestions.entityId, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + " FROM suggestions INNER JOIN suggestionTags ON suggestions.entityId = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? GROUP BY suggestions.entityId) AS suggestions";
-                    selectQuery += " suggestions.entityId AS id, title, published, timeCreated, descr, score, conf, author, dir, path AS thumb ";
+                    interestSubquery += " suggestions.entityId, title, published, timeCreated, timeUpdated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + " FROM suggestions INNER JOIN suggestionTags ON suggestions.entityId = suggestionTags.suggestion INNER JOIN userTags ON userTags.tag = suggestionTags.tag AND userTags.user = ? GROUP BY suggestions.entityId) AS suggestions";
+                    selectQuery += " suggestions.entityId AS id, title, published, timeCreated, timeUpdated, descr, score, conf, author, dir, path AS thumb ";
                     subqueryParams.push(userId);
                     fromQuery = "FROM " + interestSubquery + " " + voteJoin;
                     joinParams.push(userId);
@@ -183,7 +188,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     throw new Error("you need to be logged in to see your interests");
                 }
             } else if(mode == "tag") {
-                selectQuery += " suggestions.entityId AS id, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
+                selectQuery += " suggestions.entityId AS id, title, published, timeCreated, timeUpdated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
                 if(userId) {
                     selectQuery += ", dir";
                     fromQuery += " " + voteJoin;
@@ -195,7 +200,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 if(!authorId) {
                     throw new Error("please specify a valid authorId");
                 }
-                selectQuery += " suggestions.entityId AS id, title, published, timeCreated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
+                selectQuery += " suggestions.entityId AS id, title, published, timeCreated, timeUpdated, author, " + descrQuery + ", " + queries.score + ", " + confQuery + ", path AS thumb";
                 if(userId) {
                     selectQuery += ", dir";
                     fromQuery += " " + voteJoin;
@@ -257,7 +262,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         id = parseInt(id, 36);
-        var selectQuery = "SELECT suggestions.entityId AS id, title, descr, author, users.name AS authorName, " + queries.score + ", published";
+        var selectQuery = "SELECT suggestions.entityId AS id, title, timeCreated, timeUpdated, descr, author, users.name AS authorName, " + queries.score + ", published";
         var params = [];
         var location = parseCoordinates(req.query);
         if(location) {
@@ -296,6 +301,8 @@ module.exports = function(app, mysqlConnection, auth) {
                               photos: photos,
                               voteDir: voteDir,
                               maximumPhotos: global.config.maximumPhotos,
+                              timeCreated: suggestionData.timeCreated,
+                              timeUpdated: suggestionData.timeUpdated,
                               published: suggestionData.published});
                 });
             }
@@ -793,7 +800,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                     if(err) throw err;
                                     if(mentionnedAuthor) {
                                         sendMentionNotifications();
-                                    } else {
+                                    } else if(userId === null || userId === "null") {
                                         mysqlConnection.query("INSERT INTO notifications (entity, author, action) VALUES (?, ?, 'comment')", [cid, userId], function(err, rows, fields) {
                                             testTransactionError(err);
                                             sendNotification(rows.insertId, suggestionData.author, function(err) {
@@ -1542,7 +1549,7 @@ module.exports = function(app, mysqlConnection, auth) {
         }
         var query, params;
         if(location) {
-            query = "SELECT count, name FROM (SELECT COUNT(suggestions.entityId) AS count, tag FROM suggestionTags INNER JOIN suggestions ON suggestionTags.suggestion = suggestions.entityId AND suggestions.published = 1 AND " + queries.distance + " < ? GROUP BY tag ORDER BY count DESC LIMIT 5) AS suggestionTags INNER JOIN tags ON suggestionTags.tag = tags.id";
+            query = "SELECT count, name FROM (SELECT COUNT(suggestions.entityId) AS count, tag FROM suggestionTags INNER JOIN suggestions ON suggestionTags.suggestion = suggestions.entityId AND suggestions.published = 1 AND " + queries.distance + " < ? GROUP BY tag ORDER BY count DESC LIMIT 20) AS suggestionTags INNER JOIN tags ON suggestionTags.tag = tags.id";
             params = [location.lat, location.lat, location.lon, 51000];
         } else {
             query = "SELECT count, name FROM (SELECT COUNT(suggestions.entityId) AS count, tag FROM suggestionTags GROUP BY tag ORDER BY count DESC LIMIT 5) AS suggestionTags INNER JOIN tags ON suggestionTags.tag = tags.id";
