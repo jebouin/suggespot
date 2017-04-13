@@ -1,7 +1,7 @@
-module.exports = function(mysqlConnection, api) {
+module.exports = function(mysqlPool, api) {
     function createTestUsers(n) {
         console.log("Creating " + n + " new users");
-        mysqlConnection.query("SELECT id, name FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
+        mysqlPool.query("SELECT id, name FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
             if(err) throw err;
             var start = 0;
             if(rows.length > 0) {
@@ -24,7 +24,7 @@ module.exports = function(mysqlConnection, api) {
 
     function simulate() {
         //createTestUsers(82);
-        mysqlConnection.query("SELECT id FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
+        mysqlPool.query("SELECT id FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
             if(err) throw err;
             var userCount = rows.length;
             if(userCount === 0) {
@@ -34,7 +34,7 @@ module.exports = function(mysqlConnection, api) {
             var voteRate = 60000 / userCount; 
             function vote() {
                 var nextTime = voteRate * (1 + Math.random() - .5);
-                mysqlConnection.query("SELECT id FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
+                mysqlPool.query("SELECT id FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length === 0) {
                         return;
@@ -49,7 +49,7 @@ module.exports = function(mysqlConnection, api) {
             var commentRate = 300000 / userCount;
             function comment() {
                 var nextTime = commentRate * (1 + Math.random() - .5);
-                mysqlConnection.query("SELECT id FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
+                mysqlPool.query("SELECT id FROM users WHERE name LIKE 'TEST%'", [], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length === 0) {
                         return;
@@ -65,7 +65,7 @@ module.exports = function(mysqlConnection, api) {
 
     function randomVote(user) {
         if(Math.random() < .2) {
-            mysqlConnection.query("SELECT entityId FROM suggestions", [], function(err, rows, fields) {
+            mysqlPool.query("SELECT entityId FROM suggestions", [], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length === 0) {
                     return;
@@ -75,7 +75,7 @@ module.exports = function(mysqlConnection, api) {
                 randomVoteThing(user, thingId);
             });
         } else {
-            mysqlConnection.query("SELECT entityId FROM comments", [], function(err, rows, fields) {
+            mysqlPool.query("SELECT entityId FROM comments", [], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length === 0) {
                     return;
@@ -96,7 +96,7 @@ module.exports = function(mysqlConnection, api) {
     }
 
     function randomComment(user) {
-        mysqlConnection.query("SELECT entityId FROM suggestions", [], function(err, rows, fields) {
+        mysqlPool.query("SELECT entityId FROM suggestions", [], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length === 0) {
                 return;
@@ -113,9 +113,26 @@ module.exports = function(mysqlConnection, api) {
             content += Math.random(36).toString(36).substr(2, utils.randInt(2, 10)) + " ";
         }
         var json = {userId: user.toString(36), suggestionId: suggestionId.toString(36), content: content};
-        api.makeLocalAPICall("POST", "/api/comment", json, function(err, res) {
+        function sendComment() {
+            api.makeLocalAPICall("POST", "/api/comment", json, function(err, res) {
 
-        });
+            });
+        }
+        if(Math.random() < .2) {
+            mysqlPool.query("SELECT id FROM commentThreads WHERE suggestion = ?", [suggestionId], function(err, rows, fields) {
+                if(err) throw err;
+                if(rows.length === 0) {
+                    sendComment();
+                } else {
+                    var threadId = rows[utils.randInt(0, rows.length)].id;
+                    json.thread = threadId.toString(36);
+                    sendComment();
+                    console.log("sent a reply");
+                }
+            });
+        } else {
+            sendComment();
+        }
     }
 
     return {

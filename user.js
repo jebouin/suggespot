@@ -2,7 +2,7 @@ const async = require("async");
 const crypto = require("crypto");
 const utils = require("./utils");
 
-module.exports = function(app, mysqlConnection, auth, view, api) {
+module.exports = function(app, auth, view, api) {
 
 	function createRoutes() {
 		app.get("/p/:id", function(req, res) {
@@ -68,8 +68,6 @@ module.exports = function(app, mysqlConnection, auth, view, api) {
                 res.status(401).end();
             });
         });
-
-        
 	} 
 
 	return {

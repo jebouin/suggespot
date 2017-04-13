@@ -2,7 +2,7 @@ const fs = require("fs");
 const colors = require("colors/safe");
 const logs = require("./logs");
 
-module.exports = function(app, mysqlConnection) {
+module.exports = function(app, mysqlPool) {
     function cleanPhotos(onDone) {
         logs.log("cleaning photos");
         var dir = __dirname + global.config.uploadDir;
@@ -21,9 +21,9 @@ module.exports = function(app, mysqlConnection) {
                     if(stats.isDirectory()) {
                         onProcessed();
                     } else {
-                        mysqlConnection.query("SELECT id FROM photos WHERE path = ?", [global.config.uploadDir + "/" + file], function(err, rows, fields) {
+                        mysqlPool.query("SELECT id FROM photos WHERE path = ?", [global.config.uploadDir + "/" + file], function(err, rows, fields) {
                             if(err) throw err;
-                            if(rows.length == 0) {
+                            if(rows.length === 0) {
                                 fs.unlinkSync(dir + "/" + file);
                                 deleted++;
                             } else if(rows.length > 1) {
@@ -39,25 +39,26 @@ module.exports = function(app, mysqlConnection) {
 
     function cleanDB(onDone) {
         logs.log("cleaning database");
-        mysqlConnection.query("SELECT id, path FROM photos", [], function(err, rows, fields) {
+        mysqlPool.query("SELECT id, path FROM photos", [], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length === 0) onDone();
             var toProcess = rows.length;
             var processed = 0, deleted = 0;
+            function onProcessed() {
+                processed++;
+                if(processed >= toProcess) {
+                    logs.log("processed " + colors.bold(processed.toString()) + " entries, deleted " + colors.bold(deleted.toString()));
+                    onDone();
+                }
+            }
+            function deleteCallback(err, rows, fields) {
+                deleted++;
+                onProcessed();
+            }
             for(var i = 0; i < rows.length; i++) {
                 var path = __dirname + rows[i].path;
-                function onProcessed() {
-                    processed++;
-                    if(processed >= toProcess) {
-                        logs.log("processed " + colors.bold(processed.toString()) + " entries, deleted " + colors.bold(deleted.toString()));
-                        onDone();
-                    }
-                }
                 if(!fs.existsSync(path)) {
-                    mysqlConnection.query("DELETE FROM photos WHERE id = ?", [rows[i].id], function(err, rows, fields) {
-                        deleted++;
-                        onProcessed();
-                    });
+                    mysqlPool.query("DELETE FROM photos WHERE id = ?", [rows[i].id], deleteCallback);
                 } else {
                     onProcessed();
                 }

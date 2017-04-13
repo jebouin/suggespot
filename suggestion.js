@@ -2,7 +2,7 @@ const utils = require("./utils");
 const logs = require("./logs");
 const qs = require("querystring");
 
-module.exports = function(app, mysqlConnection, auth, view, api) {
+module.exports = function(app, auth, view, api) {
 
     function sendSuggestions(req, res, loginData) {
         var params = {};

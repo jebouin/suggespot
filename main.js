@@ -9,12 +9,22 @@ const mysql = require("mysql");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const colors = require("colors/safe");
-var connection = mysql.createConnection({
-	host : "localhost",
-	user : "root",
-	password : global.config.passwords.database,
-	database : "suggespot",
-	charset : "utf8mb4"
+var mysqlPool = mysql.createPool({
+    connectionLimit: 20,
+    queueLimit: 30,
+    host: "localhost",
+    user: "root",
+    password: global.config.passwords.database,
+    database: "suggespot",
+    charset: "utf8mb4"
+}).on("enqueue", function() {
+    console.log("No connection available");
+}).on("acquire", function(connection) {
+    console.log("Connection " + connection.threadId + " acquired");
+}).on("connection", function(connection) {
+    console.log("Connection " + connection.threadId + " connected");
+}).on("release", function(connection) {
+    console.log("Connection " + connection.threadId + " released");
 });
 
 app.set("x-powered-by", false);
@@ -25,20 +35,18 @@ app.use(cookieParser());
 
 const utils = require("./utils");
 const view = require("./view")(app);
-const auth = require("./auth")(app, connection, view);
-const api = require("./api")(app, connection, auth);
-const suggestion = require("./suggestion")(app, connection, auth, view, api);
-const discover = require("./discover")(app, connection, auth, view, api);
-const user = require("./user")(app, connection, auth, view, api);
-const preferences = require("./preferences")(app, connection, auth, view, api);
-const cleaner = require("./cleaner")(app, connection);
-const digest = require("./digest")(connection);
-const simulator = require("./simulator")(connection, api);
+const auth = require("./auth")(app, mysqlPool, view);
+const api = require("./api")(app, mysqlPool, auth);
+const suggestion = require("./suggestion")(app, auth, view, api);
+const discover = require("./discover")(app, auth, view, api);
+const user = require("./user")(app, auth, view, api);
+const preferences = require("./preferences")(app, auth, view, api);
+const cleaner = require("./cleaner")(app, mysqlPool);
+const digest = require("./digest")(mysqlPool);
+const simulator = require("./simulator")(mysqlPool, api);
 
-connection.connect();
 digest.init(createRoutes);
 //cleaner.clean(createRoutes);
-
 
 
 function createRoutes() {
@@ -111,8 +119,9 @@ function createRoutes() {
 
 process.on("SIGINT", function() {
 	logs.log("closing server...");
-	connection.end();
-	logs.log(colors.bold("server closed"));
-	logs.close();
-	process.exit();
+    mysqlPool.end(function(err) {
+        logs.log(colors.bold("server closed"));
+        logs.close();
+        process.exit();
+    });
 });

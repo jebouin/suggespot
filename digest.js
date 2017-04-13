@@ -2,7 +2,7 @@ const schedule = require("node-schedule");
 const colors = require("colors/safe");
 const logs = require("./logs");
 
-module.exports = function(mysqlConnection) {
+module.exports = function(mysqlPool) {
     
     function getNextDigestTime() {
         var time = new Date();
@@ -16,7 +16,7 @@ module.exports = function(mysqlConnection) {
     }
     
     function sendDigest(userId) {
-        mysqlConnection.query("SELECT name FROM users WHERE id = ?", [userId], function(err, rows, fields) {
+        mysqlPool.query("SELECT name FROM users WHERE id = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length === 0) {
                 throw new Error("user not found");
@@ -30,7 +30,7 @@ module.exports = function(mysqlConnection) {
     function setNextDigestTime(userId) {
         var time = getNextDigestTime();
         var timestamp = Math.floor(time.getTime() / 1000);
-        mysqlConnection.query("UPDATE users SET nextDigest = FROM_UNIXTIME(?) WHERE id = ?", [timestamp, userId], function(err, rows, fields) {
+        mysqlPool.query("UPDATE users SET nextDigest = FROM_UNIXTIME(?) WHERE id = ?", [timestamp, userId], function(err, rows, fields) {
             if(err) throw err;
             var job = schedule.scheduleJob(time, sendDigest.bind(null, userId));
         });
@@ -38,7 +38,7 @@ module.exports = function(mysqlConnection) {
 
     function init(callback) {
         logs.log("Scheduling digests...");
-        mysqlConnection.query("SELECT id, nextDigest FROM users", [], function(err, rows, fields) {
+        mysqlPool.query("SELECT id, nextDigest FROM users", [], function(err, rows, fields) {
             if(err) throw err;
             rows.forEach(function(row) {
                 var time = row.nextDigest;

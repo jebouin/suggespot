@@ -3,11 +3,11 @@ const logs = require("./logs");
 const utils = require("./utils");
 const crypto = require("crypto");
 
-module.exports = function(app, mysqlConnection, view) {
+module.exports = function(app, mysqlPool, view) {
     
-    function testTransactionError(err, beforeCallback) {
+    function testTransactionError(connection, err, beforeCallback) {
         if(err) {
-            mysqlConnection.rollback();
+            connection.rollback();
             if(beforeCallback) {
                 beforeCallback();
             }
@@ -29,7 +29,7 @@ module.exports = function(app, mysqlConnection, view) {
 
     function changePasswordSalt(userId, correctPassword, callback) {
         var hash = getNewPasswordHash(correctPassword);
-        mysqlConnection.query("UPDATE users SET salt2 = ?, hash = ?, resetExpires = ? WHERE id = ?", [hash.salt, hash.hash, new Date(), userId], function(err, rows, fields) {
+        mysqlPool.query("UPDATE users SET salt2 = ?, hash = ?, resetExpires = ? WHERE id = ?", [hash.salt, hash.hash, new Date(), userId], function(err, rows, fields) {
             if(err) {
                 callback(err);
                 return;
@@ -40,7 +40,7 @@ module.exports = function(app, mysqlConnection, view) {
 
     function changeSessionSalt(userId, callback) {
         var hash = getNewSessionHash(userId);
-        mysqlConnection.query("UPDATE users SET salt = ? WHERE id = ?", [hash.salt, hash.hash], function(err, rows, fields) {
+        mysqlPool.query("UPDATE users SET salt = ? WHERE id = ?", [hash.salt, hash.hash], function(err, rows, fields) {
             if(err) {
                 callback(err);
                 return;
@@ -75,7 +75,7 @@ module.exports = function(app, mysqlConnection, view) {
             } else if(!name.match(/^[a-zA-Z0-9_]+$/)) {
                 errors.push("U_INV");
             }
-            mysqlConnection.query("SELECT id FROM users WHERE name = ?", [name], function(err, rows, fields) {
+            mysqlPool.query("SELECT id FROM users WHERE name = ?", [name], function(err, rows, fields) {
                 if(err) {
                     callback(err);
                     return;
@@ -102,7 +102,7 @@ module.exports = function(app, mysqlConnection, view) {
                     return;
                 }
             }
-            mysqlConnection.query("SELECT local, domain FROM emails WHERE (local, domain) = (?, ?)", [emailLocal, emailDomain], function(err, rows, fields) {
+            mysqlPool.query("SELECT local, domain FROM emails WHERE (local, domain) = (?, ?)", [emailLocal, emailDomain], function(err, rows, fields) {
                 if(err) {
                     callback(err);
                     return;
@@ -133,19 +133,23 @@ module.exports = function(app, mysqlConnection, view) {
     }
 
     function createUser(name, emailLocal, emailDomain, callback) {
-        mysqlConnection.beginTransaction(function(err) {
-            testTransactionError(err);
-            mysqlConnection.query("INSERT INTO users (name) VALUES (?)", [name], function(err, rows, fields) {
-                testTransactionError(err);
-                var userId = rows.insertId;
-                mysqlConnection.query("INSERT INTO emails (local, domain, user) VALUES (?, ?, ?)", [emailLocal, emailDomain, userId], function(err, rows, fields) {
-                    testTransactionError(err);
-                    mysqlConnection.query("INSERT INTO preferences (user) VALUES (?)", [userId], function(err, rows, fields) {
-                        testTransactionError(err);
-                        mysqlConnection.commit(function(err) {
-                            testTransactionError(err);
-							logs.log("new user " + colors.bold(name));
-                            callback(userId);
+        mysqlPool.getConnection(function(err, connection) {
+            if(err) throw err;
+            connection.beginTransaction(function(err) {
+                testTransactionError(connection, err);
+                connection.query("INSERT INTO users (name) VALUES (?)", [name], function(err, rows, fields) {
+                    testTransactionError(connection, err);
+                    var userId = rows.insertId;
+                    connection.query("INSERT INTO emails (local, domain, user) VALUES (?, ?, ?)", [emailLocal, emailDomain, userId], function(err, rows, fields) {
+                        testTransactionError(connection, err);
+                        connection.query("INSERT INTO preferences (user) VALUES (?)", [userId], function(err, rows, fields) {
+                            testTransactionError(connection, err);
+                            connection.commit(function(err) {
+                                testTransactionError(connection, err);
+                                connection.release();
+                                logs.log("new user " + colors.bold(name));
+                                callback(userId);
+                            });
                         });
                     });
                 });
@@ -195,7 +199,7 @@ module.exports = function(app, mysqlConnection, view) {
             } catch(e) {
                 res.status(400).end(e.message);
             }
-			mysqlConnection.query('SELECT id, salt2, hash FROM users WHERE name = ?', [username], function(err, rows, fields) {
+			mysqlPool.query('SELECT id, salt2, hash FROM users WHERE name = ?', [username], function(err, rows, fields) {
 				if(err) throw err;
 				if(rows.length === 0) {
 					res.status(200).json({errors: ["U_NF"]});
@@ -238,7 +242,7 @@ module.exports = function(app, mysqlConnection, view) {
                     res.status(200).end("E_INV");
                     return;
                 }
-                mysqlConnection.query("SELECT user FROM emails WHERE (local, domain) = (?, ?)", [emailObject.local, emailObject.domain], function(err, rows, fields) {
+                mysqlPool.query("SELECT user FROM emails WHERE (local, domain) = (?, ?)", [emailObject.local, emailObject.domain], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length === 0) {
                         res.status(200).end("U_NF");
@@ -271,7 +275,7 @@ module.exports = function(app, mysqlConnection, view) {
                     return;
                 }
                 var hash = crypto.createHash("sha256").update(token).digest("hex");
-                mysqlConnection.query("SELECT id, resetExpires FROM users WHERE resetHash = ?", [hash], function(err, rows, fields) {
+                mysqlPool.query("SELECT id, resetExpires FROM users WHERE resetHash = ?", [hash], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length !== 1) {
                         res.redirect("/");
@@ -300,7 +304,7 @@ module.exports = function(app, mysqlConnection, view) {
                 return;
             }
             var tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-            mysqlConnection.query("SELECT id, resetExpires FROM users WHERE resetHash = ?", [tokenHash], function(err, rows, fields) {
+            mysqlPool.query("SELECT id, resetExpires FROM users WHERE resetHash = ?", [tokenHash], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length !== 1) {
                     res.status(200).json({errors: "T_INV"});
@@ -329,7 +333,7 @@ module.exports = function(app, mysqlConnection, view) {
         var passwordHash = getNewPasswordHash(password);
         var params = [sessionHash.salt, passwordHash.salt, passwordHash.hash, id];
         var uid = id.toString(36);
-        mysqlConnection.query('UPDATE users SET salt = ?, salt2 = ?, hash = ? WHERE id = ?', params, function(err, rows, fields) {
+        mysqlPool.query('UPDATE users SET salt = ?, salt2 = ?, hash = ? WHERE id = ?', params, function(err, rows, fields) {
 			if(err) throw err;
 			res.cookie("uid", uid, {expires: utils.getMonthsFromNow(1)});
 			res.cookie("uid2", sessionHash.hash, {expires: utils.getMonthsFromNow(1)});
@@ -345,7 +349,7 @@ module.exports = function(app, mysqlConnection, view) {
 	function checkUserLoggedIn(req, res, yesCallback, noCallback, errCallback) {
 		if(req.cookies.uid) {
             var uid = parseInt(req.cookies.uid, 36);
-            mysqlConnection.query('SELECT id, name, salt FROM users WHERE id = ?', [uid], function(err, rows, fields) {
+            mysqlPool.query('SELECT id, name, salt FROM users WHERE id = ?', [uid], function(err, rows, fields) {
 				if(err) throw err;
 				function wrongHash() {
 					//logs.log(colors.bold("unknown user tried to log with id " + req.cookies.uid + " from " + req.ip)); //happens when you change device

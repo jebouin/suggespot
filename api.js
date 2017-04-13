@@ -26,9 +26,9 @@ var uploadPhoto = multer({
     }
 }).single("photo");
 
-module.exports = function(app, mysqlConnection, auth) {
+module.exports = function(app, mysqlPool, auth) {
     var inTransaction = false;
-    var originalBeginTransaction = mysqlConnection.beginTransaction;
+    /*var originalBeginTransaction = mysqlConnection.beginTransaction;
     var originalCommit = mysqlConnection.commit;
     var originalRollback = mysqlConnection.rollback;
 
@@ -45,11 +45,26 @@ module.exports = function(app, mysqlConnection, auth) {
     mysqlConnection.rollback = function(options, callback) {
         inTransaction = false;
         originalRollback.call(mysqlConnection, options, callback);
-    };
+    };*/
+    //todo
 
-    function testTransactionError(err, beforeCallback) {
+    function getTransactingConnection(callback) {
+        mysqlPool.getConnection(function(err, connection) {
+            if(err) {
+                callback(err);
+            }
+            connection.beginTransaction(function(err) {
+                if(err) {
+                    callback(err);
+                }
+                callback(null, connection);
+            });
+        });
+    }
+
+    function testTransactionError(connection, err, beforeCallback) {
         if(err) {
-            mysqlConnection.rollback();
+            connection.rollback();
             if(beforeCallback) {
                 beforeCallback();
             }
@@ -57,19 +72,20 @@ module.exports = function(app, mysqlConnection, auth) {
         }
     }
 
-    function createNewEntity(callback) {
-        if(!inTransaction) {
+    function createNewEntity(connection, callback) {
+        /*if(!inTransaction) {
             callback(new Error("Not in transaction"), null);
             return;
-        }
-        mysqlConnection.query("INSERT INTO entities () VALUES ()", function(err, rows, fields) {
-            testTransactionError(err);
+        }*/
+        connection.query("INSERT INTO entities () VALUES ()", function(err, rows, fields) {
+            if(err) callback(err);
+            testTransactionError(connection, err);
             callback(null, rows.insertId);
         });
     }
 
     function checkUserExists(id, res, callback) {
-        mysqlConnection.query("SELECT name FROM users WHERE id = ?", [id], function(err, rows, fields) {
+        mysqlPool.query("SELECT name FROM users WHERE id = ?", [id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404).end("this user doesn't exist");
@@ -79,17 +95,17 @@ module.exports = function(app, mysqlConnection, auth) {
         });
     }
 
-    function sendNotification(notificationId, userId, callback) {
+    function sendNotification(connection, notificationId, userId, callback) {
         if(userId === null || userId === "null") {
             callback(new Error("userId is null"));
             return;
         }
-        if(!inTransaction) {
+        /*if(!inTransaction) {
             callback(new Error("not in transaction"));
             return;
-        }
-        mysqlConnection.query("INSERT INTO userNotifications (user, notification) VALUES (?, ?)", [userId, notificationId], function(err, rows, fields) {
-            testTransactionError(err);
+        }*/ //todo?
+        connection.query("INSERT INTO userNotifications (user, notification) VALUES (?, ?)", [userId, notificationId], function(err, rows, fields) {
+            testTransactionError(connection, err);
             callback(null);
         });
     }
@@ -232,7 +248,7 @@ module.exports = function(app, mysqlConnection, auth) {
         params.push(start);
         params.push(limit);
         //console.log(query, params);
-        mysqlConnection.query(query, params, function(err, rows, fields) {
+        mysqlPool.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             for(var i=0; i<rows.length; i++) {
                 rows[i].id = rows[i].id.toString(36);
@@ -244,7 +260,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(200).json({suggestions: rows});
             }
             if(userId && location) {
-                mysqlConnection.query("UPDATE users SET lastLat = ?, lastLon = ? WHERE id = ?", [location.lat * 10000000, location.lon * 10000000, userId], function(err, rows, fields) {
+                mysqlPool.query("UPDATE users SET lastLat = ?, lastLon = ? WHERE id = ?", [location.lat * 10000000, location.lon * 10000000, userId], function(err, rows, fields) {
                     if(err) throw err;
                 });
             }
@@ -271,7 +287,7 @@ module.exports = function(app, mysqlConnection, auth) {
         }
         var query = selectQuery + " FROM suggestions LEFT JOIN users ON suggestions.author = users.id WHERE suggestions.entityId = ?";
         params.push(id);
-        mysqlConnection.query(query, params, function(err, rows, fields) {
+        mysqlPool.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404).end("this suggestion doesn't exist");
@@ -289,7 +305,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     author = author.toString(36);
                 }
                 //get tags and send response with everything
-                mysqlConnection.query("SELECT tags.id AS tid, tags.name AS name FROM suggestionTags LEFT JOIN tags ON tags.id = tag WHERE suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
+                mysqlPool.query("SELECT tags.id AS tid, tags.name AS name FROM suggestionTags LEFT JOIN tags ON tags.id = tag WHERE suggestion = ?", [suggestionData.id], function(err, tagRows, fields) {
                     if(err) throw err;
                     res.status(200).json({title: suggestionData.title,
                               descr: suggestionData.descr,
@@ -308,13 +324,13 @@ module.exports = function(app, mysqlConnection, auth) {
             }
 
             //get the photos
-            mysqlConnection.query("SELECT id, path FROM photos WHERE suggestion = ? ORDER BY position", [suggestionData.id], function(err, photoRows, fields) {
+            mysqlPool.query("SELECT id, path FROM photos WHERE suggestion = ? ORDER BY position", [suggestionData.id], function(err, photoRows, fields) {
                 if(err) throw err;
                 for(var i = 0; i < photoRows.length; i++) {
                     photoRows[i].id = photoRows[i].id.toString(36);
                 }
                 if(userId) {
-                    mysqlConnection.query("SELECT dir FROM votes WHERE entity = ? AND user = ?", [id, userId], function(err, voteRows, fields) {
+                    mysqlPool.query("SELECT dir FROM votes WHERE entity = ? AND user = ?", [id, userId], function(err, voteRows, fields) {
                         if(err) throw err;
                         if(voteRows.length != 1) {
                             sendResponse(photoRows);
@@ -347,7 +363,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT entityId AS id, " + queries.distance + " AS dist FROM suggestions WHERE entityId = ?", [location.lat, location.lat, location.lon, id], function(err, rows, fields) {
+        mysqlPool.query("SELECT entityId AS id, " + queries.distance + " AS dist FROM suggestions WHERE entityId = ?", [location.lat, location.lat, location.lon, id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404).end("this suggestion doesn't exist");
@@ -371,7 +387,7 @@ module.exports = function(app, mysqlConnection, auth) {
             var dirField = utils.voteDirToField(dir);
             var username = row.name;
             if(thing.type === 0) {
-                mysqlConnection.query("SELECT title FROM suggestions WHERE entityId = ?", [thing.id], function(err, rows, fields) {
+                mysqlPool.query("SELECT title FROM suggestions WHERE entityId = ?", [thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length != 1) {
                         res.status(404).end("this suggestion doesn't exist");
@@ -379,7 +395,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     }
                     var suggestionTitle = rows[0].title;
                     if(dir === 0) {
-                        mysqlConnection.query("SELECT id, dir FROM votes WHERE entity = ? AND user = ?", [thing.id, userId], function(err, rows, fields) {
+                        mysqlPool.query("SELECT id, dir FROM votes WHERE entity = ? AND user = ?", [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
                                 res.status(400).end("no vote to cancel");
@@ -387,14 +403,15 @@ module.exports = function(app, mysqlConnection, auth) {
                             } else {
                                 var prevDir = rows[0].dir;
                                 var prevDirField = utils.voteDirToField(prevDir);
-                                mysqlConnection.beginTransaction(function(err) {
+                                getTransactingConnection(function(err, connection) {
                                     if(err) throw err;
-                                    mysqlConnection.query("DELETE FROM votes WHERE id = ?", [rows[0].id], function(err, rows, fields) {
-                                        testTransactionError(err);
-                                        mysqlConnection.query("UPDATE suggestions SET " + prevDirField + " = " + prevDirField + " - 1 WHERE entityId = ?", [thing.id], function(err, rows, fields) {
-                                            testTransactionError(err);
-                                            mysqlConnection.commit(function(err) {
-                                                testTransactionError(err);
+                                    connection.query("DELETE FROM votes WHERE id = ?", [rows[0].id], function(err, rows, fields) {
+                                        testTransactionError(connection, err);
+                                        connection.query("UPDATE suggestions SET " + prevDirField + " = " + prevDirField + " - 1 WHERE entityId = ?", [thing.id], function(err, rows, fields) {
+                                            testTransactionError(connection, err);
+                                            connection.commit(function(err) {
+                                                testTransactionError(connection, err);
+                                                connection.release();
                                                 logs.log("user " + colors.bold(username) + " canceled his " + (prevDir == 1 ? "up" : "down") + "vote on " + colors.bold(suggestionTitle));
                                             });
                                         });
@@ -404,34 +421,35 @@ module.exports = function(app, mysqlConnection, auth) {
                         });
                     } else {
                         var up = (dir == 1);
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE entity = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
+                        mysqlPool.query('SELECT id, dir FROM votes WHERE entity = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
-                            function registerVote() {
-                                mysqlConnection.query('INSERT INTO votes (dir, user, entity) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
-                                    testTransactionError(err);
-                                    mysqlConnection.commit(function(err) {
-                                        testTransactionError(err);
+                            function registerVote(connection) {
+                                connection.query('INSERT INTO votes (dir, user, entity) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
+                                    testTransactionError(connection, err);
+                                    connection.commit(function(err) {
+                                        testTransactionError(connection, err);
+                                        connection.release();
                                         logs.log("user " + colors.bold(username) + " " + (up ? "upvoted" : "downvoted") + " an entry " + colors.bold(suggestionTitle));
                                     });
                                 });
                             }
-                            mysqlConnection.beginTransaction(function(err) {
+                            getTransactingConnection(function(err, connection) {
                                 if(err) throw err;
                                 if(rows.length === 0) {
-                                    mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
-                                        testTransactionError(err);
-                                        registerVote();
+                                    connection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
+                                        testTransactionError(connection, err);
+                                        registerVote(connection);
                                     });
                                 } else {
                                     var prevDir = rows[0].dir;
                                     var prevDirField = utils.voteDirToField(prevDir);
                                     var wasUp = prevDir === 1;
                                     if(up != wasUp) {
-                                        mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
-                                            testTransactionError(err);
-                                            mysqlConnection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
+                                        connection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                            testTransactionError(connection, err);
+                                            connection.query('UPDATE suggestions SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
                                                 testTransactionError(err);
-                                                registerVote();
+                                                registerVote(connection);
                                             });
                                         });
                                     }
@@ -443,7 +461,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     return;
                 });
             } else if(thing.type == 1) {
-                mysqlConnection.query('SELECT author FROM comments WHERE entityId = ?', [thing.id], function(err, rows, fields) {
+                mysqlPool.query('SELECT author FROM comments WHERE entityId = ?', [thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length != 1) {
                         res.status(404).end("this comment doesn't exist");
@@ -451,7 +469,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     }
                     var commentAuthor = rows[0].author;
                     if(dir === 0) {
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE entity = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
+                        mysqlPool.query('SELECT id, dir FROM votes WHERE entity = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
                             if(rows.length != 1) {
                                 res.status(400).end("no vote to cancel");
@@ -459,14 +477,15 @@ module.exports = function(app, mysqlConnection, auth) {
                             } else {
                                 var prevDir = rows[0].dir;
                                 var prevDirField = utils.voteDirToField(prevDir);
-                                mysqlConnection.beginTransaction(function(err) {
+                                var connection = getTransactingConnection(function(err, connection) {
                                     if(err) throw err;
-                                    mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
-                                        testTransactionError(err);
-                                        mysqlConnection.query('UPDATE comments SET ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE entity = ?', [thing.id], function(err, rows, fields) {
-                                            testTransactionError(err);
-                                            mysqlConnection.commit(function(err) {
-                                                testTransactionError(err);
+                                    connection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                        testTransactionError(connection, err);
+                                        connection.query('UPDATE comments SET ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE entity = ?', [thing.id], function(err, rows, fields) {
+                                            testTransactionError(connection, err);
+                                            connection.commit(function(err) {
+                                                testTransactionError(connection, err);
+                                                connection.release();
                                             });
                                         });
                                     });
@@ -475,33 +494,34 @@ module.exports = function(app, mysqlConnection, auth) {
                         });
                     } else {
                         var up = (dir == 1);
-                        mysqlConnection.query('SELECT id, dir FROM votes WHERE entity = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
+                        mysqlPool.query('SELECT id, dir FROM votes WHERE entity = ? AND user = ?', [thing.id, userId], function(err, rows, fields) {
                             if(err) throw err;
-                            function registerVote() {
-                                mysqlConnection.query('INSERT INTO votes (dir, user, entity) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
-                                    testTransactionError(err);
-                                    mysqlConnection.commit(function(err) {
-                                        testTransactionError(err);
+                            function registerVote(connection) {
+                                connection.query('INSERT INTO votes (dir, user, entity) VALUES (?, ?, ?)', [dir, userId, thing.id], function(err, rows, fields) {
+                                    testTransactionError(connection, err);
+                                    connection.commit(function(err) {
+                                        testTransactionError(connection, err);
+                                        connection.release();
                                     });
                                 });
                             }
-                            mysqlConnection.beginTransaction(function(err) {
+                            getTransactingConnection(function(err, connection) {
                                 if(err) throw err;
                                 if(rows.length === 0) {
-                                    mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
-                                        testTransactionError(err);
-                                        registerVote();
+                                    connection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
+                                        testTransactionError(connection, err);
+                                        registerVote(connection);
                                     });
                                 } else {
                                     var prevDir = rows[0].dir;
                                     var prevDirField = utils.voteDirToField(prevDir);
                                     var wasUp = prevDir === 1;
                                     if(up != wasUp) {
-                                        mysqlConnection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
-                                            testTransactionError(err);
-                                            mysqlConnection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
-                                                testTransactionError(err);
-                                                registerVote();
+                                        connection.query('DELETE FROM votes WHERE id = ?', [rows[0].id], function(err, rows, fields) {
+                                            testTransactionError(connection, err);
+                                            connection.query('UPDATE comments SET ' + dirField + ' = ' + dirField + ' + 1, ' + prevDirField + ' = ' + prevDirField + ' - 1 WHERE entityId = ?', [thing.id], function(err, rows, fields) {
+                                                testTransactionError(connection, err);
+                                                registerVote(connection);
                                             });
                                         });
                                     }
@@ -571,14 +591,14 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT entityId AS id FROM suggestions WHERE entityId = ?", [sid], function(err, rows, fields) {
+        mysqlPool.query("SELECT entityId AS id FROM suggestions WHERE entityId = ?", [sid], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length < 1) {
                 res.status(404).end("this suggestion doesn't exist");
                 return;
             }
             if(cid) {
-                mysqlConnection.query("SELECT thread FROM comments WHERE entityId = ?", [cid], function(err, rows, fields) {
+                mysqlPool.query("SELECT thread FROM comments WHERE entityId = ?", [cid], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length < 1) {
                         res.status(404).end("this comment doesn't exist");
@@ -612,7 +632,7 @@ module.exports = function(app, mysqlConnection, auth) {
             } else {
                 query = "SELECT comments.entityId AS id, isReply, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score, " + confQuery + " FROM " + subQuery + " INNER JOIN comments ON threads.id = comments.thread LEFT JOIN users ON comments.author = users.id " + orderQuery;
             }
-            mysqlConnection.query(query, params, function(err, commentRows, fields) {
+            mysqlPool.query(query, params, function(err, commentRows, fields) {
                 if(err) throw err;
                 var formattedComments = {};
                 var result = [];
@@ -668,7 +688,7 @@ module.exports = function(app, mysqlConnection, auth) {
             query = "SELECT comments.entityId AS id, content, thread, TIME(timeCreated) AS time, timeCreated, users.name AS author, users.id AS authorId, CAST(upvotes AS SIGNED) - CAST(downvotes AS SIGNED) AS score FROM comments LEFT JOIN users ON comments.author = users.id WHERE comments.entityId = ?";
             params = [commentId];
         }
-        mysqlConnection.query(query, params, function(err, rows, fields) {
+        mysqlPool.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             if(rows.length == 1) {
                 var comment = rows[0];
@@ -694,7 +714,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var id = parseInt(suggestionId, 36);
         checkUserExists(userId, res, function(ok, row) {
             var username = row.name;
-            mysqlConnection.query("SELECT entityId AS id, title, author FROM suggestions WHERE entityId = ?", [id], function(err, rows, fields) {
+            mysqlPool.query("SELECT entityId AS id, title, author FROM suggestions WHERE entityId = ?", [id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
                     res.status(404).end("this suggestion doesn't exist");
@@ -703,27 +723,28 @@ module.exports = function(app, mysqlConnection, auth) {
                 var suggestionData = rows[0];
                 function sendComment(thread) {
                     var isReply = typeof(thread) !== "undefined";
-                    function insertComment() {
-                        createNewEntity(function(err, entityId) {
-                            testTransactionError(err);
-                            mysqlConnection.query("INSERT INTO comments (entityId, author, content, thread, isReply) VALUES (?, ?, ?, ?, ?)", [entityId, userId, content, thread, isReply], function(err, rows, fields) {
-                                testTransactionError(err);
-                                mysqlConnection.commit(function(err) {
-                                    testTransactionError(err);
+                    function insertComment(connection) {
+                        createNewEntity(connection, function(err, entityId) {
+                            testTransactionError(connection, err);
+                            connection.query("INSERT INTO comments (entityId, author, content, thread, isReply) VALUES (?, ?, ?, ?, ?)", [entityId, userId, content, thread, isReply], function(err, rows, fields) {
+                                testTransactionError(connection, err);
+                                connection.commit(function(err) {
+                                    testTransactionError(connection, err);
+                                    connection.release();
                                     onInsertedComment(entityId);
                                 });
                             });
                         });
                     }
-                    mysqlConnection.beginTransaction(function(err) {
+                    getTransactingConnection(function(err, connection) {
                         if(err) throw err;
                         if(thread) {
-                            insertComment();
+                            insertComment(connection);
                         } else {
-                            mysqlConnection.query("INSERT INTO commentThreads (suggestion) VALUES (?)", [id], function(err, rows, fields) {
-                                testTransactionError(err);
+                            connection.query("INSERT INTO commentThreads (suggestion) VALUES (?)", [id], function(err, rows, fields) {
+                                testTransactionError(connection, err);
                                 thread = rows.insertId;
-                                insertComment();
+                                insertComment(connection);
                             });
                         }
                     });
@@ -747,7 +768,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         mentionned.forEach(function(m) {
                             if(!m) return;
                             checkUserFunctions.push(function(callback) {
-                                mysqlConnection.query("SELECT id FROM users WHERE name = ?", [m], function(err, rows, fields) {
+                                mysqlPool.query("SELECT id FROM users WHERE name = ?", [m], function(err, rows, fields) {
                                     if(err) {
                                         callback(err);
                                         return;
@@ -768,50 +789,49 @@ module.exports = function(app, mysqlConnection, auth) {
                             users = users.filter(function(user) {
                                 return (user !== undefined && user !== null && user !== "" && user !== userId);
                             });
-                            function sendMentionNotifications() {
+                            function sendMentionNotifications(connection) {
                                 if(users.length > 0) {
-                                    mysqlConnection.beginTransaction(function(err) {
-                                        if(err) {
-                                            throw err;
-                                        }
-                                        mysqlConnection.query("INSERT INTO notifications (entity, author, action) VALUES (?, ?, 'mention')", [cid, userId], function(err, rows, fields) {
-                                            testTransactionError(err);
+                                    getTransactingConnection(function(err, connection) {
+                                        if(err) throw err;
+                                        connection.query("INSERT INTO notifications (entity, author, action) VALUES (?, ?, 'mention')", [cid, userId], function(err, rows, fields) {
+                                            testTransactionError(connection, err);
                                             var toSend = users.length;
                                             users.forEach(function(user) {
-                                                sendNotification(rows.insertId, user, function(err) {
-                                                    testTransactionError(err);
+                                                sendNotification(connection, rows.insertId, user, function(err) {
+                                                    testTransactionError(connection, err);
                                                     toSend--;
                                                     if(toSend === 0) {
-                                                        mysqlConnection.commit(function(err) {
-                                                            testTransactionError(err);
+                                                        connection.commit(function(err) {
+                                                            testTransactionError(connection, err);
+                                                            connection.release();
                                                         });
                                                         return;
                                                     }
                                                 });
                                             });
                                         });
+
                                     });
                                 }
                             }
-                            if(mentionnedAuthor || suggestionData.author == userId) {
+                            if(userId === null || userId === "null" || suggestionData.author === null || suggestionData.author === "null") {
+
+                            } else if(mentionnedAuthor || suggestionData.author == userId) {
                                 sendMentionNotifications();
                             } else {
-                                mysqlConnection.beginTransaction(function(err) {
+                                getTransactingConnection(function(err, connection) {
                                     if(err) throw err;
-                                    if(mentionnedAuthor) {
-                                        sendMentionNotifications();
-                                    } else if(userId === null || userId === "null") {
-                                        mysqlConnection.query("INSERT INTO notifications (entity, author, action) VALUES (?, ?, 'comment')", [cid, userId], function(err, rows, fields) {
-                                            testTransactionError(err);
-                                            sendNotification(rows.insertId, suggestionData.author, function(err) {
-                                                testTransactionError(err);
-                                                mysqlConnection.commit(function(err) {
-                                                    testTransactionError(err);
-                                                    sendMentionNotifications();
-                                                });
+                                    connection.query("INSERT INTO notifications (entity, author, action) VALUES (?, ?, 'comment')", [cid, userId], function(err, rows, fields) {
+                                        testTransactionError(connection, err);
+                                        sendNotification(connection, rows.insertId, suggestionData.author, function(err) {
+                                            testTransactionError(connection, err);
+                                            connection.commit(function(err) {
+                                                testTransactionError(connection, err);
+                                                connection.release();
+                                                sendMentionNotifications();
                                             });
                                         });
-                                    }
+                                    });
                                 });
                             }
                         });
@@ -855,18 +875,19 @@ module.exports = function(app, mysqlConnection, auth) {
                 query = 'INSERT INTO suggestions (title, descr, author, entityId) VALUES (?, ?, ?, ?)';
                 params = [title, descr, userId];
             }
-            mysqlConnection.beginTransaction(function(err) {
+            getTransactingConnection(function(err, connection) {
                 if(err) throw err;
-                createNewEntity(function(err, entityId) {
-                    testTransactionError(err);
+                createNewEntity(connection, function(err, entityId) {
+                    testTransactionError(connection, err);
                     params.push(entityId);
-                    mysqlConnection.query(query, params, function(err, rows, fields) {
-                        testTransactionError(err);
-                        mysqlConnection.commit(function(err) {
-                            testTransactionError(err);
+                    connection.query(query, params, function(err, rows, fields) {
+                        testTransactionError(connection, err);
+                        connection.commit(function(err) {
+                            testTransactionError(connection, err);
                             var sid = parseInt(entityId);
                             logs.log("user " + colors.bold(username) + " posted a new entry " + colors.bold(title));
                             res.status(201).end(sid.toString(36));
+                            connection.release();
                         });
                     });
                 });
@@ -897,13 +918,13 @@ module.exports = function(app, mysqlConnection, auth) {
             function editPhotoOrder(callback) {
                 edited = true;
                 var order = edit.photosOrder;
-                mysqlConnection.beginTransaction(function(err) {
+                getTransactingConnection(function(err, connection) {
                     if(err) throw err;
                     var queryFunctions = [];
                     Array.prototype.forEach.call(order, function(photoId, i) {
                         queryFunctions.push(function(callback) {
-                            mysqlConnection.query("UPDATE photos SET position = ? WHERE id = ?", [i, parseInt(photoId, 36)], function(err, rows, fields) {
-                                testTransactionError(err);
+                            connection.query("UPDATE photos SET position = ? WHERE id = ?", [i, parseInt(photoId, 36)], function(err, rows, fields) {
+                                testTransactionError(connection, err);
                                 callback();
                             });
                         });
@@ -913,8 +934,9 @@ module.exports = function(app, mysqlConnection, auth) {
                             callback(true);
                             return;
                         }
-                        mysqlConnection.commit(function(err) {
-                            testTransactionError(err);
+                        connection.commit(function(err) {
+                            testTransactionError(connection, err);
+                            connection.release();
                             callback();
                         });
                     });
@@ -922,7 +944,7 @@ module.exports = function(app, mysqlConnection, auth) {
             }
             function editDescription(callback) {
                 edited = true;
-                mysqlConnection.query("UPDATE suggestions SET descr = ? WHERE entityId = ?", [edit.descr, thing.id], function(err, rows, fields) {
+                mysqlPool.query("UPDATE suggestions SET descr = ? WHERE entityId = ?", [edit.descr, thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     callback();
                 });
@@ -930,14 +952,14 @@ module.exports = function(app, mysqlConnection, auth) {
             function editTagsAdded(callback) {
                 edited = true;
                 var tags = edit.tagsAdded;
-                mysqlConnection.beginTransaction(function(err) {
+                getTransactingConnection(function(err, connection) {
                     if(err) throw err;
                     var queryFunctions = [];
                     Array.prototype.forEach.call(tags, function(tag) {
                         if(tag.tid) {
                             queryFunctions.push(function(callback) {
-                                mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [thing.id, tag.tid], function(err, rows, fields) {
-                                    testTransactionError(err);
+                                connection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [thing.id, tag.tid], function(err, rows, fields) {
+                                    testTransactionError(connection, err);
                                     callback();
                                 });
                             });
@@ -946,20 +968,20 @@ module.exports = function(app, mysqlConnection, auth) {
                                 return t.charAt(0).toUpperCase() + t.substr(1).toLowerCase();
                             });
                             queryFunctions.push(function(callback) {
-                                mysqlConnection.query("INSERT INTO tags (name) VALUES (?)", [tag.name], function(err, rows, fields) {
+                                connection.query("INSERT INTO tags (name) VALUES (?)", [tag.name], function(err, rows, fields) {
                                     //if duplicate, don't throw error
                                     if(err) {
                                         if(err.code == "ER_DUP_ENTRY") {
-                                            mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, (SELECT id FROM tags WHERE name = ?))", [suggestion.id, tag.name], function(err, rows, fields) {
-                                                testTransactionError(err);
+                                            connection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, (SELECT id FROM tags WHERE name = ?))", [suggestion.id, tag.name], function(err, rows, fields) {
+                                                testTransactionError(connection, err);
                                                 callback();
                                             });
                                         } else {
-                                            testTransactionError(err);
+                                            testTransactionError(connection, err);
                                         }
                                     } else {
-                                        mysqlConnection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [thing.id, rows.insertId], function(err, rows, fields) {
-                                            testTransactionError(err);
+                                        connection.query("INSERT INTO suggestionTags (suggestion, tag) VALUES (?, ?)", [thing.id, rows.insertId], function(err, rows, fields) {
+                                            testTransactionError(connection, err);
                                             logs.log("user " + colors.bold(user.name) + " created a new tag " + colors.bold(tag.name));
                                             callback();
                                         });
@@ -973,24 +995,26 @@ module.exports = function(app, mysqlConnection, auth) {
                             callback(true);
                             return;
                         }
-                        mysqlConnection.commit(function(err) {
-                            testTransactionError(err);
+                        connection.commit(function(err) {
+                            testTransactionError(connection, err);
+                            connection.release();
                             callback();
                         });
                     });
+
                 });
             }
             function editTagsRemoved(callback) {
                 edited = true;
                 var tags = edit.tagsRemoved;
-                mysqlConnection.beginTransaction(function(err) {
+                getTransactingConnection(function(err, connection) {
                     if(err) throw err;
                     var queryFunctions = [];
                     Array.prototype.forEach.call(tags, function(tag) {
                         if(!tag.tid) return;
                         queryFunctions.push(function(callback) {
-                            mysqlConnection.query("DELETE FROM suggestionTags WHERE (suggestion, tag) = (?, ?)", [thing.id, tag.tid], function(err, rows, fields) {
-                                testTransactionError(err);
+                            connection.query("DELETE FROM suggestionTags WHERE (suggestion, tag) = (?, ?)", [thing.id, tag.tid], function(err, rows, fields) {
+                                testTransactionError(connection, err);
                                 callback();
                             });
                         });
@@ -1000,8 +1024,9 @@ module.exports = function(app, mysqlConnection, auth) {
                             callback(true);
                             return;
                         }
-                        mysqlConnection.commit(function(err) {
+                        connection.commit(function(err) {
                             testTransactionError(err);
+                            connection.release();
                             callback();
                         });
                     });
@@ -1030,7 +1055,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(400).end("no comment content provided");
                 return;
             }
-            mysqlConnection.query("UPDATE comments SET content = ? WHERE entityId = ?", [commentContent, comment.entityId], function(err, rows, fields) {
+            mysqlPool.query("UPDATE comments SET content = ? WHERE entityId = ?", [commentContent, comment.entityId], function(err, rows, fields) {
                 if(err) throw err;
                 res.status(200).end();
             });
@@ -1043,7 +1068,7 @@ module.exports = function(app, mysqlConnection, auth) {
             if(thing.type === 0) {
                 selectQuery += ", title";
             }
-            mysqlConnection.query(selectQuery + " FROM " + tableName + " WHERE entityId = ?", [thing.id], function(err, rows, fields) {
+            mysqlPool.query(selectQuery + " FROM " + tableName + " WHERE entityId = ?", [thing.id], function(err, rows, fields) {
                 if(err) throw err;
                 if(rows.length != 1) {
                     res.status(404).end("this " + thingName + " doesn't exist");
@@ -1131,7 +1156,7 @@ module.exports = function(app, mysqlConnection, auth) {
                     }
                     detectAndRename(req.file.path, newPath, cb);
                 }
-                mysqlConnection.query("SELECT entityId AS id, author, title FROM suggestions WHERE entityId = ?", [thing.id], function(err, rows, fields) {
+                mysqlPool.query("SELECT entityId AS id, author, title FROM suggestions WHERE entityId = ?", [thing.id], function(err, rows, fields) {
                     if(err) throw err;
                     if(rows.length != 1) {
                         res.status(404).end("this suggestion doesn't exist");
@@ -1142,7 +1167,7 @@ module.exports = function(app, mysqlConnection, auth) {
                         res.status(401).end("this suggestion is not yours");
                         return;
                     }
-                    mysqlConnection.query("SELECT COUNT(id) AS count FROM photos WHERE suggestion = ?", [thing.id], function(err, rows, fields) {
+                    mysqlPool.query("SELECT COUNT(id) AS count FROM photos WHERE suggestion = ?", [thing.id], function(err, rows, fields) {
                         if(err) throw err;
                         var count = rows[0].count;
                         if(count >= global.config.maximumPhotos) {
@@ -1157,7 +1182,7 @@ module.exports = function(app, mysqlConnection, auth) {
                                 res.status(200).json(err);
                                 return;
                             }
-                            mysqlConnection.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
+                            mysqlPool.query("INSERT INTO photos (path, suggestion, position) VALUES (?, ?, ?)", [newPath, thing.id, count], function(err, rows, fields) {
                                 if(err) {
                                     fs.unlinkSync(newPath);
                                     throw err;
@@ -1201,7 +1226,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         var photoId = thing.id;
-        mysqlConnection.query("SELECT path, author FROM photos LEFT JOIN suggestions ON photos.suggestion = suggestions.entityId WHERE photos.id = ?", [photoId], function(err, rows, fields) {
+        mysqlPool.query("SELECT path, author FROM photos LEFT JOIN suggestions ON photos.suggestion = suggestions.entityId WHERE photos.id = ?", [photoId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404).end("this photo doesn't exist");
@@ -1212,7 +1237,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 return;
             }
             var path = rows[0].path;
-            mysqlConnection.query("DELETE FROM photos WHERE id = ?", [photoId], function(err, rows, fields) {
+            mysqlPool.query("DELETE FROM photos WHERE id = ?", [photoId], function(err, rows, fields) {
                 if(err) throw err;
                 fs.unlink(__dirname + path, function() {
                     res.status(200).end();
@@ -1230,7 +1255,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         var params = [tagName, userId];
-        mysqlConnection.query("INSERT INTO userTags (user, tag) VALUES (?, (SELECT id FROM tags WHERE name = ?))", [userId, tagName], function(err, rows, fields) {
+        mysqlPool.query("INSERT INTO userTags (user, tag) VALUES (?, (SELECT id FROM tags WHERE name = ?))", [userId, tagName], function(err, rows, fields) {
             if(err) throw err;
             res.status(200).end();
         });
@@ -1245,7 +1270,7 @@ module.exports = function(app, mysqlConnection, auth) {
             return;
         }
         var params = [tagName, userId];
-        mysqlConnection.query("DELETE FROM userTags WHERE user = ? AND tag = (SELECT id FROM tags WHERE name = ?)", [userId, tagName], function(err, rows, fields) {
+        mysqlPool.query("DELETE FROM userTags WHERE user = ? AND tag = (SELECT id FROM tags WHERE name = ?)", [userId, tagName], function(err, rows, fields) {
             if(err) throw err;
             res.status(200).end();
         });
@@ -1264,7 +1289,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT entityId AS id, author FROM suggestions WHERE entityId = ?", [suggestionId], function(err, rows, fields) {
+        mysqlPool.query("SELECT entityId AS id, author FROM suggestions WHERE entityId = ?", [suggestionId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404).end("this suggestion doesn't exist");
@@ -1274,7 +1299,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 res.status(403).end("this suggestion is private and you are not the author");
                 return;
             }
-            mysqlConnection.query("UPDATE suggestions SET published = 1 WHERE entityId = ?", [suggestionId], function(err, rows, fields) {
+            mysqlPool.query("UPDATE suggestions SET published = 1 WHERE entityId = ?", [suggestionId], function(err, rows, fields) {
                 if(err) throw err;
                 //check rows?
                 res.status(200).end();
@@ -1306,16 +1331,16 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end("you can't report this");
             return;
         }
-        mysqlConnection.query("SELECT id FROM reports WHERE (author, entity) = (?, ?)", [userId, thing.id], function(err, rows, fields) {
+        mysqlPool.query("SELECT id FROM reports WHERE (author, entity) = (?, ?)", [userId, thing.id], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length > 0) {
-                mysqlConnection.query("UPDATE reports SET entity = ?, message = ? WHERE id = ?", [thing.id, message, rows[0].id], function(err, rows, fields) {
+                mysqlPool.query("UPDATE reports SET entity = ?, message = ? WHERE id = ?", [thing.id, message, rows[0].id], function(err, rows, fields) {
                     if(err) throw err;
                     res.status(200).end();
                     return;
                 });
             } else {
-                mysqlConnection.query("INSERT INTO reports (author, entity, message) VALUES (?, ?, ?)", [userId, thing.id, message], function(err, rows, fields) {
+                mysqlPool.query("INSERT INTO reports (author, entity, message) VALUES (?, ?, ?)", [userId, thing.id, message], function(err, rows, fields) {
                     if(err) throw err;
                     res.status(200).end();
                     return;
@@ -1334,7 +1359,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT id, name, TIMESTAMPDIFF(SECOND, timeRegistered, CURRENT_TIMESTAMP) AS timeSinceRegistered FROM users WHERE id = ?", [userId], function(err, rows, fields) {
+        mysqlPool.query("SELECT id, name, TIMESTAMPDIFF(SECOND, timeRegistered, CURRENT_TIMESTAMP) AS timeSinceRegistered FROM users WHERE id = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length != 1) {
                 res.status(404).end("this user doesn't exist");
@@ -1361,7 +1386,7 @@ module.exports = function(app, mysqlConnection, auth) {
         query += " LIMIT ?, ?";
         params.push(start);
         params.push(limit);
-        mysqlConnection.query(query, params, function(err, rows, fields) {
+        mysqlPool.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             res.status(200).json(rows);
         });
@@ -1388,13 +1413,13 @@ module.exports = function(app, mysqlConnection, auth) {
             } else if(row.action == "mention" || row.action == "comment") {
                 json.authorName = row.authorName;
                 //another query to get comment and suggestion details, can't use a join because we didn't know the notification type
-                mysqlConnection.query("SELECT suggestions.entityId AS id, title, thread FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.entityId WHERE comments.entityId = ?", [row.entity], function(err, rows, fields) {
+                mysqlPool.query("SELECT suggestions.entityId AS id, title, thread FROM comments INNER JOIN commentThreads ON comments.thread = commentThreads.id INNER JOIN suggestions ON commentThreads.suggestion = suggestions.entityId WHERE comments.entityId = ?", [row.entity], function(err, rows, fields) {
                     if(err) {
                         callback(err);
                         return;
                     }
                     if(rows.length === 0) {
-                        mysqlConnection.query("DELETE FROM userNotifications WHERE id = ?", [row.id], function(err, rows, fields) {
+                        mysqlPool.query("DELETE FROM userNotifications WHERE id = ?", [row.id], function(err, rows, fields) {
                             if(err) {
                                 callback(err);
                                 return;
@@ -1413,7 +1438,7 @@ module.exports = function(app, mysqlConnection, auth) {
                 callback(new Error("Unsupported notification thingType" + row.thingType));
             }
         }
-        mysqlConnection.query("SELECT userNotifications.id AS id, entity, author, action, timeCreated, seen, authors.name AS authorName FROM userNotifications INNER JOIN notifications ON userNotifications.notification = notifications.id INNER JOIN users AS authors ON notifications.author = authors.id WHERE user = ? ORDER BY timeCreated DESC LIMIT 20", [userId], function(err, rows, fields) {
+        mysqlPool.query("SELECT userNotifications.id AS id, entity, author, action, timeCreated, seen, authors.name AS authorName FROM userNotifications INNER JOIN notifications ON userNotifications.notification = notifications.id INNER JOIN users AS authors ON notifications.author = authors.id WHERE user = ? ORDER BY timeCreated DESC LIMIT 20", [userId], function(err, rows, fields) {
             if(err) throw err;
             var convertFunctions = [];
             function addConvertFunction(i) {
@@ -1453,7 +1478,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("UPDATE userNotifications SET seen = 1 WHERE id = ?", [notificationId], function(err, rows, fields) {
+        mysqlPool.query("UPDATE userNotifications SET seen = 1 WHERE id = ?", [notificationId], function(err, rows, fields) {
             if(err) throw err;
             res.status(200).end();
         });
@@ -1469,7 +1494,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT digestFrequency, theme, privateTags, privateSuggestions FROM preferences WHERE user = ?", [userId], function(err, rows, fields) {
+        mysqlPool.query("SELECT digestFrequency, theme, privateTags, privateSuggestions FROM preferences WHERE user = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             if(rows.length === 0) {
                 res.status(404).end("user preferences not found");
@@ -1494,7 +1519,7 @@ module.exports = function(app, mysqlConnection, auth) {
         var params = [];
         for(var preference in changes) {
             if(changes.hasOwnProperty(preference)) {
-                query += mysqlConnection.escapeId(preference) + "= ?, ";
+                query += mysqlPool.escapeId(preference) + "= ?, ";
                 params.push(changes[preference]);
             }
         }
@@ -1504,7 +1529,7 @@ module.exports = function(app, mysqlConnection, auth) {
         }
         query = query.substr(0, query.length - 2) + " WHERE user = ?";
         params.push(userId);
-        mysqlConnection.query(query, params, function(err, rows, fields) {
+        mysqlPool.query(query, params, function(err, rows, fields) {
             if(err) {
                 res.status(500).end();
                 return;
@@ -1519,7 +1544,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(200).json({});
             return;
         }
-        mysqlConnection.query("SELECT id, name FROM tags WHERE name LIKE ? LIMIT 10", [prefix + "%"], function(err, rows, fields) {
+        mysqlPool.query("SELECT id, name FROM tags WHERE name LIKE ? LIMIT 10", [prefix + "%"], function(err, rows, fields) {
             if(err) throw err;
             res.status(200).json(rows);
         });
@@ -1535,7 +1560,7 @@ module.exports = function(app, mysqlConnection, auth) {
             res.status(400).end(e.message);
             return;
         }
-        mysqlConnection.query("SELECT tags.id AS tid, name FROM userTags INNER JOIN tags ON userTags.tag = tags.id WHERE user = ?", [userId], function(err, rows, fields) {
+        mysqlPool.query("SELECT tags.id AS tid, name FROM userTags INNER JOIN tags ON userTags.tag = tags.id WHERE user = ?", [userId], function(err, rows, fields) {
             if(err) throw err;
             res.status(200).json(rows);
         });
@@ -1555,7 +1580,7 @@ module.exports = function(app, mysqlConnection, auth) {
             query = "SELECT count, name FROM (SELECT COUNT(suggestions.entityId) AS count, tag FROM suggestionTags GROUP BY tag ORDER BY count DESC LIMIT 5) AS suggestionTags INNER JOIN tags ON suggestionTags.tag = tags.id";
             params = [];
         }
-        mysqlConnection.query(query, params, function(err, rows, fields) {
+        mysqlPool.query(query, params, function(err, rows, fields) {
             if(err) throw err;
             res.status(200).json(rows);
         });

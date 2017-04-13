@@ -1,6 +1,6 @@
 const utils = require("./utils");
 
-module.exports = function(app, mysqlConnection, auth, view, api) {
+module.exports = function(app, auth, view, api) {
 
 	function discover(req, res, loginData) {
         function sendResponse(templateData) {

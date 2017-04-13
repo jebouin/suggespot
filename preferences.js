@@ -1,4 +1,4 @@
-module.exports = function(app, mysqlConnection, auth, view, api) {
+module.exports = function(app, auth, view, api) {
 
 	function createRoutes() {
 		app.get("/preferences", function(req, res) {
